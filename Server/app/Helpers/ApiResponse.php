@@ -3,7 +3,7 @@
 namespace App\Helpers;
 
 class ApiResponse{
-    public function errorResponse($code = 500, $message = '', $errorMessage = ''){
+    public static function errorResponse($code = 500, $message = '', $errorMessage = ''){
         $response = [
             'status' => $code,
             'message' => $message,
@@ -13,7 +13,7 @@ class ApiResponse{
         return response()->json($response,$code);
     }
 
-    public function responseObject($data, $code = 200, $message = 'success'){
+    public static function responseObject($data, $code = 200, $message = 'success'){
         $response = [
                 'code' => $code,
                 'message' => $message,
@@ -23,14 +23,14 @@ class ApiResponse{
         return response()->json($response,$code);
     }
 
-    public function responsePage($page){
+    public static function responsePage($page){
         $reponse = [
             'success' => true,
             'status' => 'success',
             'data' => $page->items(),
             'page' => [
                 'currentPage' => $page->currentPage(),
-                'lasstPage' => $page->lastPage(),
+                'lastPage' => $page->lastPage(),
                 'perPage' => $page->perPage(),
                 'total' => $page->total()
             ]
@@ -39,7 +39,7 @@ class ApiResponse{
         return response()->json($reponse,200);
     }
 
-    public function responseSuccess($message, $code = 200){
+    public static function responseSuccess($message, $code = 200){
         $response = [
             'status' => 'success',
             'message' => $message
