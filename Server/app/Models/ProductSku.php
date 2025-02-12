@@ -20,10 +20,10 @@ class ProductSku extends Model
         return $this->belongsTo(Product::class);
     }
     public function attributeOptions(){
-        return $this->belongsToMany(AttributeOption::class);
+        return $this->belongsToMany(AttributeOption::class,'attribute_option_sku','sku_id','attribute_option_id');
     }
     public function attributes(){
-        return $this->hasMany(AttributeOptionSku::class);
+        return $this->hasMany(AttributeOptionSku::class,'sku_id');
     }
 
 }

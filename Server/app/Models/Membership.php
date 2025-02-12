@@ -11,11 +11,10 @@ class Membership extends Model
         'membership_type',
         'start_date',
         'end_date',
-        'status',
+        'status',  
     ];
 
     public function user(){
         return $this->belongsTo(User::class);
     }
-    
 }

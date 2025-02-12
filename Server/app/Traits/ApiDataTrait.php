@@ -68,6 +68,7 @@ trait ApiDataTrait
             return ApiResponse::responsePage($data);
 
         } catch (\Exception $e) {
+            
             return ApiResponse::responseError(500, $e->getMessage(), $message);
         }
     }
