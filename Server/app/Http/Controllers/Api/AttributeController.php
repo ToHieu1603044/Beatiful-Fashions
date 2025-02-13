@@ -9,7 +9,7 @@ class AttributeController extends Controller
 {
     public function index()
     {
-        return response()->json(Attribute::with('options')->get());
+        return response()->json(Attribute::with('values')->get());
     }
 
     public function store(Request $request)
