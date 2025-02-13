@@ -13,8 +13,8 @@ class Attribute extends Model
     public function products(){
         return $this->belongsToMany(Product::class);
     }
-    public function values(){
-        return $this->hasMany(AttributeOption::class);
+    public function options(){
+        return $this->hasMany(AttributeOption::class, 'attribute_id');
     }
 
 }
