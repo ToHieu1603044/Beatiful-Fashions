@@ -92,6 +92,27 @@ trait ApiDataTrait
             return ApiResponse::responseError(500, $e->getMessage(), $message);
         }
     }
+    public function deleteDataById(Model $model, $id, $message = "Xoa thanh cong")
+    {
+        try {
+            $data = $model::findOrFail($id);
+
+            if (!$data) {
+                return response()->json([
+                    'message' => 'Không tìm th/ay dữ liệu',
+                    'data' => []
+                ], Response::HTTP_NOT_FOUND);
+            }
+            $data->delete();
+
+            return ApiResponse::responseSuccess($message);
+
+
+        } catch (\Throwable $th) {
+
+            return ApiResponse::responseError(500, $th->getMessage());
+        }
+    }
     public function processUpdateStatus($model, $id, $status)
     {
         try {

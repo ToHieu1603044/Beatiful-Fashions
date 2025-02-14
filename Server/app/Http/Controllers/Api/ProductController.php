@@ -191,11 +191,12 @@ class ProductController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'error' => 'Lỗi khi cập nhật sản phẩm',
-                'message' => $e->getMessage()
-            ], 500);
+
+           return ApiResponse::errorResponse(500, $e->getMessage());
         }
+    }
+    public function delete($id){
+        return $this->deleteDataById(new Product, $id,);
     }
     
 }
