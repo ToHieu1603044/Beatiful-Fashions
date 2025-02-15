@@ -23,7 +23,7 @@ function App() {
           element: <Categories />, 
           children: [
             { path: "create", element: <CategoriesAdd /> },
-            { path: "edit", element: <CategoriesEdit /> }
+            { path: ":id/edit", element: <CategoriesEdit /> }
           ]
         },
         { 
