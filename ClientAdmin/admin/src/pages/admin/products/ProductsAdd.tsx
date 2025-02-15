@@ -1,9 +1,9 @@
 
 
-const ProductAdd = () => {
+const ProductsAdd = () => {
   return (
     <div>ProductAdd</div>
   )
 }
 
-export default ProductAdd
+export default ProductsAdd
