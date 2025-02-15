@@ -1,20 +1,86 @@
+import { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { getCategories } from "../../../services/categoryService";
+
+type CategoryType = {
+  id: number;
+  name: string;
+  slug: string;
+  image?: string | null;
+  parent_id?: number | null;
+  children: CategoryType[];
+  created_at?: string;
+  updated_at?: string;
+};
 
 const Categories = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isRootCategories = location.pathname === "/admin/categories";
 
+  const [categories, setCategories] = useState<CategoryType[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await getCategories();
+        setCategories(response.data);
+      } catch (error) {
+        console.error("Lỗi khi lấy danh mục:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // 🔹 Hàm lấy tên danh mục cha từ ID
+  const getParentName = (parentId: number | null) => {
+    if (!parentId) return "----";
+    const parent = categories.find((c) => c.id === parentId);
+    return parent ? parent.name : "----";
+  };
+
+  // 🔹 Đệ quy hiển thị danh mục con
+  const renderCategories = (categories: CategoryType[], level: number = 0): JSX.Element[] => {
+    return categories.flatMap((category) => [
+      <tr key={category.id}>
+        <td>{category.id}</td>
+        <td style={{ paddingLeft: `${level * 20}px` }}>{category.name}</td>
+        <td>{category.slug}</td>
+        <td>
+          <img
+            src={category.image || "https://placehold.co/50x50"}
+            alt={category.name}
+            className="rounded"
+            width={50}
+            height={50}
+          />
+        </td>
+        <td>{getParentName(category.parent_id)}</td>
+        <td>{category.created_at || "----"}</td>
+        <td>{category.updated_at || "----"}</td>
+        <td>
+          <button className="btn btn-warning btn-sm me-1">Xem</button>
+          <button className="btn btn-danger btn-sm me-1">Xóa</button>
+          <button className="btn btn-primary btn-sm" onClick={() => navigate(`/admin/categories/${category.id}/edit`)}>
+            Sửa
+          </button>
+        </td>
+      </tr>,
+      ...renderCategories(category.children, level + 1),
+    ]);
+  };
+
   return (
     <div className="container mt-4">
       {isRootCategories && (
         <>
-            <div className="d-flex align-items-center mb-3">
-            <h2 className="mb-0">Danh sách Categories</h2>
-            <button
-              className="btn btn-success ms-3"
-              onClick={() => navigate("/admin/attributes/create")}
-            >
+          <div className="d-flex align-items-center mb-3">
+            <h2 className="mb-0">Danh sách Danh Mục</h2>
+            <button className="btn btn-success ms-3" onClick={() => navigate("/admin/categories/create")}>
               Thêm mới
             </button>
           </div>
@@ -24,49 +90,34 @@ const Categories = () => {
               <thead className="table-dark">
                 <tr>
                   <th>ID</th>
-                  <th>Name</th>
+                  <th>Tên</th>
                   <th>Slug</th>
-                  <th>Image</th>
-                  <th>Parent Id</th>
-                  <th>Created</th>
-                  <th>Updated</th>
-                  <th>Actions</th>
+                  <th>Hình ảnh</th>
+                  <th>Danh mục cha</th>
+                  <th>Ngày tạo</th>
+                  <th>Ngày cập nhật</th>
+                  <th>Hành động</th>
                 </tr>
               </thead>
               <tbody>
-                {[
-                  { id: 1, name: "Giày Sneakers", slug: "giay-sneakers", parentId: "None", created: "2024-01-20", updated: "2024-02-10" },
-                  { id: 2, name: "Áo Polo", slug: "ao-polo", parentId: "1", created: "2024-01-25", updated: "2024-02-15" },
-                ].map((category) => (
-                  <tr key={category.id}>
-                    <td>{category.id}</td>
-                    <td>{category.name}</td>
-                    <td>{category.slug}</td>
-                    <td>
-                      <img src="https://placehold.co/50x50" alt={category.name} className="rounded" />
-                    </td>
-                    <td>{category.parentId}</td>
-                    <td>{category.created}</td>
-                    <td>{category.updated}</td>
-                    <td>
-                      <button className="btn btn-warning btn-sm me-1">View</button>
-                      <button className="btn btn-danger btn-sm me-1">Delete</button>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => navigate(`/admin/categories/edit/`)}
-                      >
-                        Edit
-                      </button>
-                    </td>
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="text-center">Đang tải dữ liệu...</td>
                   </tr>
-                ))}
+                ) : categories.length > 0 ? (
+                  renderCategories(categories)
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="text-center">Không có danh mục nào.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </>
       )}
 
-      {/* Hiển thị route con như /admin/categories/add hoặc /admin/categories/edit */}
+      {/* Hiển thị route con như /admin/categories/create hoặc /admin/categories/edit/:id */}
       <Outlet />
     </div>
   );
