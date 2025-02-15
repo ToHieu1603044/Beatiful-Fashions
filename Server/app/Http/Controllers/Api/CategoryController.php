@@ -9,49 +9,47 @@ use Illuminate\Http\Request;
 use App\Models\Category;
 class CategoryController extends Controller
 {
-      // Lấy danh mục theo dạng cây
-      public function index()
-      {
-          $categories = Category::all();
-  
-          // Định dạng lại danh mục thành dạng cây
-          $tree = $this->buildCategoryTree($categories);
-  
-          return response()->json($tree);
-      }
-  
-      // Hàm tạo cây danh mục
-      private function buildCategoryTree($categories, $parentId = null)
-      {
-          return $categories->where('parent_id', $parentId)->map(function ($category) use ($categories) {
-              return [
-                  'id' => $category->id,
-                  'name' => $category->name,
-                  'parent_id' => $category->parent_id,
-                  'children' => $this->buildCategoryTree($categories, $category->id),
-              ];
-          })->values();
-      }
-  
-      // Thêm danh mục mới
-      public function store(Request $request)
-      {
-          $request->validate([
-              'name' => 'required|string|max:255',
-              'parent_id' => 'nullable|exists:categories,id',
-          ]);
-          
-          $category = Category::create([
-              'name' => $request->name,
-              'slug' => \Str::slug($request->name),
-              'image' => null, // Nếu có upload ảnh thì xử lý thêm ở đây
-              'parent_id' => $request->parent_id,
-          ]);
-  
-          return response()->json(['message' => 'Danh mục đã được tạo!', 'category' => $category]);
-      }
+    // Lấy danh mục theo dạng cây
+    public function index()
+    {
+        $categories = Category::all();
 
+        // Định dạng lại danh mục thành dạng cây
+        $tree = $this->buildCategoryTree($categories);
 
+        return response()->json($tree);
+    }
+
+    // Hàm tạo cây danh mục
+    private function buildCategoryTree($categories, $parentId = null)
+    {
+        return $categories->where('parent_id', $parentId)->map(function ($category) use ($categories) {
+            return [
+                'id' => $category->id,
+                'name' => $category->name,
+                'parent_id' => $category->parent_id,
+                'children' => $this->buildCategoryTree($categories, $category->id),
+            ];
+        })->values();
+    }
+
+    // Thêm danh mục mới
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'parent_id' => 'nullable|exists:categories,id',
+        ]);
+
+        $category = Category::create([
+            'name' => $request->name,
+            'slug' => \Str::slug($request->name),
+            'image' => null, // Nếu có upload ảnh thì xử lý thêm ở đây
+            'parent_id' => $request->parent_id,
+        ]);
+
+        return response()->json(['message' => 'Danh mục đã được tạo!', 'category' => $category]);
+    }
 
     public function edit(Request $req, $id)
     {
@@ -87,6 +85,28 @@ class CategoryController extends Controller
 
         return response()->json(['message' => 'Danh mục đã được cập nhật thành công', 'data' => $category]);
     }
+    public function show($id)
+    {
+        $category = Category::with('children')->find($id);
+
+        if (!$category) {
+            return response()->json(['message' => 'Danh mục không tồn tại'], 404);
+        }
+
+        return response()->json([
+            'id' => $category->id,
+            'name' => $category->name,
+            'parent_id' => $category->parent_id,
+            'children' => $category->children->map(function ($child) {
+                return [
+                    'id' => $child->id,
+                    'name' => $child->name,
+                    'parent_id' => $child->parent_id,
+                ];
+            }),
+        ]);
+    }
+
 
     private function bubbleImage($file)
     {
