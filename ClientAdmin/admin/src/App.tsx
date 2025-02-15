@@ -1,27 +1,54 @@
-import { Route, Routes } from "react-router-dom";
-import Dashboard from "./Layout";
-import Categories from "./components/admin/categories/Categories";
-import Attributes from "./components/admin/Attributes";
-import Orders from "./components/admin/Orders";
-import Products from "./components/admin/Products";
-import Users from "./components/admin/Users";
-import CategoryCreate from "./components/admin/categories/CategoryCreate";
-import CategoryEdit from "./components/admin/categories/CategoryEdit";
+import { useRoutes } from "react-router-dom";
+import Admin from "./layouts/admin/Admin";
+import Categories from "./pages/admin/categories/Categories";
+import Attributes from "./pages/admin/attributes/Attributes";
+import Orders from "./pages/admin/orders/Orders";
+import Products from "./pages/admin/products/Products";
+import Users from "./pages/admin/users/Users";
+import AttributesAdd from "./pages/admin/attributes/AttributesAdd";
+import AttributesEdit from "./pages/admin/attributes/AttributesEdit";
+import ProductAdd from "./pages/admin/products/ProductsAdd";
+import ProductsEdit from "./pages/admin/products/ProductsEdit";
+import CategoriesAdd from "./pages/admin/categories/CategoriesAdd";
+import CategoriesEdit from "./pages/admin/categories/CategoriesEdit";
 
 function App() {
-  return (
-    <Routes>
-      <Route path="/admin" element={<Dashboard />}>
-        <Route path="categories" element={<Categories />} />
-        <Route path="categories/create" element={<CategoryCreate />} />
-        <Route path="categories/:id/edit" element={<CategoryEdit />} />
-        <Route path="attributes" element={<Attributes />} />
-        <Route path="orders" element={<Orders />} />
-        <Route path="products" element={<Products />} />
-        <Route path="users" element={<Users />} />
-      </Route>
-    </Routes>
-  );
+  const routes = useRoutes([
+    {
+      path: "admin",
+      element: <Admin />,
+      children: [
+        { 
+          path: "categories", 
+          element: <Categories />, 
+          children: [
+            { path: "add", element: <CategoriesAdd /> },
+            { path: "edit", element: <CategoriesEdit /> },
+          ],
+        },
+        { 
+          path: "attributes", 
+          element: <Attributes />, 
+          children: [
+            { path: "add", element: <AttributesAdd /> },
+            { path: "edit", element: <AttributesEdit /> },
+          ],
+        },
+        { path: "orders", element: <Orders /> },
+        { 
+          path: "products", 
+          element: <Products />, 
+          children: [
+            { path: "add", element: <ProductAdd /> },
+            { path: "edit", element: <ProductsEdit /> },
+          ],
+        },
+        { path: "users", element: <Users /> },
+      ],
+    },
+  ]);
+
+  return routes;
 }
 
 export default App;

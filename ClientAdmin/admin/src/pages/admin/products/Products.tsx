@@ -1,7 +1,10 @@
 const Products = () => {
   return (
     <div className="container mt-4">
-      <h2 className="mb-3">Danh sách Products</h2>
+     <div className="d-flex align-items-center mb-3">
+        <h2 className="mb-0">Danh sách Products</h2>
+        <button className="btn btn-success ms-3">Thêm mới</button>
+      </div>
       <div className="table-responsive">
         <table className="table table-bordered table-striped">
           <thead className="table-dark">
