@@ -23,37 +23,37 @@ const Dashboard = () => {
 
         <ul className="list-unstyled mt-3">
           <li className="mb-2">
-            <NavLink to="/" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
+            <NavLink to="/admin" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
               <RiHome2Line className="me-2" />
               {isSidebarOpen && <span>Dashboard</span>}
             </NavLink>
           </li>
+            <li className="mb-2">
+              <NavLink to="/admin/categories" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
+                <RiInstanceLine className="me-2" />
+                {isSidebarOpen && <span>Danh Mục</span>}
+              </NavLink>
+            </li>
           <li className="mb-2">
-            <NavLink to="/categories" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
-              <RiInstanceLine className="me-2" />
-              {isSidebarOpen && <span>Danh Mục</span>}
-            </NavLink>
-          </li>
-          <li className="mb-2">
-            <NavLink to="/products" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
+            <NavLink to="/admin/products" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
               <RiFlashlightLine className="me-2" />
               {isSidebarOpen && <span>Sản Phẩm</span>}
             </NavLink>
           </li>
           <li className="mb-2">
-            <NavLink to="/attributes" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
+            <NavLink to="/admin/attributes" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
               <RiListSettingsLine className="me-2" />
               {isSidebarOpen && <span>Thuộc Tính</span>}
             </NavLink>
           </li>
           <li className="mb-2">
-            <NavLink to="/orders" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
+            <NavLink to="/admin/orders" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
               <RiShoppingCart2Line className="me-2" />
               {isSidebarOpen && <span>Đơn Hàng</span>}
             </NavLink>
           </li>
           <li className="mb-2">
-            <NavLink to="/users" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
+            <NavLink to="/admin/users" className={({ isActive }) => `d-flex align-items-center py-2 px-3 text-white text-decoration-none rounded ${isActive ? "bg-primary" : ""}`}>
               <RiUser3Line className="me-2" />
               {isSidebarOpen && <span>Thành Viên</span>}
             </NavLink>

@@ -1,15 +1,15 @@
 import { Route, Routes } from "react-router-dom";
-import Dashboard from "./DashBoard";
-import Categories from "./components/Categories";
-import Attributes from "./components/Attributes";
-import Orders from "./components/Orders";
-import Products from "./components/Products";
-import Users from "./components/Users";
+import Dashboard from "./Layout";
+import Categories from "./components/admin/Categories";
+import Attributes from "./components/admin/Attributes";
+import Orders from "./components/admin/Orders";
+import Products from "./components/admin/Products";
+import Users from "./components/admin/Users";
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Dashboard />}>
+      <Route path="/admin" element={<Dashboard />}>
         <Route path="categories" element={<Categories />} />
         <Route path="attributes" element={<Attributes />} />
         <Route path="orders" element={<Orders />} />
