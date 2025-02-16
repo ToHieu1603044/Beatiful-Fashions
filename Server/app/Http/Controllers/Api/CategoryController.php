@@ -9,17 +9,30 @@ use Illuminate\Http\Request;
 use App\Models\Category;
 class CategoryController extends Controller
 {
+    use ApiDataTrait;
     // Lấy danh mục theo dạng cây
-    public function index()
+    public function index(Request $request)
     {
-        $categories = Category::all();
-
-        // Định dạng lại danh mục thành dạng cây
+        $query = Category::query();
+    
+        // Lọc theo tên
+        if ($request->has('search') && $request->search) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+    
+        // Lọc theo danh mục cha (nếu parent_id là số, lọc theo danh mục cha, nếu 'all' thì lấy tất cả)
+        if ($request->has('parent_id') && $request->parent_id !== 'all') {
+            $query->where('parent_id', $request->parent_id);
+        }
+    
+        $categories = $query->get();
+    
+        // Xây dựng cây danh mục
         $tree = $this->buildCategoryTree($categories);
-
+    
         return response()->json($tree);
     }
-
+    
     // Hàm tạo cây danh mục
     private function buildCategoryTree($categories, $parentId = null)
     {
@@ -27,11 +40,13 @@ class CategoryController extends Controller
             return [
                 'id' => $category->id,
                 'name' => $category->name,
+                'slug' => $category->slug,
                 'parent_id' => $category->parent_id,
                 'children' => $this->buildCategoryTree($categories, $category->id),
             ];
         })->values();
     }
+    
 
     // Thêm danh mục mới
     public function store(Request $request)
@@ -51,9 +66,9 @@ class CategoryController extends Controller
         return response()->json(['message' => 'Danh mục đã được tạo!', 'category' => $category]);
     }
 
-    public function edit(Request $req, $id)
+    public function update(Request $req, $id)
     {
-        // Validate dữ liệu từ request
+    
         $req->validate([
             'name' => 'required|string|max:255',
             'parent_id' => 'nullable|exists:categories,id',
@@ -80,7 +95,7 @@ class CategoryController extends Controller
             'name' => $req->name,
             'slug' => \Str::slug($req->name),
             'parent_id' => $req->parent_id,
-            'image' => $image_url, // Nếu có ảnh, sẽ lưu đường dẫn ảnh
+            'image' => $image_url,
         ]);
 
         return response()->json(['message' => 'Danh mục đã được cập nhật thành công', 'data' => $category]);
@@ -96,6 +111,7 @@ class CategoryController extends Controller
         return response()->json([
             'id' => $category->id,
             'name' => $category->name,
+            'slug' => $category->slug,
             'parent_id' => $category->parent_id,
             'children' => $category->children->map(function ($child) {
                 return [
@@ -117,6 +133,10 @@ class CategoryController extends Controller
         $file->storeAs('images', $imageName, 'public');
 
         return 'images/' . $imageName;
+    }
+    public function destroy($id)
+    {
+        return $this->deleteDataById(new Category, $id, "Xoa thanh cong");
     }
 
 
