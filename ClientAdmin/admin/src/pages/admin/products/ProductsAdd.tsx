@@ -1,14 +1,10 @@
 import { useState, useEffect } from "react";
 import { TagsInput } from "react-tag-input-component";
 import axios from "axios";
-import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { updateProduct, getProductById } from "../../../services/productService";
+import { createProduct } from "../../../services/productService";
 
-export default function EditProductForm() {
-  const { id } = useParams<{ id: string }>(); // Get product ID from URL
-  const navigate = useNavigate();
-
+export default function AddProductForm() {
   const [product, setProduct] = useState({
     name: "",
     brand_id: "",
@@ -34,28 +30,14 @@ export default function EditProductForm() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Fetch existing product data and other necessary data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch brands and categories
         const brandRes = await axios.get("http://127.0.0.1:8000/api/brands");
         const categoryRes = await axios.get("http://127.0.0.1:8000/api/categories");
 
-        // Log to check if the API response is correct
-        console.log("Brand Data: ", brandRes.data);
-        console.log("Category Data: ", categoryRes.data);
-
         setBrands(brandRes.data.data || []);
         setCategories(categoryRes.data || []);
-
-        // Fetch product by ID
-        const productRes = await getProductById(id);
-        
-        // Log the product data to check if the correct data is returned
-        console.log("Product Data: ", productRes.data);
-        setProduct(productRes.data);
-
       } catch (err) {
         console.error("Lỗi khi lấy dữ liệu:", err);
         setError("Không thể lấy dữ liệu từ API. Kiểm tra lại server.");
@@ -65,7 +47,7 @@ export default function EditProductForm() {
     };
 
     fetchData();
-  }, [id]);
+  }, []);
 
   const renderCategoryTree = (categories: CategoryType[], level: number = 0): JSX.Element[] => {
     return categories.flatMap((category) => [
@@ -149,13 +131,12 @@ export default function EditProductForm() {
 
     try {
       console.log("Dữ liệu gửi lên API:", outputData); // Kiểm tra dữ liệu
-      const response = await updateProduct(id, outputData); // Use the update API
-      console.log("Sản phẩm đã cập nhật:", response.data);
-      alert("✅ Sản phẩm đã được cập nhật thành công!");
-      navigate(`/admin/products`); // Redirect after update
+      const response = await createProduct(outputData);
+      console.log("Sản phẩm đã thêm:", response.data);
+      alert("✅ Sản phẩm đã được thêm thành công!");
     } catch (error) {
-      console.error("❌ Lỗi khi cập nhật sản phẩm:", error);
-      alert("Lỗi khi cập nhật sản phẩm! Kiểm tra lại dữ liệu.");
+      console.error("❌ Lỗi khi thêm sản phẩm:", error);
+      alert("Lỗi khi thêm sản phẩm! Kiểm tra lại dữ liệu.");
     }
   };
 
@@ -164,8 +145,8 @@ export default function EditProductForm() {
 
   return (
     <div className="container mt-4 p-4 bg-light border rounded">
-      <h2>Chỉnh sửa sản phẩm</h2>
-   
+      <h2>Thêm sản phẩm</h2>
+
       <input
         className="form-control mb-2"
         placeholder="Tên sản phẩm"
@@ -255,7 +236,7 @@ export default function EditProductForm() {
       )}
 
       <button className="btn btn-danger w-100 mt-3" onClick={handleSubmit}>
-        Cập nhật sản phẩm
+        Lưu sản phẩm
       </button>
     </div>
   );
