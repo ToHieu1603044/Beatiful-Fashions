@@ -23,7 +23,7 @@ function App() {
           element: <Categories />, 
           children: [
             { path: "create", element: <CategoriesAdd /> },
-            { path: ":id/edit", element: <CategoriesEdit /> }
+            { path: ":productId/edit", element: <CategoriesEdit /> }
           ]
         },
         { 
@@ -40,7 +40,7 @@ function App() {
           element: <Products />, 
           children: [
             { path: "create", element: <ProductsAdd /> },
-            { path: "edit", element: <ProductsEdit /> }
+            { path: ":id/edit", element: <ProductsEdit /> }
           ]
         },
         { path: "users", element: <Users /> },

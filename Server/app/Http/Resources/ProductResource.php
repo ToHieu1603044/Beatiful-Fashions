@@ -17,8 +17,14 @@ class ProductResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'brand' => $this->brand->name ?? null,
-            'category' => $this->category->name ?? null,
+            'brand' => [
+                'id' => $this->brand->id,
+                'name' => $this->brand->name
+            ],
+            'category' => [
+                'id' => $this->category->id,
+                'name' => $this->category->name
+            ],
             'images' => $this->images,
             'variants' => ProductVariantResource::collection($this->skus),
         ];
