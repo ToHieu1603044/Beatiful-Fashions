@@ -30,7 +30,7 @@ const Brands = () => {
 
     const fetchBrands = async () => {
         try {
-            const response = await getBrands({ search: searchTerm });
+            const response = await getBrands({ name: searchTerm });
             console.log("Dữ liệu ---:", response.data);
             setBrands(response.data.data);
         } catch (error) {
@@ -39,7 +39,6 @@ const Brands = () => {
             setLoading(false);
         }
     };
-    console.log("AAAA" + brands)
     const handleDelete = async (id: number) => {
         if (!window.confirm("Bạn có chắc chắn muốn xóa danh mục này không?")) return;
 
@@ -91,7 +90,7 @@ const Brands = () => {
                                 <tr>
                                     <th>ID</th>
                                     <th>Tên</th>
-                                    <th>Name</th>
+                                    <th>Status</th>
                                     <th>Ngày tạo</th>
                                     <th>Ngày cập nhật</th>
                                     <th>Thao tác</th>
@@ -102,21 +101,24 @@ const Brands = () => {
                                     <tr key={brand.id}>
                                         <td>{brand.id}</td>
                                         <td>{brand.name}</td>
-                                        <td>{brand.name}</td>
+                                        <td>{brand.status ? "Đang hoạt động" : "Ngừng hoạt động"}</td>
                                         <td>{brand.created_at}</td>
                                         <td>{brand.updated_at}</td>
                                         <td>
-                                            <button className="btn btn-info" onClick={() => handleShowModal(brand)}>
-                                                Chi tiết
+                                            <button className="btn btn-warning" onClick={() => handleShowModal(brand)}>
+                                                Xem
                                             </button>
                                             <button className="btn btn-danger ms-2" onClick={() => handleDelete(brand.id)}>
                                                 Xóa
+                                            </button>
+                                            <button className="btn btn-info ms-2" onClick={() => navigate(`/admin/brands/${brand.id}/edit`)}>
+                                                Sửa
                                             </button>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
-                        
+
 
                         </table>
                     </div>

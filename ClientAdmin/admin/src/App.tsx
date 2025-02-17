@@ -11,6 +11,9 @@ import AttributesAdd from "./pages/admin/attributes/AttributesAdd";
 import AttributesEdit from "./pages/admin/attributes/AttributesEdit";
 import ProductsEdit from "./pages/admin/products/ProductsEdit";
 import ProductsAdd from "./pages/admin/products/ProductsAdd";
+import Brands from "./pages/admin/barnds/Brands";
+import BrandsAdd from "./pages/admin/barnds/BrandsAdd";
+import BrandsEdit from "./pages/admin/barnds/BrandsEdit";
 
 function App() {
   const routes = useRoutes([
@@ -23,7 +26,7 @@ function App() {
           element: <Categories />, 
           children: [
             { path: "create", element: <CategoriesAdd /> },
-            { path: ":productId/edit", element: <CategoriesEdit /> }
+            { path: ":id/edit", element: <CategoriesEdit /> }
           ]
         },
         { 
@@ -32,6 +35,14 @@ function App() {
           children: [
             { path: "create", element: <AttributesAdd /> },
             { path: "edit", element: <AttributesEdit /> }
+          ]
+        },
+        { 
+          path: "brands", 
+          element: <Brands />, 
+          children: [
+            { path: "create", element: <BrandsAdd /> },
+            { path: ":id/edit", element: <BrandsEdit /> }
           ]
         },
         { path: "orders", element: <Orders /> },
