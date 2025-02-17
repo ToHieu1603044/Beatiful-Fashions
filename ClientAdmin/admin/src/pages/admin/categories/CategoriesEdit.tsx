@@ -15,6 +15,7 @@ type CategoryType = {
 
 const CategoriesEdit = () => {
   const { id } = useParams<{ id: string }>();
+  console.log(id);
   const navigate = useNavigate();
   const [categories, setCategories] = useState<CategoryType[]>([]);
   const [name, setName] = useState("");
