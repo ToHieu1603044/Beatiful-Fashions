@@ -30,7 +30,9 @@ const Brands = () => {
 
     const fetchBrands = async () => {
         try {
+
             const response = await getBrands({ name: searchTerm });
+
             console.log("Dữ liệu ---:", response.data);
             setBrands(response.data.data);
         } catch (error) {
@@ -39,6 +41,7 @@ const Brands = () => {
             setLoading(false);
         }
     };
+
     const handleDelete = async (id: number) => {
         if (!window.confirm("Bạn có chắc chắn muốn xóa danh mục này không?")) return;
 
@@ -118,7 +121,6 @@ const Brands = () => {
                                     </tr>
                                 ))}
                             </tbody>
-
 
                         </table>
                     </div>

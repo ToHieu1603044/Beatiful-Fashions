@@ -10,7 +10,9 @@ const menuItems = [
   { to: "/admin/products", icon: <RiFlashlightLine />, label: "Sản Phẩm" },
   { to: "/admin/attributes", icon: <RiListSettingsLine />, label: "Thuộc Tính" },
   { to: "/admin/orders", icon: <RiShoppingCart2Line />, label: "Đơn Hàng" },
+
   { to: "/admin/brands", icon: <TbBrandDiscord />, label: "Brands" },
+
   { to: "/admin/users", icon: <RiUser3Line />, label: "Thành Viên" },
   { to: "/admin/settings", icon: <RiSettings2Line />, label: "Cài Đặt" },
 ];
