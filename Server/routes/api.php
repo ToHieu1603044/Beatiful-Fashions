@@ -12,7 +12,4 @@ Route::middleware(['api'])->group(function () {
 });
 
 
-Route::middleware(['api'])->group(function () {
-    Route::apiResource('brands', BrandController::class);
-    Route::apiResource('categories', CategoryController::class);
-});
+

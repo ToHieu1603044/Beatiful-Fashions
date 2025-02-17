@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Api;
 use App\Helpers\ApiResponse;
 
+
 use App\Http\Controllers\Api\Controller;
 use App\Models\Brand;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class BrandController extends Controller
 {
+
     // Lấy danh sách thương hiệu
     public function index()
     {
@@ -69,3 +72,4 @@ class BrandController extends Controller
         return response()->json(['data' => $brand], 200);
     }
 }
+
