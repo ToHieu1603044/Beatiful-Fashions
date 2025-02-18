@@ -31,7 +31,7 @@ function App() {
           element: <Attributes />, 
           children: [
             { path: "create", element: <AttributesAdd /> },
-            { path: "edit", element: <AttributesEdit /> }
+            { path: "edit/:id", element: <AttributesEdit /> }
           ]
         },
         { path: "orders", element: <Orders /> },
