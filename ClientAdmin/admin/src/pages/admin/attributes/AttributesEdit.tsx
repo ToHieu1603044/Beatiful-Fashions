@@ -7,7 +7,7 @@ const AttributesEdit = () => {
   const { id } = useParams(); // Lấy ID từ URL
   const navigate = useNavigate();
   const outletContext = useOutletContext();
-  const handleUpdate = outletContext?.handleUpdate || (() => {}); // Tránh lỗi nếu không có handleUpdate
+  const handleUpdate = outletContext?.handleUpdate || (() => {}); 
   const [attributes, setAttribute] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -20,7 +20,7 @@ const AttributesEdit = () => {
       return;
     }
 
-    axios.get(`http://localhost:3000/data/${id}`)
+    axios.get(`http://127.0.0.1:8000/api/attributes/${id}`)
       .then((response) => {
         console.log("Fetched data:", response.data);
         if (response.data) {
@@ -51,7 +51,7 @@ const AttributesEdit = () => {
         updated_at: new Date().toISOString(),
       };
 
-      await axios.put(`http://localhost:3000/data/${id}`, updatedAttribute);
+      await axios.put(`http://127.0.0.1:8000/api/attributes/${id}`, updatedAttribute);
       
       if (typeof handleUpdate === "function") {
         handleUpdate(updatedAttribute); // Gọi để cập nhật danh sách

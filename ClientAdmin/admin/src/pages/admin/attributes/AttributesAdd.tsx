@@ -7,7 +7,7 @@ const AttributesAdd = () => {
   const [attribute, setAttribute] = useState("");
   const [successMessage, setSuccessMessage] = useState(false);
   const navigate = useNavigate();
-  const { handleAdd } = useOutletContext(); // Nhận hàm cập nhật danh sách
+  const { handleAdd } = useOutletContext();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,14 +20,13 @@ const AttributesAdd = () => {
         updated_at: new Date().toISOString() 
       };
 
-      const response = await axios.post("http://localhost:3000/data", newAttribute);
+      const response = await axios.post("http://127.0.0.1:8000/api/attributes", newAttribute);
       
-      handleAdd(response.data); // Cập nhật danh sách ngay lập tức
+      handleAdd(response.data); 
 
-      setAttribute(""); // Xóa input sau khi thêm
-      setSuccessMessage(true); // Hiện thông báo
+      setAttribute("");
+      setSuccessMessage(true); 
 
-      // Chờ 1.5 giây rồi quay về trang danh sách
       setTimeout(() => {
         navigate("/admin/attributes");
       }, 1500);

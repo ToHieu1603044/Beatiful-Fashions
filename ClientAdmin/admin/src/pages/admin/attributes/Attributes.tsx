@@ -10,7 +10,7 @@ const Attributes = () => {
 
   const fetchAttributes = () => {
     axios
-      .get("http://localhost:3000/data")
+      .get("http://127.0.0.1:8000/api/attributes")
       .then((response) => setAttributes(response.data))
       .catch((error) => console.error("Error fetching attributes:", error));
   };
@@ -20,7 +20,7 @@ const Attributes = () => {
   }, []);
 
   const handleAdd = (newAttribute) => {
-    setAttributes((prev) => [...prev, newAttribute]); // Cập nhật danh sách ngay lập tức
+    setAttributes((prev) => [...prev, newAttribute]); 
   };
 
   const handleUpdate = (updatedAttribute) => {
@@ -32,7 +32,7 @@ const Attributes = () => {
   const handleDelete = (id) => {
     if (window.confirm("Bạn có chắc muốn xóa?")) {
       axios
-        .delete(`http://localhost:3000/data/${id}`)
+        .delete(`http://127.0.0.1:8000/api/attributes/${id}`)
         .then(() => setAttributes((prev) => prev.filter((attr) => attr.id !== id)))
         .catch((error) => console.error("Error deleting attribute:", error));
     }
