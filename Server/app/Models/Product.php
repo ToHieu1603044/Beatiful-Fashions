@@ -38,4 +38,7 @@ class Product extends Model
     public function setDate($value){
         $this->attributes['created_at'] = Carbon::parse($value)->timezone('Asia/Ho_Chi_Minh')->format('Y-m-d H:i:s');
     }
+    public function galleries(){
+        return $this->hasMany(Gallery::class);
+    }
 }

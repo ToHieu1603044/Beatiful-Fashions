@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Attribute extends Model
 {
     protected $fillable = [
         'name'
+    ];
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function products(){
@@ -16,5 +21,15 @@ class Attribute extends Model
     public function values(){
         return $this->hasMany(AttributeOption::class, 'attribute_id');
     }
-
+    
+    public function getCreatedAtAttribute($value)
+    {
+        return \Carbon\Carbon::parse($value)->format('Y-m-d H:i:s');  // Hoặc định dạng bạn muốn
+    }
+    
+    public function getUpdatedAtAttribute($value)
+    {
+        return \Carbon\Carbon::parse($value)->format('Y-m-d H:i:s');
+    }
+    
 }

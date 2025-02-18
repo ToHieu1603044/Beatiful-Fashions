@@ -16,7 +16,7 @@ export const createProduct = async (data: FormData) => {
   });
 };
 
-export const updateProduct = async (id: number, data: FormData) => {
+export const updateProduct = async (id: number, data: FormData ) => {
   return await axios.post(`${API_URL}/${id}?_method=PUT`, data, {
     headers: { "Content-Type": "multipart/form-data" },
   });

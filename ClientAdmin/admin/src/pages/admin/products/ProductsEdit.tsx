@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
+import { TagsInput } from "react-tag-input-component";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { useParams } from "react-router-dom";
 import { getProductById, updateProduct } from "../../../services/productService";
-import { TagsInput } from "react-tag-input-component";
+import { useParams } from "react-router-dom";
 
 export default function EditProductForm() {
   const { id } = useParams();
@@ -12,18 +12,20 @@ export default function EditProductForm() {
     brand_id: "",
     category_id: "",
     description: "",
-    image: "",
-    stock: 100,
+    image: [],
+    galleryImages: [],
     attributes: [],
     variant_values: [],
   });
 
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
+  const [attributeName, setAttributeName] = useState("");
+  const [attributeValues, setAttributeValues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [newVariant, setNewVariant] = useState({
-    attributes: [{ name: "", value: [] }], // Changed value to an array for multiple values
+    attributes: [{ name: "", value: [] }],
     price: "",
     old_price: "",
     stock: "",
@@ -32,26 +34,42 @@ export default function EditProductForm() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [brandRes, categoryRes, productRes] = await Promise.all([
-          axios.get("http://127.0.0.1:8000/api/brands"),
-          axios.get("http://127.0.0.1:8000/api/categories"),
-          getProductById(id),
-        ]);
+        const brandRes = await axios.get("http://127.0.0.1:8000/api/brands");
+        const categoryRes = await axios.get("http://127.0.0.1:8000/api/categories");
+        const productRes = await getProductById(id);
+
+        console.log("Dữ liệu sản phẩm: ", productRes.data.data); // Debug API response
 
         setBrands(brandRes.data.data || []);
         setCategories(categoryRes.data || []);
-
         const productData = productRes.data.data;
+
+        // Tạo danh sách thuộc tính từ variants
+        const extractedAttributes = [];
+        productData.variants.forEach((variant) => {
+          variant.attributes.forEach((attr) => {
+            if (!extractedAttributes.some((a) => a.name === attr.name)) {
+              extractedAttributes.push({ name: attr.name, value: attr.value });
+            }
+          });
+        });
+
         setProduct({
           id: productData.id,
-          name: productData.name || "",
+          name: productData.name,
           brand_id: productData.brand?.id || "",
           category_id: productData.category?.id || "",
           description: productData.description || "",
-          image: productData.images || "",
-          stock: productData.stock || 100,
-          attributes: productData.attributes || [],
-          variant_values: productData.variants || [],
+          images: productData.images || "",
+          image: productData.image || [],
+          attributes: extractedAttributes, // Gán danh sách thuộc tính lấy từ variants
+          variant_values: productData.variants?.map((variant) => ({
+            sku: variant.sku,
+            price: variant.price,
+            old_price: variant.old_price,
+            stock: variant.stock,
+            variant_combination: variant.attributes.map((attr) => attr.value) || [],
+          })) ?? [],
         });
       } catch (err) {
         console.error("Lỗi khi lấy dữ liệu:", err);
@@ -64,10 +82,35 @@ export default function EditProductForm() {
     fetchData();
   }, [id]);
 
+
+  const renderCategoryTree = (categories, level = 0) => {
+    return categories.flatMap((category) => [
+      <option key={category.id} value={category.id}>
+        {"—".repeat(level)} {category.name}
+      </option>,
+      ...renderCategoryTree(category.children, level + 1),
+    ]);
+  };
+
+  const addAttribute = () => {
+    if (!attributeName.trim() || attributeValues.length === 0) return;
+
+    setProduct((prev) => ({
+      ...prev,
+      attributes: [
+        ...prev.attributes,
+        { name: attributeName, value: attributeValues.join(", ") },
+      ],
+    }));
+
+    setAttributeName("");
+    setAttributeValues([]);
+  };
+
   const handleVariantChange = (index, field, value) => {
     setProduct((prev) => {
       const updatedVariants = [...prev.variant_values];
-      updatedVariants[index] = { ...updatedVariants[index], [field]: value };
+      updatedVariants[index][field] = value;
       return { ...prev, variant_values: updatedVariants };
     });
   };
@@ -77,7 +120,7 @@ export default function EditProductForm() {
     setNewVariant((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleNewVariantAttributesChange = (index, field, value) => {
+  const handleNewVariantAttributeChange = (index, field, value) => {
     const updatedAttributes = [...newVariant.attributes];
     updatedAttributes[index] = { ...updatedAttributes[index], [field]: value };
     setNewVariant((prev) => ({ ...prev, attributes: updatedAttributes }));
@@ -96,24 +139,76 @@ export default function EditProductForm() {
     });
   };
 
-  const handleSubmit = async () => {
-    try {
-      const formData = new FormData();
-      formData.append("name", product.name);
-      formData.append("brand_id", product.brand_id);
-      formData.append("category_id", product.category_id);
-      formData.append("description", product.description);
-      formData.append("image", product.image);
-      formData.append("stock", product.stock);
-      formData.append("attributes", JSON.stringify(product.attributes));
-      formData.append("variant_values", JSON.stringify(product.variant_values));
-      formData.append("_method", "PUT");
+  const generateVariants = () => {
+    if (product.attributes.length === 0) {
+      alert("Vui lòng thêm ít nhất một thuộc tính!");
+      return;
+    }
 
-      console.log("Dữ liệu gửi lên API:", Object.fromEntries(formData));
-      await updateProduct(id, formData);
-      alert("✅ Sản phẩm đã được cập nhật thành công!");
+    let combinations = [[]];
+
+    product.attributes.forEach((attr) => {
+      let temp = [];
+      combinations.forEach((combo) => {
+        attr.value.split(", ").forEach((value) => {
+          temp.push([...combo, value]);
+        });
+      });
+      combinations = temp;
+    });
+
+    const variant_values = combinations.map((comb) => ({
+      variant_combination: comb,
+      price: 0,
+      old_price: 0,
+      stock: 0,
+    }));
+
+    setProduct((prev) => ({ ...prev, variant_values }));
+  };
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setProduct((prev) => ({
+      ...prev,
+      image: file,
+    }));
+  };
+  const handleGalleryChange = (e) => {
+    const files = Array.from(e.target.files); 
+    setProduct((prev) => ({
+      ...prev,
+      galleryImages: files,
+    }));
+  };
+  const handleSubmit = async () => {
+
+    const FormData = {
+      name: product.name,
+      images: product.image,
+      image: product.galleryImages,
+      description: product.description,
+      category_id: product.category_id,
+      brand_id: product.brand_id,
+      stock: product.stock,
+      attributes: product.attributes.map((attr) => ({
+        name: attr.name,
+        value: attr.value,
+      })),
+      variant_values: product.variant_values.map((variant) => ({
+        variant_combination: variant.variant_combination,
+        price: variant.price,
+        old_price: variant.old_price,
+        stock: variant.stock,
+      })),
+    };
+
+    try {
+      console.log("Dữ liệu gửi lên API:", JSON.stringify(FormData, null, 2));
+
+      await updateProduct(id, FormData);
+      alert("Sản phẩm đã được cập nhật thành công!");
     } catch (error) {
-      console.error("❌ Lỗi khi cập nhật sản phẩm:", error);
+      console.error("Lỗi khi cập nhật sản phẩm:", error);
       alert("Lỗi khi cập nhật sản phẩm! Kiểm tra lại dữ liệu.");
     }
   };
@@ -125,12 +220,28 @@ export default function EditProductForm() {
     <div className="container mt-4 p-4 bg-light border rounded">
       <h2>Chỉnh sửa sản phẩm</h2>
 
-      {/* Form nhập liệu cho sản phẩm */}
       <input
         className="form-control mb-2"
         placeholder="Tên sản phẩm"
         value={product.name}
         onChange={(e) => setProduct({ ...product, name: e.target.value })}
+      />
+
+<label className="form-label" htmlFor="Image">Image</label>
+      <input
+        type="file"
+        className="form-control mb-2"
+        accept="image/*"
+        onChange={handleImageChange}
+      />
+
+      <label className="form-label" htmlFor="Galleries">Galleries</label>
+      <input
+        type="file"
+        className="form-control mb-2"
+        accept="image/*"
+        multiple
+        onChange={handleGalleryChange}
       />
 
       <select
@@ -152,21 +263,47 @@ export default function EditProductForm() {
         onChange={(e) => setProduct({ ...product, category_id: e.target.value })}
       >
         <option value="">-- Chọn danh mục --</option>
-        {categories.map((category) => (
-          <option key={category.id} value={category.id}>
-            {category.name}
-          </option>
-        ))}
+        {renderCategoryTree(categories)}
       </select>
 
-      {/* Hiển thị danh sách biến thể hiện có */}
+      <textarea
+        className="form-control mb-2"
+        placeholder="Mô tả sản phẩm"
+        value={product.description}
+        onChange={(e) => setProduct({ ...product, description: e.target.value })}
+      />
+
+      <h4>Thuộc tính</h4>
+      <input
+        className="form-control mb-2"
+        placeholder="Tên thuộc tính"
+        value={attributeName}
+        onChange={(e) => setAttributeName(e.target.value)}
+      />
+      <TagsInput value={attributeValues} onChange={setAttributeValues} placeHolder="Nhập giá trị và nhấn Enter" />
+      <button className="btn btn-primary mt-2" onClick={addAttribute}>
+        Thêm thuộc tính
+      </button>
+
+      <h4 className="mt-4">Danh sách thuộc tính</h4>
+      {product.attributes.length > 0 && (
+        <ul className="list-group mb-3">
+          {product.attributes.map((attr, index) => (
+            <li key={index} className="list-group-item">
+              <strong>{attr.name}:</strong> {attr.value}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <button className="btn btn-success mt-3" onClick={generateVariants}>
+        Tạo biến thể
+      </button>
+
       <h4>Danh sách biến thể</h4>
       {product.variant_values.length > 0 ? (
         product.variant_values.map((variant, index) => {
-          const variantDescription = variant.attributes
-            .map((attr) => `${attr.value} ${attr.name}`)
-            .join(" - ");
-
+          const variantDescription = variant.variant_combination.join(" - ");
           return (
             <div key={index} className="p-2 border rounded mb-2">
               <span className="badge bg-secondary me-1">{variantDescription}</span>
@@ -197,59 +334,7 @@ export default function EditProductForm() {
       ) : (
         <p className="text-muted">Sản phẩm này chưa có biến thể.</p>
       )}
-
-      {/* Thêm biến thể mới */}
-      <h4>Thêm biến thể mới</h4>
-      <div className="mb-3">
-        {newVariant.attributes.map((attr, index) => (
-          <div key={index} className="d-flex mb-2">
-            <input
-              className="form-control me-2"
-              placeholder="Tên thuộc tính (ví dụ: Màu sắc)"
-              value={attr.name}
-              onChange={(e) =>
-                handleNewVariantAttributesChange(index, "name", e.target.value)
-              }
-            />
-            <TagsInput
-              value={attr.value}
-              onChange={(newTags) => {
-                handleNewVariantAttributesChange(index, "value", newTags);
-              }}
-              name="value"
-              placeHolder="Nhập giá trị thuộc tính"
-              className="form-control"
-            />
-          </div>
-        ))}
-        <input
-          className="form-control mt-1"
-          placeholder="Giá"
-          name="price"
-          value={newVariant.price}
-          onChange={handleNewVariantChange}
-        />
-        <input
-          className="form-control mt-1"
-          placeholder="Giá cũ"
-          name="old_price"
-          value={newVariant.old_price}
-          onChange={handleNewVariantChange}
-        />
-        <input
-          className="form-control mt-1"
-          placeholder="Tồn kho"
-          name="stock"
-          value={newVariant.stock}
-          onChange={handleNewVariantChange}
-        />
-      </div>
-      <button className="btn btn-secondary" onClick={handleAddNewVariant}>
-        Thêm biến thể mới
-      </button>
-
-      {/* Submit form */}
-      <button className="btn btn-primary w-100 mt-3" onClick={handleSubmit}>
+      <button className="btn btn-danger w-100 mt-3" onClick={handleSubmit}>
         Cập nhật sản phẩm
       </button>
     </div>

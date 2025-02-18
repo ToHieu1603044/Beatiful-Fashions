@@ -55,7 +55,7 @@ const Products = () => {
 
   const handleDelete = async (id: number) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?")) return;
-
+    console.log(id);
     try {
       await deleteProduct(id);
       alert("Xóa sản phẩm thành công!");
@@ -107,8 +107,7 @@ const Products = () => {
                   <th>Thương hiệu</th>
                   <th>Danh mục</th>
                   <th>Hình ảnh</th>
-                  <th>Ngày tạo</th>
-                  <th>Ngày cập nhật</th>
+
                   <th>Hành động</th>
                 </tr>
               </thead>
@@ -126,16 +125,31 @@ const Products = () => {
                       <td>{product.brand.name}</td>
                       <td>{product.category.name}</td>
                       <td>
-                        <img
-                          src={product.images || "https://placehold.co/50x50"}
-                          alt={product.name}
-                          className="rounded"
-                          width={50}
-                          height={50}
-                        />
+                        <div className="d-flex position-relative">
+                        
+                          <img
+                            src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://placehold.co/50x50"}
+                            alt={product.name}
+                            className="rounded-circle position-relative"
+                            style={{ width: "50px", height: "50px", zIndex: 2, marginRight: "-20px" }}
+                          />
+
+                          {product.galleries?.map((galleryImage, index) => (
+                            <img
+                              key={galleryImage.id}
+                              src={`http://127.0.0.1:8000/storage/${galleryImage.image}`}
+                              alt={`Gallery image ${index + 1}`}
+                              className="rounded-circle position-relative"
+                              style={{
+                                width: "50px",
+                                height: "50px",
+                                marginLeft: index === 0 ? "0px" : "-20px", 
+                                zIndex: 1
+                              }}
+                            />
+                          ))}
+                        </div>
                       </td>
-                      <td>{product.created_at || "----"}</td>
-                      <td>{product.updated_at || "----"}</td>
                       <td>
                         <button className="btn btn-warning btn-sm me-1" onClick={() => handleShowModal(product)}>
                           Xem
@@ -177,7 +191,7 @@ const Products = () => {
                 <p>
                   <strong>Hình ảnh:</strong><br />
                   <img
-                    src={selectedProduct.images || "https://placehold.co/100x100"}
+                    src={selectedProduct.images ? `http://127.0.0.1:8000/storage/${selectedProduct.images}` : "https://placehold.co/50x50"}
                     alt={selectedProduct.name}
                     className="rounded mt-2"
                     width={100}
@@ -188,9 +202,9 @@ const Products = () => {
                 <ul>
                   {selectedProduct.variants.map((variant, index) => (
                     <li key={index}>
-                      <strong>SKU:</strong> {variant.sku} | 
-                      <strong> Giá:</strong> {variant.price.toLocaleString()} VNĐ | 
-                      <strong> Kho:</strong> {variant.stock} 
+                      <strong>SKU:</strong> {variant.sku} |
+                      <strong> Giá:</strong> {variant.price.toLocaleString()} VNĐ |
+                      <strong> Kho:</strong> {variant.stock}
                       <br />
                       <strong>Thuộc tính:</strong> {variant.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(", ")}
                     </li>
