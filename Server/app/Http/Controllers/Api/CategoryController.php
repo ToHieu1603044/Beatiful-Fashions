@@ -135,17 +135,6 @@ class CategoryController extends Controller
         return 'images/' . $imageName;
     }
 
-    public function show($id)
-    {
-        $category = Category::with('children')->find($id);
-    
-        if (!$category) {
-            return response()->json(['message' => 'Danh mục không tồn tại'], 404);
-        }
-    
-        return response()->json($category);
-    }
-
     public function destroy($id)
     {
         return $this->deleteDataById(new Category, $id, "Xoa thanh cong");

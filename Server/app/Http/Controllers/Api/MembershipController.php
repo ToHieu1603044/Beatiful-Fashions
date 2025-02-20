@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 
-class MemberController extends Controller
+class MembershipController extends Controller
 {
     //
 }
