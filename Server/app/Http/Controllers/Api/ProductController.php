@@ -19,7 +19,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $relations = ['brand', 'category', 'skus.attributeOptions', 'galleries'];
-        $filterableFields = ['name'];
+        $filterableFields = ['name','category_id','brand_id'];
 
         $dates = ['create_at'];
 
@@ -27,55 +27,57 @@ class ProductController extends Controller
     }
     public function store(ProductRequest $request)
     {
-        // dd($request->all());
         $validated = $request->validated();
-
+    
         DB::beginTransaction();
         try {
+         
             if ($request->hasFile('images')) {
-
                 $path = $request->file('images')->store('products', 'public');
                 $validated['images'] = $path;
             }
+    
             $product = Product::create([
                 'name' => $validated['name'],
                 'brand_id' => $validated['brand_id'],
                 'category_id' => $validated['category_id'],
                 'description' => $request->input('description'),
-                'images' => $validated['images'],
+                'images' => $validated['images'] ?? null,
                 'total_rating' => 0,
                 'total_sold' => 0,
             ]);
-
-            foreach ($request->file('image') as $file) {
-                $imagePath = $file->store('products/gallery', 'public');
-
-                Gallery::create([
-                    'product_id' => $product->id,
-                    'image' => $imagePath
-                ]);
-            }
-
+    
             $attributeMap = [];
             foreach ($validated['attributes'] as $attr) {
                 $attribute = Attribute::firstOrCreate(['name' => $attr['name']]);
-                $attributeOption = AttributeOption::firstOrCreate([
-                    'attribute_id' => $attribute->id,
-                    'value' => $attr['value']
-                ]);
-                $attributeMap[$attr['name']][$attr['value']] = $attributeOption->id; // -> [ "Color" => [ "Xanh" => 1, "Den" => 2 ]  ]
+    
+                foreach ($attr['values'] as $value) {
+                    $attributeOption = AttributeOption::firstOrCreate([
+                        'attribute_id' => $attribute->id,
+                        'value' => $value
+                    ]);
+                    $attributeMap[$attr['name']][$value] = $attributeOption->id;
+                }
             }
-            foreach ($validated['variant_values'] as $variant) {
+
+            foreach ($validated['variant_values'] as $variant) {   
                 $sku_values = [];
-                foreach ($variant['variant_combination'] as $option_value) {
-                    foreach ($attributeMap as $name => $values) {
+                foreach ($variant['variant_combination'] as $option_value) {  
+                    foreach ($attributeMap as $name => $values) {              
                         if (isset($values[$option_value])) {
                             $sku_values[] = $values[$option_value];
                         }
                     }
                 }
+    
                 sort($sku_values);
                 $sku = rand(100000, 999999) . "-" . $product->id . '-' . implode('-', $sku_values);
+    
+                // Kiểm tra SKU đã tồn tại chưa
+                if (ProductSku::where('sku', $sku)->exists()) {
+                    return response()->json(['error' => 'SKU đã tồn tại!'], 422);
+                }
+    
                 $productSku = ProductSku::create([
                     'product_id' => $product->id,
                     'price' => $variant['price'],
@@ -83,7 +85,7 @@ class ProductController extends Controller
                     'stock' => $variant['stock'],
                     'sku' => $sku,
                 ]);
-                //  dd($productSku);
+    
                 foreach ($sku_values as $option_id) {
                     AttributeOptionSku::create([
                         'sku_id' => $productSku->id,
@@ -91,6 +93,7 @@ class ProductController extends Controller
                     ]);
                 }
             }
+    
             DB::commit();
             return response()->json([
                 'message' => 'Sản phẩm đã được tạo thành công!',
@@ -104,6 +107,7 @@ class ProductController extends Controller
             ], 500);
         }
     }
+    
     public function show($id)
     {
         $data = Product::with([
@@ -174,7 +178,7 @@ class ProductController extends Controller
                         }
                     }
                     sort($sku_values);
-                    $sku = $product->id . '-' . implode('-', $sku_values);
+                    $sku = rand(100000, 999999) . "-" . $product->id . '-' . implode('-', $sku_values);
                     if ($existingSkus->has($sku)) {
                         $productSku = ProductSku::findOrFail($existingSkus[$sku]);
                         $productSku->update([

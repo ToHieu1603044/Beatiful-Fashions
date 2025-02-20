@@ -57,51 +57,52 @@ export default function AddProductForm() {
       ...renderCategoryTree(category.children, level + 1),
     ]);
   };
-
   const addAttribute = () => {
-    if (!attributeName.trim() || attributeValues.length === 0) return;
-
-    setProduct((prev) => ({
-      ...prev,
-      attributes: [
-        ...prev.attributes,
-        { name: attributeName, value: attributeValues.join(", ") },
-      ],
-    }));
-
-
+    if (!attributeName.trim() || !Array.isArray(attributeValues) || attributeValues.length === 0) return;
+  
+    setProduct((prev) => {
+      return {
+        ...prev,
+        attributes: [
+          ...prev.attributes,
+          { name: attributeName, values: attributeValues ?? [] }, // Đảm bảo luôn là mảng
+        ],
+      };
+    });
+  
     setAttributeName("");
-    setAttributeValues([]);
+    setAttributeValues([]); // Reset về mảng rỗng sau khi thêm
   };
-
+  
 
   const generateVariants = () => {
     if (product.attributes.length === 0) {
       alert("Vui lòng thêm ít nhất một thuộc tính!");
       return;
     }
-
+  
     let combinations = [[]];
-
+  
     product.attributes.forEach((attr) => {
       let temp = [];
-      combinations.forEach((combo) => {
-        attr.value.split(", ").forEach((value) => {
+      attr.values.forEach((value) => { // ✅ Duyệt qua `values`
+        combinations.forEach((combo) => {
           temp.push([...combo, value]);
         });
       });
       combinations = temp;
     });
-
+  
     const variant_values = combinations.map((comb) => ({
       variant_combination: comb,
       price: 0,
       old_price: 0,
       stock: 0,
     }));
-
+  
     setProduct((prev) => ({ ...prev, variant_values }));
   };
+  
 
   const handleVariantChange = (index, field, value) => {
     setProduct((prev) => {
@@ -136,7 +137,7 @@ export default function AddProductForm() {
       stock: product.stock,
       attributes: product.attributes.map((attr) => ({
         name: attr.name,
-        value: attr.value,
+        values: attr.values, 
       })),
       variant_values: product.variant_values.map((variant) => ({
         variant_combination: variant.variant_combination,
@@ -229,15 +230,14 @@ export default function AddProductForm() {
       </button>
 
       <h4 className="mt-4">Danh sách thuộc tính</h4>
-      {product.attributes.length > 0 && (
-        <ul className="list-group mb-3">
-          {product.attributes.map((attr, index) => (
-            <li key={index} className="list-group-item">
-              <strong>{attr.name}:</strong> {attr.value}
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="list-group mb-3">
+  {product.attributes.map((attr, index) => (
+    <li key={index} className="list-group-item">
+      <strong>{attr.name}:</strong> {attr.values.join(", ")}
+    </li>
+  ))}
+</ul>
+
 
       <button className="btn btn-success mt-3" onClick={generateVariants}>
         Tạo biến thể

@@ -12,18 +12,11 @@ trait ApiDataTrait
     {
         try {
             $filters = request()->query();
+
             $query = $model::with($relations);
-    
-            foreach ($filters as $field => $value) {
-                if (!empty($value) && $field !== 'search'&& $field !== 'page') { 
-                    if (\Str::startsWith($field, 'name')) {
-                        $query->where($field, 'like', "%$value%");
-                    } else {
-                        $query->where($field, $value);
-                    }
-                }
-            }
-    
+
+          
+
             if (!empty($filters['search'])) {
                 $search = trim($filters['search']);
                 $query->where(function ($q) use ($search, $filterableFields) {
@@ -32,7 +25,17 @@ trait ApiDataTrait
                     }
                 });
             }
-    
+
+            if (isset($filters['min_price']) && isset($filters['max_price'])) {
+                $query->whereHas('skus', function ($q) use ($filters) {
+                    $minPrice = (int) $filters['min_price'];
+                    $maxPrice = (int) $filters['max_price'];
+                    $q->whereBetween('price', [$minPrice, $maxPrice]);
+                });
+            }
+            
+            
+
             foreach ($dates as $date) {
                 if (isset($filters['start_date']) && isset($filters['end_date'])) {
                     $query->whereBetween($date, [$filters['start_date'], $filters['end_date']]);
@@ -42,26 +45,30 @@ trait ApiDataTrait
                     $query->where($date, '<=', $filters['to_date']);
                 }
             }
-    
+            if (isset($filters['date'])) {
+                $orderDirection = strtolower($filters['date']) === 'asc' ? 'asc' : 'desc';
+                $query->orderBy('created_at', $orderDirection);
+            }            
+
             $perPage = request()->query('per_page', 10);
-            $data = $query->paginate($perPage);
-    
+            $data = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
             if ($data->isEmpty()) {
                 return response()->json([
                     'message' => 'Không tìm thấy dữ liệu',
                     'data' => []
                 ], Response::HTTP_OK);
             }
-    
+
             return ApiResponse::responsePage($resourceClass::collection($data));
-    
+
         } catch (\Exception $e) {
-        
+
             \Log::error('Error in getAllData', ['exception' => $e->getMessage()]);
             return ApiResponse::errorResponse();
         }
     }
-    
+
     public function getDataById(Model $model, $id, $relations = [], $message = "Ket qua")
     {
         try {
