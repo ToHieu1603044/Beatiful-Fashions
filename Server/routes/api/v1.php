@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AttributeController;
 use App\Http\Controllers\Api\AttributeOptionController;
 use App\Http\Controllers\Api\BrandController;
+use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ProductController;
 use App\Models\Product;
@@ -25,4 +26,9 @@ Route::middleware(['api'])->group(function () {
     Route::apiResource('categories', CategoryController::class);
     Route::put('/categories/{id}',[CategoryController::class,'update']);
 });
+
+Route::middleware('auth')->group(function(){
+    Route::apiResource('carts',CartController::class);
+})
+
 ?>

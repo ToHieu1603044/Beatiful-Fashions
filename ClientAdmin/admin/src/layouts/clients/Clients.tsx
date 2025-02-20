@@ -1,14 +1,15 @@
+import { Outlet } from "react-router-dom";
 import Footer from "../../components/clients/Footer";
 import Header from "../../components/clients/Header";
-import Main from "../../components/clients/MainContent";
+
 
 const Clients = () => {
     return (
         <div className="d-flex flex-column min-vh-100">
             <Header />
-            <div className="flex-grow-1">
-                <Main />
-            </div>
+            <div className="mt-3 flex-grow-1">
+                    <Outlet />
+                  </div>
             <footer className="bg-dark text-light shadow-sm">
                 <Footer />
             </footer>

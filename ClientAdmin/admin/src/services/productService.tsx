@@ -2,9 +2,10 @@ import axios from "axios";
 
 const API_URL = "http://127.0.0.1:8000/api/products";
 
-export const getProducts = async (params?: { search?: string; category_id?: number }) => {
+export const getProducts = async (params?: { search?: string; category_id?: string; brand?: string; date?: string; mix_price?: number; max_price: number }) => {
   return await axios.get(API_URL, { params });
 };
+
 
 export const getProductById = async (id: number) => {
   return await axios.get(`${API_URL}/${id}`);
