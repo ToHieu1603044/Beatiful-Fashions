@@ -7,6 +7,8 @@ use App\Helpers\ApiResponse;
 use App\Traits\ApiDataTrait;
 use Illuminate\Http\Request;
 use App\Models\Category;
+use App\Models\Product;
+
 class CategoryController extends Controller
 {
     use ApiDataTrait;
@@ -152,5 +154,91 @@ class CategoryController extends Controller
 
     return response()->json(['message' => 'Danh mục đã được xoá']);
 }
+
+public function getProductsByCategory(Request $request, $id, $slug = null)
+{
+    // Kiểm tra danh mục có tồn tại không
+    $categoryQuery = Category::where('id', $id);
+    
+    if ($slug) {
+        $categoryQuery->where('slug', $slug);
+    }
+
+    $category = $categoryQuery->first();
+
+    if (!$category) {
+        return response()->json(['message' => 'Danh mục không tồn tại'], 404);
+    }
+
+    // Truy vấn sản phẩm theo danh mục
+    $query = Product::where('category_id', $id);
+
+    // Lọc theo khoảng giá từ bảng product_skus
+    if ($request->has('price_range')) {
+        $priceRange = explode('-', $request->price_range);
+        if (count($priceRange) == 2) {
+            $minPrice = (int)$priceRange[0];
+            $maxPrice = (int)$priceRange[1];
+
+            $query->whereHas('skus', function ($q) use ($minPrice, $maxPrice) {
+                $q->whereBetween('price', [$minPrice, $maxPrice]);
+            });
+        }
+    }
+
+    // Lọc theo màu sắc
+    if ($request->has('color')) {
+        $query->whereHas('skus.attributeOptions', function ($q) use ($request) {
+            $q->whereHas('attribute', function ($q2) {
+                $q2->where('name', 'color');
+            })->where('value', $request->color);
+        });
+    }
+
+    // Lọc theo kích thước
+    if ($request->has('size')) {
+        $query->whereHas('skus.attributeOptions', function ($q) use ($request) {
+            $q->whereHas('attribute', function ($q2) {
+                $q2->where('name', 'size');
+            })->where('value', $request->size);
+        });
+    }
+
+    // Sắp xếp sản phẩm theo yêu cầu
+    if ($request->has('sortby')) {
+        switch ($request->sortby) {
+            case 'price_min:asc':
+                $query->with(['skus' => function ($q) {
+                    $q->orderBy('price', 'asc');
+                }]);
+                break;
+            case 'price_max:desc':
+                $query->with(['skus' => function ($q) {
+                    $q->orderBy('price', 'desc');
+                }]);
+                break;
+            case 'newest':
+                $query->orderBy('created_at', 'desc'); // Mới nhất
+                break;
+            case 'oldest':
+                $query->orderBy('created_at', 'asc'); // Cũ nhất
+                break;
+        }
+    }
+
+    // Phân trang (10 sản phẩm mỗi trang)
+    $products = $query->paginate(10);
+
+    return response()->json([
+        'category' => [
+            'id' => $category->id,
+            'name' => $category->name,
+            'slug' => $category->slug,
+        ],
+        'products' => $products
+    ]);
+}
+
+
 
 }

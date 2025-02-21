@@ -23,6 +23,10 @@ Route::apiResource('attribute-options', AttributeOptionController::class);
 Route::middleware(['api'])->group(function () {
     Route::apiResource('brands', BrandController::class);
     Route::apiResource('categories', CategoryController::class);
+    Route::get('/products/categories/{id}/{slug?}', [CategoryController::class, 'getProductsByCategory']);
+
+
+
     Route::put('/categories/{id}',[CategoryController::class,'update']);
 });
 ?>

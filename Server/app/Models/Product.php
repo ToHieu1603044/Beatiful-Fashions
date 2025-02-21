@@ -41,4 +41,23 @@ class Product extends Model
     public function galleries(){
         return $this->hasMany(Gallery::class);
     }
+
+    public function attributes()
+    {
+        return $this->belongsToMany(Attribute::class, 'attribute_option_sku', 'attribute_id', 'attribute_option_id');
+    }
+    
+
+public function attributeOptions()
+{
+    return $this->hasManyThrough(
+        AttributeOption::class,      // Model đích
+        ProductSku::class,           // Model trung gian
+        'product_id',                // Khóa ngoại ở bảng product_skus tham chiếu products
+        'id',                        // Khóa chính bảng attribute_options
+        'id',                        // Khóa chính bảng products
+        'attribute_option_id'        // Khóa ngoại ở bảng attribute_option_sku tham chiếu attribute_options
+    );
+}
+
 }
