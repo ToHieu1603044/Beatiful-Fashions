@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AttributeOptionController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
@@ -27,8 +28,17 @@ Route::middleware(['api'])->group(function () {
     Route::put('/categories/{id}',[CategoryController::class,'update']);
 });
 
-Route::middleware('auth')->group(function(){
+Route::middleware('auth:sanctum')->group(function(){
     Route::apiResource('carts',CartController::class);
-})
+
+    Route::apiResource('orders',OrderController::class);
+    Route::get('/orders/user', [OrderController::class,'orderUser']);
+    Route::get('/orders/list-deleted', [OrderController::class,'listDeleted']);
+    Route::get('/orders/restore/{id}', [OrderController::class,'restore']);
+    Route::delete('/orders/force-delete/{id}', [OrderController::class,'forceDelete']);
+    Route::put('/orders/{id}', [OrderController::class,'updateStatus']);
+});
+
+
 
 ?>

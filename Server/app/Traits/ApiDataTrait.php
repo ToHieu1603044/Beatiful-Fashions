@@ -33,6 +33,22 @@ trait ApiDataTrait
                     $q->whereBetween('price', [$minPrice, $maxPrice]);
                 });
             }
+            if(isset($filters['price_range'])){
+                [$minPrice, $maxPrice] = explode('-', $filters['price_range']);
+                $query->whereHas('skus', function ($q) use ($minPrice, $maxPrice) {
+                    $q->whereBetween('price', [(int) $minPrice, (int) $maxPrice]);
+                });
+            }
+
+            if (isset($filters['price'])) {
+                $flagPrice = strtolower($filters['price']) === 'asc' ? 'asc' : 'desc';
+            
+                $query->addSelect([
+                    'min_price' => \DB::table('product_skus')
+                        ->selectRaw('MIN(price)')
+                        ->whereColumn('product_skus.product_id', 'products.id')
+                ])->orderBy('min_price', $flagPrice);
+            }
             
             
 
