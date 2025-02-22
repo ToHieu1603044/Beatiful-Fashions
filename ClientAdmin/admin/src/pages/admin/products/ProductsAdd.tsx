@@ -71,7 +71,7 @@ export default function AddProductForm() {
     });
   
     setAttributeName("");
-    setAttributeValues([]); // Reset về mảng rỗng sau khi thêm
+    setAttributeValues([]);
   };
   
 
@@ -85,7 +85,7 @@ export default function AddProductForm() {
   
     product.attributes.forEach((attr) => {
       let temp = [];
-      attr.values.forEach((value) => { // ✅ Duyệt qua `values`
+      attr.values.forEach((value) => { 
         combinations.forEach((combo) => {
           temp.push([...combo, value]);
         });

@@ -39,7 +39,7 @@ const ProductCategories = () => {
     fetchProducts();
   }, [date, price, priceRange, pagination.currentPage]);
   const handlePriceRangeChange = (event) => {
-    const [min, max] = event.target.value.split("-").map(Number); // Chuyển về dạng số
+    const [min, max] = event.target.value.split("-").map(Number); 
     setPriceRange({ min, max });
   };
   const handlePageChange = (page) => {

@@ -14,8 +14,8 @@ const Users = () => {
 
   const getAll = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/users");
-      setUsers(response.data);
+      const response = await axios.get("http://127.0.0.1:8000/api/users");
+      setUsers(response.data.data);
     } catch (error) {
       console.log(error);
     }
@@ -28,7 +28,7 @@ const Users = () => {
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure??")) {
       try {
-        await axios.delete(`http://localhost:3000/users/${id}`);
+        await axios.delete(`http://127.0.0.1:8000/api/users/${id}`);
         getAll();
       } catch (error) {
         console.log(error);
