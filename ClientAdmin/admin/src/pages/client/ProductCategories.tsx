@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 import { getProducts } from "../../services/productService";
+import { Link } from "react-router-dom";
 
 const ProductCategories = () => {
   const [products, setProducts] = useState([]);
@@ -200,14 +201,16 @@ const ProductCategories = () => {
                 products.map((product) => (
                   <div key={product.id} className="col-md-4 mb-4">
                     <div className="card">
+                      <Link to={`/products/${product.id}/detail`}>
                       <img
                         src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://placehold.co/50x50"}
                         className="card-img-top"
                         alt={product.name}
                         style={{ height: "250px", objectFit: "cover" }}
                       />
+                      </Link>
                       <div className="card-body">
-                        <h6 className="card-title">{product.name}</h6>
+                      <Link to={`/products/${product.id}/detail`}>{product.name}</Link>
                         <p className="text-muted">
                           Thương hiệu: {product.brand?.name} | Danh mục: {product.category?.name}
                         </p>
