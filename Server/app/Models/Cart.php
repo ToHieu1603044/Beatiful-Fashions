@@ -13,7 +13,7 @@ class Cart extends Model
         'quantity',
     ];
 
-    public function productSku(){
+    public function sku(){
         return $this->belongsTo(ProductSku::class);
     }
     public function user(){

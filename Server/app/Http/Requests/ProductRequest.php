@@ -23,22 +23,22 @@ class ProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-           'name' => [
+            'name' => [
                 'required',
                 'string',
                 'max:255',
-               
+
                 Rule::unique('products', 'name')
-                ->ignore($this->route('id')),
-        ],
+                    ->ignore($this->route('id')),
+            ],
             'brand_id' => 'required|exists:brands,id',
             'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string',
             'images' => 'nullable',
-            'image' => 'nullable|array',
             'attributes' => 'required|array',
             'attributes.*.name' => 'required|string',
-            'attributes.*.value' => 'required|string',
+            'attributes.*.values' => 'required|array|min:1',
+            'attributes.*.values.*' => 'required|string',
             'variant_values' => 'required|array',
             'variant_values.*.variant_combination' => 'required|array',
             'variant_values.*.price' => 'required|integer',
@@ -46,5 +46,5 @@ class ProductRequest extends FormRequest
             'variant_values.*.stock' => 'required|integer',
         ];
     }
-    
+
 }

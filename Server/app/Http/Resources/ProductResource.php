@@ -17,7 +17,7 @@ class ProductResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-           'created_at' => $this->created_at->format('Y-m-d H:i:s'),
+            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'brand' => [
                 'id' => $this->brand->id,
                 'name' => $this->brand->name
@@ -27,7 +27,9 @@ class ProductResource extends JsonResource
                 'name' => $this->category->name
             ],
             'images' => $this->images,
-            'galleries'=> $this->galleries,
+            'galleries' => $this->galleries,
+            'price' => $this->skus->min('price'),
+            'old_price' => $this->skus->min('old_price'),
             'variants' => ProductVariantResource::collection($this->skus),
         ];
     }
