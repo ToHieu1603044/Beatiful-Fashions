@@ -1,0 +1,8 @@
+.category-image {
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .category-hover:hover .category-image {
+    transform: scale(1.1);
+  }
+  
