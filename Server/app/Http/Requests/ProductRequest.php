@@ -35,12 +35,10 @@ class ProductRequest extends FormRequest
             'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string',
             'images' => 'nullable',
-
             'attributes' => 'required|array',
             'attributes.*.name' => 'required|string',
             'attributes.*.values' => 'required|array|min:1',
             'attributes.*.values.*' => 'required|string',
-
             'variant_values' => 'required|array',
             'variant_values.*.variant_combination' => 'required|array',
             'variant_values.*.price' => 'required|integer',

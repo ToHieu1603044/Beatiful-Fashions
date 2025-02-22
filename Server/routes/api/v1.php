@@ -28,6 +28,7 @@ Route::middleware(['api'])->group(function () {
     Route::put('/categories/{id}',[CategoryController::class,'update']);
 });
 
+Route::get('/users', [App\Http\Controllers\Api\AuthController::class,'index']);
 Route::middleware('auth:sanctum')->group(function(){
     Route::apiResource('carts',CartController::class);
 
@@ -38,7 +39,5 @@ Route::middleware('auth:sanctum')->group(function(){
     Route::delete('/orders/force-delete/{id}', [OrderController::class,'forceDelete']);
     Route::put('/orders/{id}', [OrderController::class,'updateStatus']);
 });
-
-
 
 ?>

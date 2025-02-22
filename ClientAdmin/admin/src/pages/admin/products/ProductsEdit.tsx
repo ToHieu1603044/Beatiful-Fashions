@@ -44,15 +44,20 @@ export default function EditProductForm() {
         setCategories(categoryRes.data || []);
         const productData = productRes.data.data;
 
-        // Tạo danh sách thuộc tính từ variants
         const extractedAttributes = [];
         productData.variants.forEach((variant) => {
           variant.attributes.forEach((attr) => {
-            if (!extractedAttributes.some((a) => a.name === attr.name)) {
-              extractedAttributes.push({ name: attr.name, value: attr.value });
+            let existingAttr = extractedAttributes.find((a) => a.name === attr.name);
+            if (existingAttr) {
+              if (!existingAttr.value.includes(attr.value)) {
+                existingAttr.value.push(attr.value);
+              }
+            } else {
+              extractedAttributes.push({ name: attr.name, value: [attr.value] });
             }
           });
         });
+        
 
         setProduct({
           id: productData.id,
@@ -192,8 +197,9 @@ export default function EditProductForm() {
       stock: product.stock,
       attributes: product.attributes.map((attr) => ({
         name: attr.name,
-        value: attr.value,
+        values: Array.isArray(attr.value) ? attr.value : attr.value.split(", "),
       })),
+      
       variant_values: product.variant_values.map((variant) => ({
         variant_combination: variant.variant_combination,
         price: variant.price,
@@ -290,7 +296,8 @@ export default function EditProductForm() {
         <ul className="list-group mb-3">
           {product.attributes.map((attr, index) => (
             <li key={index} className="list-group-item">
-              <strong>{attr.name}:</strong> {attr.value}
+              <strong>{attr.name}:</strong> {attr.value.join(", ")}
+
             </li>
           ))}
         </ul>

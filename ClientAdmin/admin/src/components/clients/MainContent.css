@@ -5,4 +5,7 @@
   .category-hover:hover .category-image {
     transform: scale(1.1);
   }
+  .modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.2) !important; /* Giảm độ tối */
+  }
   

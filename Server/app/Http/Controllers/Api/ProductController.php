@@ -46,6 +46,17 @@ class ProductController extends Controller
                 'total_rating' => 0,
                 'total_sold' => 0,
             ]);
+
+            if($request->hasFile('image')){
+                foreach($request->image as $file){
+                    $pathImage = $file->store('products/gallery', 'public');
+
+                    Gallery::updateOrCreate([
+                        'product_id' => $product->id,
+                        'image'=> $pathImage
+                    ]);
+                }
+            }
     
             $attributeMap = [];
             foreach ($validated['attributes'] as $attr) {
@@ -100,6 +111,7 @@ class ProductController extends Controller
                 'product' => $product->load('skus')
             ], 201);
         } catch (\Exception $e) {
+            \Log::error($e);
             DB::rollBack();
             return response()->json([
                 'error' => 'Lỗi khi tạo sản phẩm',
@@ -154,17 +166,18 @@ class ProductController extends Controller
             $attributeMap = [];
             if ($request->has('attributes')) {
                 foreach ($validated['attributes'] as $attr) {
-
                     $attribute = Attribute::firstOrCreate(['name' => $attr['name']]);
-
-                    $attributeOption = AttributeOption::firstOrCreate([
-
-                        'attribute_id' => $attribute->id,
-                        'value' => $attr['value']
-
-                    ]);
-                    $attributeMap[$attr['name']][$attr['value']] = $attributeOption->id;
+                
+                    foreach ($attr['values'] as $value) {
+                        $attributeOption = AttributeOption::firstOrCreate([
+                            'attribute_id' => $attribute->id,
+                            'value' => $value
+                        ]);
+                
+                        $attributeMap[$attr['name']][$value] = $attributeOption->id;
+                    }
                 }
+                
             }
             if ($request->has('variant_values')) {
                 $existingSkus = $product->skus->pluck('id', 'sku');
@@ -221,5 +234,4 @@ class ProductController extends Controller
     {
         return $this->deleteDataById(new Product, $id, "Xoa thanh cong");
     }
-
 }
