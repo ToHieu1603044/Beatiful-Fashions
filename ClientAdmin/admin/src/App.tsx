@@ -16,6 +16,7 @@ import BrandsAdd from "./pages/admin/barnds/BrandsAdd";
 import BrandsEdit from "./pages/admin/barnds/BrandsEdit";
 import Clients from "./layouts/clients/Clients";
 import ProductCategories from "./pages/client/ProductCategories";
+import DetailProducts from "./pages/client/DetailProducts";
 
 function App() {
   const routes = useRoutes([
@@ -64,6 +65,7 @@ function App() {
       element: <Clients />,
       children: [
         { path: "/categories", element: <ProductCategories /> },
+        { path: "products/:id/detail", element: <DetailProducts /> }
       ]
     }
   ]);
