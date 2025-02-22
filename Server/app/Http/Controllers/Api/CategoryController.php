@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Storage;
 
 use App\Helpers\ApiResponse;
 use App\Traits\ApiDataTrait;
+use App\Http\Resources\ProductResource;
+
 use Illuminate\Http\Request;
 use App\Models\Category;
 use App\Models\Product;
@@ -157,88 +159,43 @@ class CategoryController extends Controller
 
 public function getProductsByCategory(Request $request, $id, $slug = null)
 {
-    // Kiểm tra danh mục có tồn tại không
-    $categoryQuery = Category::where('id', $id);
-    
-    if ($slug) {
-        $categoryQuery->where('slug', $slug);
-    }
-
-    $category = $categoryQuery->first();
-
-    if (!$category) {
-        return response()->json(['message' => 'Danh mục không tồn tại'], 404);
-    }
-
-    // Truy vấn sản phẩm theo danh mục
-    $query = Product::where('category_id', $id);
-
-    // Lọc theo khoảng giá từ bảng product_skus
-    if ($request->has('price_range')) {
-        $priceRange = explode('-', $request->price_range);
-        if (count($priceRange) == 2) {
-            $minPrice = (int)$priceRange[0];
-            $maxPrice = (int)$priceRange[1];
-
-            $query->whereHas('skus', function ($q) use ($minPrice, $maxPrice) {
-                $q->whereBetween('price', [$minPrice, $maxPrice]);
-            });
-        }
-    }
-
-    // Lọc theo màu sắc
-    if ($request->has('color')) {
-        $query->whereHas('skus.attributeOptions', function ($q) use ($request) {
-            $q->whereHas('attribute', function ($q2) {
-                $q2->where('name', 'color');
-            })->where('value', $request->color);
+    $query = Product::with([
+        'brand',
+        'category',
+        'skus.attributeOptions.attribute',
+        'galleries'
+    ])->where('category_id', $id)
+        ->when($request->price_range, function ($q, $range) {
+            [$min, $max] = array_map('intval', explode('-', $range));
+            $q->whereHas('skus', fn($q) => $q->whereBetween('price', [$min, $max]));
+        })
+        ->when($request->color, fn($q, $color) => $q->whereHas('skus.attributeOptions', fn($q) =>
+            $q->whereHas('attribute', fn($q) => $q->where('name', 'color'))->where('value', $color)
+        ))
+        ->when($request->size, fn($q, $size) => $q->whereHas('skus.attributeOptions', fn($q) =>
+            $q->whereHas('attribute', fn($q) => $q->where('name', 'size'))->where('value', $size)
+        ))
+        ->when($request->sortby, function ($q, $sortby) {
+            $sorts = [
+                'price_min:asc' => ['price', 'asc'],
+                'price_max:desc' => ['price', 'desc'],
+                'newest' => ['created_at', 'desc'],
+                'oldest' => ['created_at', 'asc']
+            ];
+            if (isset($sorts[$sortby])) $q->orderBy(...$sorts[$sortby]);
         });
-    }
 
-    // Lọc theo kích thước
-    if ($request->has('size')) {
-        $query->whereHas('skus.attributeOptions', function ($q) use ($request) {
-            $q->whereHas('attribute', function ($q2) {
-                $q2->where('name', 'size');
-            })->where('value', $request->size);
-        });
-    }
+    $products = $query->get(); // Lấy toàn bộ sản phẩm phù hợp bộ lọc
 
-    // Sắp xếp sản phẩm theo yêu cầu
-    if ($request->has('sortby')) {
-        switch ($request->sortby) {
-            case 'price_min:asc':
-                $query->with(['skus' => function ($q) {
-                    $q->orderBy('price', 'asc');
-                }]);
-                break;
-            case 'price_max:desc':
-                $query->with(['skus' => function ($q) {
-                    $q->orderBy('price', 'desc');
-                }]);
-                break;
-            case 'newest':
-                $query->orderBy('created_at', 'desc'); // Mới nhất
-                break;
-            case 'oldest':
-                $query->orderBy('created_at', 'asc'); // Cũ nhất
-                break;
-        }
+    if ($products->isEmpty()) {
+        return response()->json(['message' => 'Không tìm thấy sản phẩm'], 404);
     }
-
-    // Phân trang (10 sản phẩm mỗi trang)
-    $products = $query->paginate(10);
 
     return response()->json([
-        'category' => [
-            'id' => $category->id,
-            'name' => $category->name,
-            'slug' => $category->slug,
-        ],
-        'products' => $products
+        'code' => 200,
+        'message' => 'success',
+        'data' => ProductResource::collection($products)
     ]);
 }
-
-
 
 }

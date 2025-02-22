@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AttributeOptionController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\AuthController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 
@@ -24,9 +25,14 @@ Route::middleware(['api'])->group(function () {
     Route::apiResource('brands', BrandController::class);
     Route::apiResource('categories', CategoryController::class);
     Route::get('/products/categories/{id}/{slug?}', [CategoryController::class, 'getProductsByCategory']);
-
-
-
     Route::put('/categories/{id}',[CategoryController::class,'update']);
+});
+
+Route::post('/login', [AuthController::class, 'login']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/profile', [AuthController::class, 'profile']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/refresh', [AuthController::class, 'refreshToken']);
 });
 ?>
