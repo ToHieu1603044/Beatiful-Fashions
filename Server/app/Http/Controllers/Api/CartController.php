@@ -5,8 +5,12 @@ use Illuminate\Support\Facades\Storage;
 
 use App\Helpers\ApiResponse;
 use App\Traits\ApiDataTrait;
+use App\Http\Resources\ProductResource;
+
 use Illuminate\Http\Request;
 use App\Models\Category;
+use App\Models\Product;
+
 class CategoryController extends Controller
 {
     use ApiDataTrait;
@@ -122,8 +126,6 @@ class CategoryController extends Controller
             }),
         ]);
     }
-
-
     private function bubbleImage($file)
     {
         // Tạo tên file ảnh duy nhất để tránh trùng lặp
@@ -137,25 +139,61 @@ class CategoryController extends Controller
 
     public function destroy($id)
     {
-        $category = Category::find($id);
-    
-        if (!$category) {
-            return response()->json(['message' => 'Danh mục không tồn tại'], 404);
-        }
-    
-        // Kiểm tra nếu danh mục có danh mục con
-        if ($category->children()->count() > 0) {
-            return response()->json(['message' => 'Không thể xoá danh mục vì có danh mục con'], 400);
-        }
-    
-        // Xóa ảnh nếu có
-        if ($category->image && Storage::exists('public/' . $category->image)) {
-            Storage::delete('public/' . $category->image);
-        }
-    
-        $category->delete();
-    
-        return response()->json(['message' => 'Danh mục đã được xoá']);
+    $category = Category::findOrFail($id);
+
+   
+    if ($category->children()->count() > 0) {
+        return response()->json(['message' => 'Không thể xoá danh mục vì có danh mục con'], 400);
     }
-    
+
+    if ($category->image && Storage::exists('public/' . $category->image)) {
+        Storage::delete('public/' . $category->image);
+    }
+
+    $category->delete();
+
+    return response()->json(['message' => 'Danh mục đã được xoá']);
+}
+
+public function getProductsByCategory(Request $request, $id, $slug = null)
+{
+    $query = Product::with([
+        'brand',
+        'category',
+        'skus.attributeOptions.attribute',
+        'galleries'
+    ])->where('category_id', $id)
+        ->when($request->price_range, function ($q, $range) {
+            [$min, $max] = array_map('intval', explode('-', $range));
+            $q->whereHas('skus', fn($q) => $q->whereBetween('price', [$min, $max]));
+        })
+        ->when($request->color, fn($q, $color) => $q->whereHas('skus.attributeOptions', fn($q) =>
+            $q->whereHas('attribute', fn($q) => $q->where('name', 'color'))->where('value', $color)
+        ))
+        ->when($request->size, fn($q, $size) => $q->whereHas('skus.attributeOptions', fn($q) =>
+            $q->whereHas('attribute', fn($q) => $q->where('name', 'size'))->where('value', $size)
+        ))
+        ->when($request->sortby, function ($q, $sortby) {
+            $sorts = [
+                'price_min:asc' => ['price', 'asc'],
+                'price_max:desc' => ['price', 'desc'],
+                'newest' => ['created_at', 'desc'],
+                'oldest' => ['created_at', 'asc']
+            ];
+            if (isset($sorts[$sortby])) $q->orderBy(...$sorts[$sortby]);
+        });
+
+    $products = $query->get(); // Lấy toàn bộ sản phẩm phù hợp bộ lọc
+
+    if ($products->isEmpty()) {
+        return response()->json(['message' => 'Không tìm thấy sản phẩm'], 404);
+    }
+
+    return response()->json([
+        'code' => 200,
+        'message' => 'success',
+        'data' => ProductResource::collection($products)
+    ]);
+}
+
 }
