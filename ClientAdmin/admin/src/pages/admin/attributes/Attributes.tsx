@@ -1,9 +1,42 @@
+import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Attributes = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isRootAttributes = location.pathname === "/admin/attributes";
+  const [attributes, setAttributes] = useState([]);
+
+  const fetchAttributes = () => {
+    axios
+      .get("http://127.0.0.1:8000/api/attributes")
+      .then((response) => setAttributes(response.data))
+      .catch((error) => console.error("Error fetching attributes:", error));
+  };
+
+  useEffect(() => {
+    fetchAttributes();
+  }, []);
+
+  const handleAdd = (newAttribute) => {
+    setAttributes((prev) => [...prev, newAttribute]); 
+  };
+
+  const handleUpdate = (updatedAttribute) => {
+    setAttributes((prev) =>
+      prev.map((attr) => (attr.id === updatedAttribute.id ? updatedAttribute : attr))
+    );
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm("Bạn có chắc muốn xóa?")) {
+      axios
+        .delete(`http://127.0.0.1:8000/api/attributes/${id}`)
+        .then(() => setAttributes((prev) => prev.filter((attr) => attr.id !== id)))
+        .catch((error) => console.error("Error deleting attribute:", error));
+    }
+  };
 
   return (
     <div className="container mt-4">
@@ -18,6 +51,7 @@ const Attributes = () => {
               Thêm mới
             </button>
           </div>
+
           <div className="table-responsive">
             <table className="table table-bordered table-striped">
               <thead className="table-dark">
@@ -30,22 +64,32 @@ const Attributes = () => {
                 </tr>
               </thead>
               <tbody>
-                {[
-                  { id: 1, name: "Màu sắc", created: "2024-01-10", updated: "2024-02-01" },
-                  { id: 2, name: "Kích thước", created: "2024-01-15", updated: "2024-02-05" },
-                  { id: 3, name: "Chất liệu", created: "2024-01-20", updated: "2024-02-10" },
-                ].map((attr) => (
+                {attributes.map((attr) => (
                   <tr key={attr.id}>
                     <td>{attr.id}</td>
                     <td>{attr.name}</td>
-                    <td>{attr.created}</td>
-                    <td>{attr.updated}</td>
+                    <td>{attr.created_at}</td>
+                    <td>{attr.updated_at}</td>
                     <td>
-                      <button className="btn btn-warning btn-sm me-1">View</button>
-                      <button className="btn btn-danger btn-sm me-1">Delete</button>
+                      <button
+                        className="btn btn-warning btn-sm me-1"
+                        onClick={() =>
+                          navigate(`/admin/attributes/view/${attr.id}`)
+                        }
+                      >
+                        View
+                      </button>
+                      <button
+                        className="btn btn-danger btn-sm me-1"
+                        onClick={() => handleDelete(attr.id)}
+                      >
+                        Delete
+                      </button>
                       <button
                         className="btn btn-primary btn-sm"
-                        onClick={() => navigate(`/admin/attributes/edit`)}
+                        onClick={() =>
+                          navigate(`/admin/attributes/edit/${attr.id}`)
+                        }
                       >
                         Edit
                       </button>
@@ -58,8 +102,8 @@ const Attributes = () => {
         </>
       )}
 
-      {/* Hiển thị route con như /admin/attributes/add hoặc /admin/attributes/edit */}
-      <Outlet />
+      {/* Truyền handleAdd và handleUpdate cho trang con */}
+      <Outlet context={{ handleAdd, handleUpdate }} />
     </div>
   );
 };

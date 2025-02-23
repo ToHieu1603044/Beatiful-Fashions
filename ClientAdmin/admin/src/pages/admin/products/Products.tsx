@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getProducts, deleteProduct } from "../../../services/productService";
+import { getCategories } from "../../../services/categoryService";
 import { AxiosError } from "axios";
+import { Slider } from "antd";
 
 type VariantType = {
   sku: string;
@@ -29,22 +31,32 @@ const Products = () => {
 
   const [products, setProducts] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
+  const [selectCategory, setSelectedCategory] = useState("");
+  const [date, setDate]  = useState("");
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(1000000);
   useEffect(() => {
     fetchProducts();
-  }, [searchTerm]);
+  }, [searchTerm, selectCategory,date, minPrice, maxPrice]);
+
+  useEffect(() => {
+    fetchCategory();
+  }, []);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response = await getProducts({ search: searchTerm });
+      const response = await getProducts({
+        search: searchTerm,
+        category_id: selectCategory ? Number(selectCategory) : undefined,
+        date: date
+      });
       console.log("Dữ liệu API:", response.data);
-
-      const productsData = Array.isArray(response.data) ? response.data : response.data.data || [];
-      setProducts(productsData);
+      setProducts(Array.isArray(response.data) ? response.data : response.data.data || []);
     } catch (error) {
       console.error("Lỗi khi lấy sản phẩm:", error);
       setProducts([]);
@@ -53,9 +65,29 @@ const Products = () => {
     }
   };
 
+  const fetchCategory = async () => {
+    setLoading(true);
+    try {
+      const res = await getCategories();
+
+      setCategories(res.data);
+    } catch (error) {
+      console.error("Lỗi khi lấy sản phẩm:", error);
+    }
+  }
+  const renderCategoryTree = (categories: CategoryType[], level: number = 0): JSX.Element[] => {
+    return categories.flatMap((category) => [
+      <option key={category.id} value={category.id}>
+        {"—".repeat(level)} {category.name}
+      </option>,
+      ...renderCategoryTree(category.children, level + 1),
+    ]);
+  };
+
+
   const handleDelete = async (id: number) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?")) return;
-
+    console.log(id);
     try {
       await deleteProduct(id);
       alert("Xóa sản phẩm thành công!");
@@ -97,7 +129,31 @@ const Products = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <label htmlFor="form-lable">Danh mục</label>
+          <select className="form-select" onChange={(e) => setSelectedCategory(e.target.value)}>
+            <option value="">Tất cả danh mục</option>
+            {renderCategoryTree(categories)}
+          </select>
+          <br />
 
+          <label htmlFor="Date" className="form-lable">Date</label>
+          <select className="form-select" name="" onChange={(e)=> setDate(e.target.value) }  id="">
+            <option value="">-------------</option>
+            <option value="desc">Desc</option>
+            <option value="asc">Asc</option>
+          </select>
+          <Slider
+                range
+                min={10}
+                max={1000}
+                step={10}
+                defaultValue={[minPrice, maxPrice]}
+                onChange={(value) => {
+                    setMinPrice(value[0]);
+                    setMaxPrice(value[1]);
+                }}
+            />
+          <br />
           <div className="table-responsive">
             <table className="table table-bordered table-striped">
               <thead className="table-dark">
@@ -107,8 +163,7 @@ const Products = () => {
                   <th>Thương hiệu</th>
                   <th>Danh mục</th>
                   <th>Hình ảnh</th>
-                  <th>Ngày tạo</th>
-                  <th>Ngày cập nhật</th>
+
                   <th>Hành động</th>
                 </tr>
               </thead>
@@ -126,16 +181,31 @@ const Products = () => {
                       <td>{product.brand.name}</td>
                       <td>{product.category.name}</td>
                       <td>
-                        <img
-                          src={product.images || "https://placehold.co/50x50"}
-                          alt={product.name}
-                          className="rounded"
-                          width={50}
-                          height={50}
-                        />
+                        <div className="d-flex position-relative">
+
+                          <img
+                            src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://placehold.co/50x50"}
+                            alt={product.name}
+                            className="rounded-circle position-relative"
+                            style={{ width: "50px", height: "50px", zIndex: 2, marginRight: "-20px" }}
+                          />
+
+                          {product.galleries?.map((galleryImage, index) => (
+                            <img
+                              key={galleryImage.id}
+                              src={`http://127.0.0.1:8000/storage/${galleryImage.image}`}
+                              alt={`Gallery image ${index + 1}`}
+                              className="rounded-circle position-relative"
+                              style={{
+                                width: "50px",
+                                height: "50px",
+                                marginLeft: index === 0 ? "0px" : "-20px",
+                                zIndex: 1
+                              }}
+                            />
+                          ))}
+                        </div>
                       </td>
-                      <td>{product.created_at || "----"}</td>
-                      <td>{product.updated_at || "----"}</td>
                       <td>
                         <button className="btn btn-warning btn-sm me-1" onClick={() => handleShowModal(product)}>
                           Xem
@@ -177,7 +247,7 @@ const Products = () => {
                 <p>
                   <strong>Hình ảnh:</strong><br />
                   <img
-                    src={selectedProduct.images || "https://placehold.co/100x100"}
+                    src={selectedProduct.images ? `http://127.0.0.1:8000/storage/${selectedProduct.images}` : "https://placehold.co/50x50"}
                     alt={selectedProduct.name}
                     className="rounded mt-2"
                     width={100}
@@ -188,9 +258,9 @@ const Products = () => {
                 <ul>
                   {selectedProduct.variants.map((variant, index) => (
                     <li key={index}>
-                      <strong>SKU:</strong> {variant.sku} | 
-                      <strong> Giá:</strong> {variant.price.toLocaleString()} VNĐ | 
-                      <strong> Kho:</strong> {variant.stock} 
+                      <strong>SKU:</strong> {variant.sku} |
+                      <strong> Giá:</strong> {variant.price.toLocaleString()} VNĐ |
+                      <strong> Kho:</strong> {variant.stock}
                       <br />
                       <strong>Thuộc tính:</strong> {variant.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(", ")}
                     </li>

@@ -22,8 +22,11 @@ class ProductSku extends Model
     public function attributeOptions(){
         return $this->belongsToMany(AttributeOption::class,'attribute_option_sku','sku_id','attribute_option_id');
     }
-    public function attributes(){
-        return $this->hasMany(AttributeOptionSku::class,'sku_id');
-    }
+    public function attributes()
+{
+    return $this->belongsToMany(Attribute::class, 'attribute_option_sku', 'sku_id', 'attribute_id')
+                ->withPivot('attribute_option_id');
+}
+
 
 }
