@@ -19,6 +19,7 @@ import ProductCategories from "./pages/client/ProductCategories";
 import DetailProducts from "./pages/client/DetailProducts";
 import CheckOut from "./pages/client/CheckOut";
 
+
 function App() {
   const routes = useRoutes([
     {
@@ -65,8 +66,8 @@ function App() {
       path: "/",
       element: <Clients />,
       children: [
-        { path: "/categories", element: <ProductCategories /> },
-        { path: "products/:id/detail", element: <DetailProducts /> }
+        { path: "/category/:id/:slug", element: <ProductCategories /> },
+        { path: "products/:id/detail", element: <DetailProducts /> },
       ]
     },
     {

@@ -1,6 +1,6 @@
 import { FaSearch, FaUser, FaShoppingCart} from 'react-icons/fa';
 import { useState, useEffect } from 'react';
-import { getCategories } from "../../services/categoryService";
+import { getCategories } from "../../services/homeService";
 import { Category } from '../../interfaces/Categories';
 
 

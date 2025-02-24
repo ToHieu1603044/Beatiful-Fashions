@@ -1,28 +1,29 @@
 
 import React, { useEffect, useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
-import { getProducts } from "../../services/productService";
-import { Link } from "react-router-dom";
+import { getProductByCategory } from "../../services/homeService";
+import { Link, useParams } from "react-router-dom";
 
 const ProductCategories = () => {
+  const { id } = useParams<{ id: number }>();
+  console.log(id);
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [selectedAttributes, setSelectedAttributes] = useState({});
   const [availableOptions, setAvailableOptions] = useState({});
-  const [date, setDate] = useState("");
+  const [sortBy, setSortBy] = useState("");
   const [price, setPrice] = useState("");
-  const [priceRange, setPriceRange] = useState({ min: null, max: null });
+  const [priceRange, setPriceRange] = useState("");
   const [pagination, setPagination] = useState({ currentPage: 1, lastPage: 1, totalItems: 0 });
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await getProducts({
-          date: date,
+        const response = await getProductByCategory(id, {
+          sortby: sortBy,
           price: price,
-          min_price: priceRange.min,
-          max_price: priceRange.max,
+          price_range: priceRange,
           page: pagination.currentPage,
         });
         setProducts(response.data.data);
@@ -37,11 +38,12 @@ const ProductCategories = () => {
       }
     };
     fetchProducts();
-  }, [date, price, priceRange, pagination.currentPage]);
+  }, [sortBy, price, priceRange, pagination.currentPage]);
   const handlePriceRangeChange = (event) => {
-    const [min, max] = event.target.value.split("-").map(Number); 
-    setPriceRange({ min, max });
+    setPriceRange(event.target.value);
   };
+
+  console.log(priceRange);
   const handlePageChange = (page) => {
     if (page >= 1 && page <= pagination.lastPage) {
       setPagination((prev) => ({ ...prev, currentPage: page }));
@@ -108,27 +110,21 @@ const ProductCategories = () => {
               <h5 className="mb-3">Bộ lọc</h5>
 
               {/* Select sắp xếp bên trên phải */}
-              <Form.Select
-                className="mb-3"
-                aria-label="Sắp xếp theo"
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value.startsWith("date_")) {
-                    setDate(value.replace("date_", ""));
-                    setPrice("");
-                  } else if (value.startsWith("price_")) {
-                    setPrice(value.replace("price_", ""));
-                    setDate("");
-                  }
-                }}
-              >
+              <Form.Select onChange={(e) => {
+                const value = e.target.value;
+                if (value === "asc" || value === "desc") {
+                  setPrice(value); 
+                } else {
+                  setSortBy(value); 
+                }
+              }}>
                 <option value="">Chọn bộ lọc</option>
-                <option value="date_desc">Ngày mới nhất</option>
-                <option value="date_asc">Ngày cũ nhất</option>
-                <option value="price_desc">Giá cao đến thấp</option>
-                <option value="price_asc">Giá thấp đến cao</option>
+                <option value="newest">Ngày mới nhất</option>
+                <option value="oldest">Ngày cũ nhất</option>
+                <option value="asc">Giá thấp đến cao</option>
+                <option value="desc">Giá cao đến thấp</option>
               </Form.Select>
-
+              
               {/* Bộ lọc giá */}
               <h6 className="mb-2">Khoảng giá</h6>
               <Form>
@@ -138,7 +134,7 @@ const ProductCategories = () => {
                   id="price-100k-200k"
                   value="100000-200000"
                   label="100K - 200K"
-                  onChange={handlePriceRangeChange}
+                  onChange={(e) => handlePriceRangeChange(e)}
                 />
                 <Form.Check
                   type="radio"
@@ -146,7 +142,7 @@ const ProductCategories = () => {
                   id="price-200k-400k"
                   value="200000-400000"
                   label="200K - 400K"
-                  onChange={handlePriceRangeChange}
+                  onChange={(e) => handlePriceRangeChange(e)}
                 />
                 <Form.Check
                   type="radio"
@@ -154,7 +150,7 @@ const ProductCategories = () => {
                   id="price-400k-1000k"
                   value="400000-1000000"
                   label="400K - 1M"
-                  onChange={handlePriceRangeChange}
+                  onChange={(e) => handlePriceRangeChange(e)}
                 />
               </Form>
 
@@ -175,26 +171,26 @@ const ProductCategories = () => {
 
           {/* Danh sách sản phẩm bên phải */}
           <div className="col-md-9">
-          <Form.Select
-                className="mb-3 "
-                aria-label="Sắp xếp theo"
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value.startsWith("date_")) {
-                    setDate(value.replace("date_", ""));
-                    setPrice("");
-                  } else if (value.startsWith("price_")) {
-                    setPrice(value.replace("price_", ""));
-                    setDate("");
-                  }
-                }}
-              >
-                <option value="">Chọn bộ lọc</option>
-                <option value="date_desc">Ngày mới nhất</option>
-                <option value="date_asc">Ngày cũ nhất</option>
-                <option value="price_desc">Giá cao đến thấp</option>
-                <option value="price_asc">Giá thấp đến cao</option>
-              </Form.Select>
+            <Form.Select
+              className="mb-3 "
+              aria-label="Sắp xếp theo"
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.startsWith("date_")) {
+                  setDate(value.replace("date_", ""));
+                  setPrice("");
+                } else if (value.startsWith("price_")) {
+                  setPrice(value.replace("price_", ""));
+                  setDate("");
+                }
+              }}
+            >
+              <option value="">Chọn bộ lọc</option>
+              <option value="date_desc">Ngày mới nhất</option>
+              <option value="date_asc">Ngày cũ nhất</option>
+              <option value="price_desc">Giá cao đến thấp</option>
+              <option value="price_asc">Giá thấp đến cao</option>
+            </Form.Select>
 
             <div className="row mt-3">
               {products.length > 0 ? (
@@ -202,15 +198,15 @@ const ProductCategories = () => {
                   <div key={product.id} className="col-md-4 mb-4">
                     <div className="card">
                       <Link to={`/products/${product.id}/detail`}>
-                      <img
-                        src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://placehold.co/50x50"}
-                        className="card-img-top"
-                        alt={product.name}
-                        style={{ height: "250px", objectFit: "cover" }}
-                      />
+                        <img
+                          src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://placehold.co/50x50"}
+                          className="card-img-top"
+                          alt={product.name}
+                          style={{ height: "250px", objectFit: "cover" }}
+                        />
                       </Link>
                       <div className="card-body">
-                      <Link to={`/products/${product.id}/detail`}>{product.name}</Link>
+                        <Link to={`/products/${product.id}/detail`}>{product.name}</Link>
                         <p className="text-muted">
                           Thương hiệu: {product.brand?.name} | Danh mục: {product.category?.name}
                         </p>

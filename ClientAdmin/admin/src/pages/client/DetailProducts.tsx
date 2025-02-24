@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { getProductById } from "../../services/productService";
+import { getProductById } from "../../services/homeService";
 import { useParams } from "react-router-dom";
 
 const DetailProducts: React.FC = () => {
@@ -12,6 +12,7 @@ const DetailProducts: React.FC = () => {
     const [errorMessage, setErrorMessage] = useState<string>("");
     const [mainImage, setMainImage] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>("description");
+    const [popularProducts, setPopularProducts] = useState([]);
 
     useEffect(() => {
         fetchProduct();
@@ -21,8 +22,12 @@ const DetailProducts: React.FC = () => {
         setLoading(true);
         try {
             const response = await getProductById(id);
-            const productData = response.data.data;
+            const productData = response.data.data.data;
+            const popular = response.data.data.popularProducts;
+            console.log("Dữ liệu sản phẩm: ", productData);
             setProduct(productData);
+            setPopularProducts(popular);
+            
             setMainImage(`http://127.0.0.1:8000/storage/${productData.images}`);
 
             if (productData.variants?.length > 0) {

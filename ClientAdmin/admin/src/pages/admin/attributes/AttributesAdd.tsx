@@ -3,6 +3,8 @@ import { TextField, Button, Box, Typography, Snackbar, Alert } from "@mui/materi
 import { useNavigate, useOutletContext } from "react-router-dom";
 import axios from "axios";
 
+
+const getAuthToken = () => localStorage.getItem("access_token");
 const AttributesAdd = () => {
   const [attribute, setAttribute] = useState("");
   const [successMessage, setSuccessMessage] = useState(false);
@@ -19,8 +21,10 @@ const AttributesAdd = () => {
         created_at: new Date().toISOString(), 
         updated_at: new Date().toISOString() 
       };
-
-      const response = await axios.post("http://127.0.0.1:8000/api/attributes", newAttribute);
+      const token = getAuthToken();
+      const response = await axios.post("http://127.0.0.1:8000/api/attributes", newAttribute,{
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       
       handleAdd(response.data); 
 

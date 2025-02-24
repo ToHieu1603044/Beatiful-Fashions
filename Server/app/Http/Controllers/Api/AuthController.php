@@ -54,6 +54,40 @@ class AuthController extends Controller
         ]);
     }
 
+    
+    public function register(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|string|email|unique:users',
+            'password' => 'required|string|min:6',
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+        ]);
+
+        // Gán quyền mặc định là 'user'
+        $user->assignRole('user');
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => $user
+        ]);
+
+    }
+
+    public function profile(Request $request)
+    {
+        return response()->json($request->user());
+    }
+
+
     // Đăng xuất
     public function logout(Request $request)
     {

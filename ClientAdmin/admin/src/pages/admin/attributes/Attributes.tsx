@@ -2,44 +2,70 @@ import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
+// Lấy token từ localStorage
+const getAuthToken = () => localStorage.getItem("access_token");
+
 const Attributes = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isRootAttributes = location.pathname === "/admin/attributes";
-  const [attributes, setAttributes] = useState([]);
+  const [attributes, setAttributes] = useState<any[]>([]); // Loại any có thể thay đổi theo cấu trúc dữ liệu thực tế
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchAttributes = () => {
+    const token = getAuthToken();
     axios
-      .get("http://127.0.0.1:8000/api/attributes")
-      .then((response) => setAttributes(response.data))
-      .catch((error) => console.error("Error fetching attributes:", error));
+      .get("http://127.0.0.1:8000/api/attributes", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      .then((response) => {
+        setAttributes(response.data);
+        setError(null);
+      })
+      .catch((error) => {
+        setError("Lỗi khi tải dữ liệu: " + error.message);
+        console.error("Error fetching attributes:", error);
+      })
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     fetchAttributes();
   }, []);
 
-  const handleAdd = (newAttribute) => {
+  const handleAdd = (newAttribute: any) => {
     setAttributes((prev) => [...prev, newAttribute]); 
   };
 
-  const handleUpdate = (updatedAttribute) => {
+  const handleUpdate = (updatedAttribute: any) => {
     setAttributes((prev) =>
-      prev.map((attr) => (attr.id === updatedAttribute.id ? updatedAttribute : attr))
+      prev.map((attr) =>
+        attr.id === updatedAttribute.id ? updatedAttribute : attr
+      )
     );
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (id: number) => {
     if (window.confirm("Bạn có chắc muốn xóa?")) {
+      const token = getAuthToken();
       axios
-        .delete(`http://127.0.0.1:8000/api/attributes/${id}`)
-        .then(() => setAttributes((prev) => prev.filter((attr) => attr.id !== id)))
+        .delete(`http://127.0.0.1:8000/api/attributes/${id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        .then(() =>
+          setAttributes((prev) => prev.filter((attr) => attr.id !== id))
+        )
         .catch((error) => console.error("Error deleting attribute:", error));
     }
   };
 
   return (
     <div className="container mt-4">
+      {loading && <p>Đang tải dữ liệu...</p>}
+
+      {error && <div className="alert alert-danger">{error}</div>}
+
       {isRootAttributes && (
         <>
           <div className="d-flex align-items-center mb-3">
