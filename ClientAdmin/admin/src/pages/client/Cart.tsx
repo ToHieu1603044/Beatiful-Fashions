@@ -3,41 +3,57 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 const products = [
     {
-        id: 1,
-        name: "Quần TB Striped Arm Band Black Trouser cx2",
-        img: "https://bizweb.dktcdn.net/thumb/medium/100/347/891/products/781-jpeg.jpg?v=1640953694857",
-        size: 28,
-        price: "428.000.000đ",
-    },
-    {
         id: 2,
-        name: "Quần TB Striped Arm Band Black Trouser cx2",
-        img: "https://bizweb.dktcdn.net/thumb/medium/100/347/891/products/339-jpeg-0c77b62b-9d0e-413d-b881-354bcf04b0d2.jpg?v=1660228599470",
-        size: 28,
-        price: "428.000đ",
+        product: {
+            id: 82,
+            name: "Quần TB Striped Arm Band Black Trouser cx2",
+            brand_id: 1,
+            category_id: 5,
+            total_rating: 0,
+            total_sold: 0,
+            images: "https://bizweb.dktcdn.net/thumb/medium/100/347/891/products/781-jpeg.jpg?v=1640953694857",
+            created_at: "2025-02-22T15:26:56.000000Z",
+            updated_at: "2025-02-22T15:26:56.000000Z",
+        },
+        sku_id: 167,
+        quantity: 3,
+        price: 78,
+        attributes: [
+            {
+                attribute: "Size",
+                value: "S",
+            },
+        ],
     },
     {
         id: 3,
-        name: "Quần TB Striped Arm Band Black Trouser cx2",
-        img: "https://bizweb.dktcdn.net/thumb/medium/100/347/891/products/781-jpeg.jpg?v=1640953694857",
-        size: 28,
-        price: "428.000đ",
-    },
-    {
-        id: 4,
-        name: "Quần TB Striped Arm Band Black Trouser cx2",
-        img: "https://bizweb.dktcdn.net/thumb/medium/100/347/891/products/781-jpeg.jpg?v=1640953694857",
-        size: 28,
-        price: "428.000đ",
+        product: {
+            id: 80,
+            name: "Previous Next Áo Lak Studios Plaid Bleached Checked Flannel Shirt cs7",
+            brand_id: 1,
+            category_id: 11,
+            total_rating: 0,
+            total_sold: 0,
+            images: "https://bizweb.dktcdn.net/thumb/medium/100/347/891/products/339-jpeg-0c77b62b-9d0e-413d-b881-354bcf04b0d2.jpg?v=1660228599470",
+            created_at: "2025-02-22T15:12:06.000000Z",
+            updated_at: "2025-02-22T15:12:06.000000Z",
+        },
+        sku_id: 163,
+        quantity: 4,
+        price: 57,
+        attributes: [
+            {
+                attribute: "Size",
+                value: "L",
+            },
+            {
+                attribute: "Color",
+                value: "Blue",
+            },
+        ],
     },
 ];
-interface Product {
-    id: number;
-    name: string;
-    img: string;
-    size: number;
-    price: string;
-}
+
 const Cart = () => {
     const [quantity, setQuantity] = useState(1);
 
@@ -50,9 +66,10 @@ const Cart = () => {
     const handleIncrease = () => {
         setQuantity(quantity + 1);
     };
+    console.log(products.map((item) => item.attributes));
+
     return (
         <>
-          
             <div className="w-100 " style={{ marginBottom: "50px" }}>
                 {/* nav cart */}
                 <div className="" style={{ backgroundColor: "#efefef" }}>
@@ -127,17 +144,18 @@ const Cart = () => {
                             </div>
                             {/* body table cart */}
                             <div className="">
-                                {products.map((item: Product) => (
+                                {products.map((item: any) => (
                                     <div className="" key={item.id}>
                                         <div
-                                            className="d-flex"
+                                            className="d-flex "
                                             style={{
                                                 borderBottom: "1px solid #ccc",
+                                                position: "relative",
                                             }}
                                         >
                                             {/* ảnh vs tên sản phẩm  */}
                                             <img
-                                                src={`${item.img}`}
+                                                src={`${item.product.images}`}
                                                 alt=""
                                                 style={{
                                                     width: "190px",
@@ -152,13 +170,22 @@ const Cart = () => {
                                                     marginLeft: "-20px",
                                                     marginTop: "40px",
                                                     fontSize: "15px",
+                                                    position: "absolute",
+                                                    left: "30%",
                                                 }}
                                             >
-                                                <p>{item.name}</p>
+                                                <p>{item.product.name}</p>
                                                 <p className="mt-2">
-                                                    {item.size}
+                                                    {item.attributes.map(
+                                                        (attr: any) => (
+                                                            <p key={attr.id}>
+                                                                {attr.attribute}
+                                                                : {attr.value}
+                                                            </p>
+                                                        )
+                                                    )}
                                                 </p>
-                                                <p>{item.price}</p>
+                                                <p>{item.product.price}</p>
                                             </div>
                                             {/* nút tăng giảm số lượng */}
                                             <div
@@ -171,6 +198,7 @@ const Cart = () => {
                                                     border: "1px solid #ccc",
                                                     borderRadius: "30px",
                                                     marginTop: "100px",
+                                                    marginLeft: "270px",
                                                 }}
                                             >
                                                 <button
@@ -226,13 +254,14 @@ const Cart = () => {
                                                     // backgroundColor: "red",
                                                 }}
                                             >
-                                                <p>{item.price}</p>
+                                                <p>1.400.000đ</p>
                                             </div>
                                             {/* Action :xóa */}
                                             <div
                                                 className=""
                                                 style={{
                                                     margin: "110px 0px 0px 10px",
+                                                    cursor: "pointer",
                                                 }}
                                             >
                                                 <i className="fa-solid fa-trash-can"></i>
