@@ -10,27 +10,7 @@
    
 class AuthController extends Controller
 {
-    // Đăng ký tài khoản
-    public function register(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6|confirmed',
-        ]);
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        return response()->json([
-            'message' => 'Đăng ký thành công!',
-            'user' => $user,
-        ], 201);
-    }
-
+  
     // Đăng nhập
     public function login(Request $request)
     {
@@ -51,6 +31,7 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => $user,
+            'role' => $user->getRoleNames()
         ]);
     }
 
@@ -82,7 +63,7 @@ class AuthController extends Controller
 
     }
 
-    public function profile(Request $request)
+    public function profile(Request $request) 
     {
         return response()->json($request->user());
     }

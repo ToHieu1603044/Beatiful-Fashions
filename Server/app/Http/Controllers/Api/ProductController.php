@@ -151,10 +151,9 @@ class ProductController extends Controller
                         ->limit(4)
                         ->get();
     
-        // Return the response as a data array
         $product = [
             'data' => new ProductResource($data),
-            'popular' => ProductResource::collection($popular) // Make sure to use the collection resource here
+            'popular' => ProductResource::collection($popular)
         ];
     
         return ApiResponse::responseObject($product);

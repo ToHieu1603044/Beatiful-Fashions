@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Helpers\ApiResponse;
+use App\Http\Resources\CartResource;
 use App\Models\Cart;
 use App\Models\ProductSku;
 use Auth;
@@ -13,40 +14,43 @@ class CartController
 
     public function index(Request $request)
     {
-        // Auth::loginUsingId(2); // 2 là ID của user bạn muốn test
-        // // nếu muốn test thì phải login user trước
-
-        $user = Auth::user();
-
-        // $session_id = ses
-        // sion()->getId();
-        $session_id = session()->getId(); // Sửa lỗi session_id
         try {
-            if (!$user) {
-                return response()->json([
-                    'message' => "Bạn chưa đăng nhập",
-                    'data' => []
-                ], 401);
+            $user = Auth::user();
+            $session_id = session()->getId(); // Sử dụng session ID cho khách
+    
+            // Bắt đầu truy vấn cart với eager loading
+            $cartQuery = Cart::with(['sku.product', 'attributeOptions.attribute']);
+    
+            // Nếu người dùng đã đăng nhập, lọc theo user_id, nếu không thì theo session_id
+            if ($user) {
+                $cartQuery->where('user_id', $user->id);
+            } else {
+                $cartQuery->where('session_id', $session_id);
             }
-            $cart = Cart::with(['sku.product'])
-                ->where(function ($query) use ($user, $session_id) {
-                    if ($user) {
-                        $query->where('user_id', $user->id);
-                    } else {
-                        $query->where('session_id', $session_id);
-                    }
-                })->get();
-
-            return ApiResponse::responseObject($cart);
-        } catch (\Exception $exception) {
-
-            \Log::error("Lỗi khi lấy danh sách giỏ hàng:", $exception->getMessage());
-            return ApiResponse::errorResponse(500, $exception->getMessage());
+    
+            // Lấy danh sách cart
+            $cart = $cartQuery->get();
+    
+            // Kiểm tra xem giỏ hàng có trống không
+            if ($cart->isEmpty()) {
+                return response()->json([
+                    'message' => 'Giỏ hàng của bạn hiện tại trống.',
+                    'data' => []
+                ], 200);
+            }
+    
+            // Trả về các item trong giỏ dưới dạng CartResource collection
+            return  CartResource::collection($cart);
+            
+        } catch (\Exception $e) {
+            // Xử lý lỗi nếu có
+            return response()->json([
+                'message' => 'Có lỗi xảy ra, vui lòng thử lại sau.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
-
-
-
+    
     public function store(Request $request)
     {
         $request->validate([
