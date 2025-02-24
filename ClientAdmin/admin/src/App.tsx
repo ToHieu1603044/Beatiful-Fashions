@@ -18,6 +18,9 @@ import Clients from "./layouts/clients/Clients";
 import ProductCategories from "./pages/client/ProductCategories";
 import DetailProducts from "./pages/client/DetailProducts";
 import CheckOut from "./pages/client/CheckOut";
+import Login from "./pages/client/Login";
+import Register from "./pages/client/Register";
+import Account from "./pages/client/Account";
 
 import Cart from "./pages/client/Cart";
 
@@ -73,16 +76,23 @@ function App() {
         { path: "products/:id/detail", element: <DetailProducts /> },
 
         {
+          path: "/login",
+          element: <Login />,
+        },
+        { path: "/register", element: <Register /> },
+        { path: "/account", element: <Account /> },
+      ]
+        {
           path: "/cart",
           element: <Cart />,
         },
       ],
-
     },
     {
       path: "/checkout",
       element: <CheckOut />,
     },
+
   ]);
 
   return routes;

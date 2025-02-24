@@ -93,7 +93,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
     Route::apiResource('attributes', AttributeController::class);
     Route::apiResource('attribute-options', AttributeOptionController::class);
-    
+
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
 
 });
