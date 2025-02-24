@@ -12,7 +12,7 @@ use App\Http\Controllers\Api\RolePermissionController;
 
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
+
 
 
 Route::get('/', function () {

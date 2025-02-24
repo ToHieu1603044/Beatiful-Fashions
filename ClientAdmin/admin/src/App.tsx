@@ -18,7 +18,9 @@ import Clients from "./layouts/clients/Clients";
 import ProductCategories from "./pages/client/ProductCategories";
 import DetailProducts from "./pages/client/DetailProducts";
 import CheckOut from "./pages/client/CheckOut";
+
 import Cart from "./pages/client/Cart";
+
 
 function App() {
   const routes = useRoutes([
@@ -69,11 +71,13 @@ function App() {
       children: [
         { path: "/category/:id/:slug", element: <ProductCategories /> },
         { path: "products/:id/detail", element: <DetailProducts /> },
+
         {
           path: "/cart",
           element: <Cart />,
         },
       ],
+
     },
     {
       path: "/checkout",

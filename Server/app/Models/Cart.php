@@ -14,10 +14,13 @@ class Cart extends Model
     ];
 
     public function sku(){
-        return $this->belongsTo(ProductSku::class);
+        return $this->belongsTo(ProductSku::class,'sku_id','id');
     }
     public function attributeOptions(){
         return $this->belongsToMany(AttributeOption::class,'attribute_option_sku','sku_id','attribute_option_id');
+    }
+    public function attribute(){
+        return $this->belongsToMany(Attribute::class,'attribute_option_sku','sku_id','attribute_id');
     }
 
     public function user(){
