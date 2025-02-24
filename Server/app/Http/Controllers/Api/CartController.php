@@ -1,199 +1,164 @@
 <?php
 
 namespace App\Http\Controllers\Api;
-use Illuminate\Support\Facades\Storage;
 
 use App\Helpers\ApiResponse;
-use App\Traits\ApiDataTrait;
-use App\Http\Resources\ProductResource;
-
+use App\Models\Cart;
+use App\Models\ProductSku;
+use Auth;
 use Illuminate\Http\Request;
-use App\Models\Category;
-use App\Models\Product;
 
-class CategoryController extends Controller
+class CartController
 {
-    use ApiDataTrait;
-    // Lấy danh mục theo dạng cây
+
     public function index(Request $request)
     {
-        $query = Category::query();
-    
-        // Lọc theo tên
-        if ($request->has('search') && $request->search) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-    
-        // Lọc theo danh mục cha (nếu parent_id là số, lọc theo danh mục cha, nếu 'all' thì lấy tất cả)
-        if ($request->has('parent_id') && $request->parent_id !== 'all') {
-            $query->where('parent_id', $request->parent_id);
-        }
-    
-        $categories = $query->get();
-    
-        // Xây dựng cây danh mục
-        $tree = $this->buildCategoryTree($categories);
-    
-        return response()->json($tree);
-    }
-    
-    // Hàm tạo cây danh mục
-    private function buildCategoryTree($categories, $parentId = null)
-    {
-        return $categories->where('parent_id', $parentId)->map(function ($category) use ($categories) {
-            return [
-                'id' => $category->id,
-                'name' => $category->name,
-                'slug' => $category->slug,
-                'parent_id' => $category->parent_id,
-                'children' => $this->buildCategoryTree($categories, $category->id),
-            ];
-        })->values();
-    }
-    
+        // Auth::loginUsingId(2); // 2 là ID của user bạn muốn test
+        // // nếu muốn test thì phải login user trước
 
-    // Thêm danh mục mới
+        $user = Auth::user();
+
+        // $session_id = ses
+        // sion()->getId();
+        $session_id = session()->getId(); // Sửa lỗi session_id
+        try {
+            if (!$user) {
+                return response()->json([
+                    'message' => "Bạn chưa đăng nhập",
+                    'data' => []
+                ], 401);
+            }
+            $cart = Cart::with(['sku.product'])
+                ->where(function ($query) use ($user, $session_id) {
+                    if ($user) {
+                        $query->where('user_id', $user->id);
+                    } else {
+                        $query->where('session_id', $session_id);
+                    }
+                })->get();
+
+            return ApiResponse::responseObject($cart);
+        } catch (\Exception $exception) {
+
+            \Log::error("Lỗi khi lấy danh sách giỏ hàng:", $exception->getMessage());
+            return ApiResponse::errorResponse(500, $exception->getMessage());
+        }
+    }
+
+
+
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'parent_id' => 'nullable|exists:categories,id',
+            'sku_id' => 'required|exists:product_skus,id',
+            'quantity' => 'required|integer|min:1'
         ]);
 
-        $category = Category::create([
-            'name' => $request->name,
-            'slug' => \Str::slug($request->name),
-            'image' => null, // Nếu có upload ảnh thì xử lý thêm ở đây
-            'parent_id' => $request->parent_id,
-        ]);
+        try {
+            // Auth::loginUsingId(2); // 2 là ID của user bạn muốn test
+            // nếu muốn test thì phải login user trước
+            $user = Auth::user();
+            $session_id = session()->getId();
+    
+            $sku = ProductSku::findOrFail($request->sku_id);
+    
+            if ($sku->stock < $request->quantity) {
+                return response()->json([
+                    'message' => "Số lượng khó hợp lệ",
+                    'data' => []
+                ], 200);
+            }
+            $cart = Cart::updateOrCreate([
+                'sku_id' => $request->sku_id,
+                'session_id' => $session_id ? $session_id : null,
+                'user_id' => $user ? $user->id : null,
+    
+            ], [
+                'quantity' => $request->quantity
+            ]);
 
-        return response()->json(['message' => 'Danh mục đã được tạo!', 'category' => $category]);
+        return ApiResponse::responseSuccess($cart,200,'Thêm giỏ hàng thành công');
+        } catch (\Throwable $th) {
+            \Log::error("Lỗi giỏ hàng:", $th->getMessage());
+
+            return ApiResponse::errorResponse(500, $th->getMessage());
+        }
     }
 
-    public function update(Request $req, $id)
+    public function update(Request $request, string $id)
     {
-    
-        $req->validate([
-            'name' => 'required|string|max:255',
-            'parent_id' => 'nullable|exists:categories,id',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Kiểm tra ảnh hợp lệ
+        $request->validate([
+            'quantity' => 'required|integer|min:1'
         ]);
 
-        // Tìm danh mục theo id
-        $category = Category::findOrFail($id);
+        $cart = Cart::findOrFail($id);
+        if(!$cart){
+            return response()->json([
+                'message' => 'Không tìm thấy sản phẩm '
+            ],200);
+        }
 
-        // Xử lý hình ảnh nếu có
-        $image_url = null;
-        if ($req->hasFile('image')) {
-            // Xóa ảnh cũ nếu có
-            if ($category->image && Storage::exists('public/' . $category->image)) {
-                Storage::delete('public/' . $category->image);
+        try {
+            if($cart->sku->stock < $request->quantity){
+                return response()->json([
+                    'message'=>'Số lượng trong kho không đủ'
+                ],200);
             }
 
-            // Lưu ảnh mới vào thư mục 'images'
-            $image_url = $this->bubbleImage($req->file('image'));
+            $cart->update([
+                'quantity' => $request->quantity
+            ]);
+        
+            return ApiResponse::responseSuccess('',200);
+
+        } catch (\Throwable $th) {
+            \Log::error("Lỗi khi cập nhật giỏ hàng:", $th->getMessage());
+
+            return ApiResponse::errorResponse(500, $th->getMessage());
         }
-
-        // Cập nhật dữ liệu vào cơ sở dữ liệu
-        $category->update([
-            'name' => $req->name,
-            'slug' => \Str::slug($req->name),
-            'parent_id' => $req->parent_id,
-            'image' => $image_url,
-        ]);
-
-        return response()->json(['message' => 'Danh mục đã được cập nhật thành công', 'data' => $category]);
     }
-    public function show($id)
-    {
-        $category = Category::with('children')->find($id);
 
-        if (!$category) {
-            return response()->json(['message' => 'Danh mục không tồn tại'], 404);
-        }
+    public function destroy(string $id)
+    {
+        $cart = Cart::findOrFail($id);
+
+        try {
+            $cart->delete();
 
         return response()->json([
-            'id' => $category->id,
-            'name' => $category->name,
-            'slug' => $category->slug,
-            'parent_id' => $category->parent_id,
-            'children' => $category->children->map(function ($child) {
-                return [
-                    'id' => $child->id,
-                    'name' => $child->name,
-                    'parent_id' => $child->parent_id,
-                ];
-            }),
-        ]);
+            'message' => 'Xóa thành công',
+        ],204);
+        } catch (\Throwable $th) {
+            \Log::error("Lỗi giỏ hàng:", $th->getMessage());
+
+            return ApiResponse::errorResponse(500, $th->getMessage());
+        }
     }
-    private function bubbleImage($file)
-    {
-        // Tạo tên file ảnh duy nhất để tránh trùng lặp
-        $imageName = time() . '.' . $file->getClientOriginalExtension();
-
-        // Lưu ảnh vào thư mục 'images' với tên file duy nhất
-        $file->storeAs('images', $imageName, 'public');
-
-        return 'images/' . $imageName;
-    }
-
-    public function destroy($id)
-    {
-    $category = Category::findOrFail($id);
-
-   
-    if ($category->children()->count() > 0) {
-        return response()->json(['message' => 'Không thể xoá danh mục vì có danh mục con'], 400);
-    }
-
-    if ($category->image && Storage::exists('public/' . $category->image)) {
-        Storage::delete('public/' . $category->image);
-    }
-
-    $category->delete();
-
-    return response()->json(['message' => 'Danh mục đã được xoá']);
-}
-
-public function getProductsByCategory(Request $request, $id, $slug = null)
+    public function clearCart()
 {
-    $query = Product::with([
-        'brand',
-        'category',
-        'skus.attributeOptions.attribute',
-        'galleries'
-    ])->where('category_id', $id)
-        ->when($request->price_range, function ($q, $range) {
-            [$min, $max] = array_map('intval', explode('-', $range));
-            $q->whereHas('skus', fn($q) => $q->whereBetween('price', [$min, $max]));
-        })
-        ->when($request->color, fn($q, $color) => $q->whereHas('skus.attributeOptions', fn($q) =>
-            $q->whereHas('attribute', fn($q) => $q->where('name', 'color'))->where('value', $color)
-        ))
-        ->when($request->size, fn($q, $size) => $q->whereHas('skus.attributeOptions', fn($q) =>
-            $q->whereHas('attribute', fn($q) => $q->where('name', 'size'))->where('value', $size)
-        ))
-        ->when($request->sortby, function ($q, $sortby) {
-            $sorts = [
-                'price_min:asc' => ['price', 'asc'],
-                'price_max:desc' => ['price', 'desc'],
-                'newest' => ['created_at', 'desc'],
-                'oldest' => ['created_at', 'asc']
-            ];
-            if (isset($sorts[$sortby])) $q->orderBy(...$sorts[$sortby]);
-        });
+    try {
+        // Auth::loginUsingId(2); // 2 là ID của user bạn muốn test
+        $user = Auth::user();
+        $session_id = session()->getId();
 
-    $products = $query->get(); // Lấy toàn bộ sản phẩm phù hợp bộ lọc
+        if (!$user) {
+            return response()->json([
+                'message' => "Bạn chưa đăng nhập"
+            ], 401);
+        }
 
-    if ($products->isEmpty()) {
-        return response()->json(['message' => 'Không tìm thấy sản phẩm'], 404);
+        // Xóa toàn bộ giỏ hàng của user hoặc session_id
+        Cart::where('user_id', $user->id)
+            ->orWhere('session_id', $session_id)
+            ->delete();
+
+        return response()->json([
+            'message' => 'Đã xóa toàn bộ giỏ hàng thành công'
+        ], 200);
+    } catch (\Throwable $th) {
+        \Log::error("Lỗi khi xóa toàn bộ giỏ hàng:", [$th->getMessage()]);
+        return ApiResponse::errorResponse(500, $th->getMessage());
     }
-
-    return response()->json([
-        'code' => 200,
-        'message' => 'success',
-        'data' => ProductResource::collection($products)
-    ]);
 }
 
 }
