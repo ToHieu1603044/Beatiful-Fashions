@@ -248,24 +248,6 @@ class CategoryController extends Controller
         return ApiResponse::responsePage(ProductResource::collection($products));
     }
 
-        $category = Category::find($id);
-    
-        if (!$category) {
-            return response()->json(['message' => 'Danh mục không tồn tại'], 404);
-        }
-    
-        // Kiểm tra nếu danh mục có danh mục con
-        if ($category->children()->count() > 0) {
-            return response()->json(['message' => 'Không thể xoá danh mục vì có danh mục con'], 400);
-        }
-    
-        // Xóa ảnh nếu có
-        if ($category->image && Storage::exists('public/' . $category->image)) {
-            Storage::delete('public/' . $category->image);
-        }
-    
-        $category->delete();
-    
-        return response()->json(['message' => 'Danh mục đã được xoá']);
+        
     }
-}
+

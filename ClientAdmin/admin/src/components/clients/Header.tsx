@@ -1,11 +1,15 @@
-import { FaSearch, FaUser, FaShoppingCart} from 'react-icons/fa';
+import { FaSearch, FaUser, FaShoppingCart } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { getCategories } from "../../services/homeService";
 import { Category } from '../../interfaces/Categories';
-
+import { useNavigate } from 'react-router-dom'; // Để chuyển hướng
 
 const Header = () => {
   const [categories, setCategories] = useState<Category[]>([]);
+  const navigate = useNavigate(); // Hook điều hướng
+  
+  // Lấy token từ localStorage khi component mount
+  const token = localStorage.getItem('accessToken');
   
 
   useEffect(() => {
@@ -20,7 +24,16 @@ const Header = () => {
     fetchCategories();
   }, []);
 
-
+  // Kiểm tra xem người dùng đã đăng nhập chưa
+  const checkLogin = () => {
+    if (!token) {
+      // Nếu không có token, điều hướng đến trang đăng nhập
+      navigate('/login');
+    } else {
+      // Nếu có token, điều hướng đến trang tài khoản
+      navigate('/account');
+    }
+  };
 
   return (
     <header className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -54,7 +67,14 @@ const Header = () => {
               </a>
             </li>
             <li className="nav-item">
-              <a className="nav-link text-white" href="/signin">
+              <a
+                className="nav-link text-white"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault(); // Ngừng hành động mặc định (chuyển hướng)
+                  checkLogin(); // Kiểm tra trạng thái đăng nhập
+                }}
+              >
                 <FaUser size={20} />
               </a>
             </li>
@@ -63,7 +83,6 @@ const Header = () => {
                 <FaShoppingCart size={20} />
               </a>
             </li>
-           
           </ul>
         </div>
       </div>
