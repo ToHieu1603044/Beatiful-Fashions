@@ -19,6 +19,7 @@ class CartResource extends JsonResource
             'product' => $this->sku->product ?? 'Sản phẩm không tồn tại',
             'sku_id' => $this->sku_id,
             'quantity' => $this->quantity,
+            'price' => $this->sku->price,
             'attributes' => $this->sku->attributeOptions->map(function ($option) {
                 return [
                     'attribute' => $option->attribute->name,
