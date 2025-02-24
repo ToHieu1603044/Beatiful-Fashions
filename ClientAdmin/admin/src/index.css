@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+.form-check-input:checked {
+    background-color: red;
+    border-color: red;
+}

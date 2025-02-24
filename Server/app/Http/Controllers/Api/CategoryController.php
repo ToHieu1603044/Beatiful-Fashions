@@ -5,12 +5,8 @@ use Illuminate\Support\Facades\Storage;
 
 use App\Helpers\ApiResponse;
 use App\Traits\ApiDataTrait;
-use App\Http\Resources\ProductResource;
-
 use Illuminate\Http\Request;
 use App\Models\Category;
-use App\Models\Product;
-
 class CategoryController extends Controller
 {
     use ApiDataTrait;
@@ -185,6 +181,7 @@ class CategoryController extends Controller
 
     public function destroy($id)
     {
+
         $category = Category::findOrFail($id);
 
 
@@ -251,4 +248,24 @@ class CategoryController extends Controller
         return ApiResponse::responsePage(ProductResource::collection($products));
     }
 
+        $category = Category::find($id);
+    
+        if (!$category) {
+            return response()->json(['message' => 'Danh mục không tồn tại'], 404);
+        }
+    
+        // Kiểm tra nếu danh mục có danh mục con
+        if ($category->children()->count() > 0) {
+            return response()->json(['message' => 'Không thể xoá danh mục vì có danh mục con'], 400);
+        }
+    
+        // Xóa ảnh nếu có
+        if ($category->image && Storage::exists('public/' . $category->image)) {
+            Storage::delete('public/' . $category->image);
+        }
+    
+        $category->delete();
+    
+        return response()->json(['message' => 'Danh mục đã được xoá']);
+    }
 }

@@ -9,13 +9,11 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Laravel\Sanctum\HasApiTokens;
 
-
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
-
-
+    use HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, Notifiable;
     /**
      * The attributes that are mass assignable.
      *
@@ -71,5 +69,4 @@ class User extends Authenticatable
     public function membership(){
         return $this->hasOne(Membership::class);
     }
-    
 }

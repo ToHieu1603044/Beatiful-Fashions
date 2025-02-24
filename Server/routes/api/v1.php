@@ -5,32 +5,54 @@ use App\Http\Controllers\Api\AttributeOptionController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
+
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\RolePermissionController;
+
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
+
 
 Route::get('/', function () {
     return 'Hello World';
 });
 Route::get('/products/web', [ProductController::class, 'indexWeb']);
 Route::get('/products/web/{id}/', [ProductController::class, 'productDetail']);
-
 Route::get('/products/categories/{id}', [CategoryController::class, 'getProductsByCategory']);
 Route::get('/categories/web', [CategoryController::class, 'indexWeb']);
 Route::get('/categories/web{id}/', [CategoryController::class, 'categoryDetail']);
 
+Route::apiResource('attributes', AttributeController::class);
+Route::apiResource('attribute-options', AttributeOptionController::class);
+
+Route::middleware(['api'])->group(function () {
+    Route::apiResource('brands', BrandController::class);
+    Route::apiResource('categories', CategoryController::class);
+    Route::put('/categories/{id}',[CategoryController::class,'update']);
+});
+// Routes công khai (không cần login)
+Route::post('/register', [AuthController::class, 'register']);
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
+
+// Routes yêu cầu login
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
     Route::post('/refresh', [AuthController::class, 'refreshToken']);
 
     Route::get('/users', [App\Http\Controllers\Api\AuthController::class, 'index']);
+
+    Route::get('/user', [AuthController::class, 'userProfile']);
+});
+Route::middleware('auth:sanctum')->group(function(){
+    Route::apiResource('carts',CartController::class);
+    Route::delete('carts', [CartController::class, 'clearCart']);
+
 });
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
@@ -79,4 +101,5 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::post('/roles/remove-all-permissions', [RolePermissionController::class, 'removeAllPermissionsFromRole']);
 
 });
+
 ?>
