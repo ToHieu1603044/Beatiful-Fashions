@@ -18,66 +18,73 @@ import Clients from "./layouts/clients/Clients";
 import ProductCategories from "./pages/client/ProductCategories";
 import DetailProducts from "./pages/client/DetailProducts";
 import CheckOut from "./pages/client/CheckOut";
-import Login from "./pages/Login";
+
+import Cart from "./pages/client/Cart";
 
 
 function App() {
   const routes = useRoutes([
     {
       path: "/admin",
-      element: <Admin />, 
+      element: <Admin />,
       children: [
-        { 
-          path: "categories", 
-          element: <Categories />, 
+        {
+          path: "categories",
+          element: <Categories />,
           children: [
             { path: "create", element: <CategoriesAdd /> },
-            { path: ":id/edit", element: <CategoriesEdit /> }
-          ]
+            { path: ":id/edit", element: <CategoriesEdit /> },
+          ],
         },
-        { 
-          path: "attributes", 
-          element: <Attributes />, 
+        {
+          path: "attributes",
+          element: <Attributes />,
           children: [
             { path: "create", element: <AttributesAdd /> },
-            { path: "edit/:id", element: <AttributesEdit /> }
-          ]
+            { path: "edit/:id", element: <AttributesEdit /> },
+          ],
         },
-        { 
-          path: "brands", 
-          element: <Brands />, 
+        {
+          path: "brands",
+          element: <Brands />,
           children: [
             { path: "create", element: <BrandsAdd /> },
-            { path: ":id/edit", element: <BrandsEdit /> }
-          ]
+            { path: ":id/edit", element: <BrandsEdit /> },
+          ],
         },
         { path: "orders", element: <Orders /> },
-        { 
-          path: "products", 
-          element: <Products />, 
+        {
+          path: "products",
+          element: <Products />,
           children: [
             { path: "create", element: <ProductsAdd /> },
-            { path: ":id/edit", element: <ProductsEdit /> }
-          ]
+            { path: ":id/edit", element: <ProductsEdit /> },
+          ],
         },
         { path: "users", element: <Users /> },
-      ]
+      ],
     },
-    {  // Client Route
+    {
+      // Client Route
       path: "/",
       element: <Clients />,
       children: [
         { path: "/category/:id/:slug", element: <ProductCategories /> },
         { path: "products/:id/detail", element: <DetailProducts /> },
-        { path: "login", element: <Login /> },
-      ]
+
+        {
+          path: "/cart",
+          element: <Cart />,
+        },
+      ],
+
     },
     {
       path: "/checkout",
       element: <CheckOut />,
-    }
+    },
   ]);
-  
+
   return routes;
 }
 
