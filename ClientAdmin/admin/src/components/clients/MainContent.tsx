@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal, Button, Form } from "react-bootstrap";
-import { getProducts } from "../../services/productService";
-import { getCategories } from "../../services/categoryService";
+import { getProducts, getCategories } from "../../services/homeService";
+
 import { Product } from "../../interfaces/Products";
 import { Category } from "../../interfaces/Categories";
 
@@ -14,7 +14,20 @@ const MainContent = () => {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [selectedAttributes, setSelectedAttributes] = useState({});
   const [availableOptions, setAvailableOptions] = useState({});
+  const [quantity, setQuantity] = useState(1);
   const navigate = useNavigate();
+
+  const handleIncrease = () => {
+    if (selectedVariant && quantity < selectedVariant.stock) {
+      setQuantity(quantity + 1);
+    }
+  };
+
+  const handleDecrease = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -40,7 +53,13 @@ const MainContent = () => {
       setLoading(false);
     }
   };
-
+  const handleSubmit = () => {
+    if (!selectedVariant) {
+      alert("Vui lòng chọn biến thể.");
+      return;
+    }
+    console.log("Dữ liệu gửi đi:", { sku_id: selectedVariant.sku_id });
+  };
   const handleCategoryClick = (id: number, slug: string) => {
     navigate(`/category/${id}/${slug}`);
   };
@@ -198,6 +217,27 @@ const MainContent = () => {
                   )}
                 </p>
                 <p>Số lượng: {selectedVariant.stock}</p>
+                <div className="d-flex align-items-center gap-2">
+                  <Button variant="outline-secondary" onClick={handleDecrease} disabled={quantity <= 1}>
+                    -
+                  </Button>
+                  <Form.Control
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      if (!isNaN(value) && value > 0 && value <= selectedVariant.stock) {
+                        setQuantity(value);
+                      }
+                    }}
+                    min="1"
+                    max={selectedVariant.stock}
+                    style={{ width: "60px", textAlign: "center" }}
+                  />
+                  <Button variant="outline-secondary" onClick={handleIncrease} disabled={quantity >= selectedVariant.stock}>
+                    +
+                  </Button>
+                </div>
               </div>
             )}
           </Modal.Body>
@@ -205,7 +245,7 @@ const MainContent = () => {
             <Button variant="secondary" onClick={handleCloseModal}>
               Đóng
             </Button>
-            <Button variant="success" disabled={!selectedVariant}>
+            <Button onClick={handleSubmit} variant="success" disabled={!selectedVariant}>
               Thêm vào giỏ
             </Button>
           </Modal.Footer>

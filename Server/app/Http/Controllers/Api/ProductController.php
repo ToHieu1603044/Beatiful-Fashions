@@ -25,6 +25,15 @@ class ProductController extends Controller
 
         return $this->getAllData(new Product, 'Danh sách sản phẩm', $relations, $filterableFields, $dates, ProductResource::class);
     }
+    public function indexWeb(Request $request)
+    {
+        $relations = ['brand', 'category', 'skus.attributeOptions', 'galleries'];
+        $filterableFields = ['name','category_id','brand_id'];
+
+        $dates = ['create_at'];
+
+        return $this->getAllData(new Product, 'Danh sách sản phẩm', $relations, $filterableFields, $dates, ProductResource::class);
+    }
     public function store(ProductRequest $request)
     {
         $validated = $request->validated();
@@ -129,6 +138,28 @@ class ProductController extends Controller
         ])->findOrFail($id);
         return ApiResponse::responseObject(new ProductResource($data));
     }
+    public function productDetail($id)
+    {
+        $data = Product::with([
+            'brand',
+            'category',
+            'skus.attributeOptions'
+        ])->findOrFail($id);
+    
+        $popular = Product::where('category_id', $data->category_id)
+                        ->where('id', '!=', $id)
+                        ->limit(4)
+                        ->get();
+    
+        // Return the response as a data array
+        $product = [
+            'data' => new ProductResource($data),
+            'popular' => ProductResource::collection($popular) // Make sure to use the collection resource here
+        ];
+    
+        return ApiResponse::responseObject($product);
+    }
+    
     public function update(ProductRequest $request, $id)
     {
         $validated = $request->validated();

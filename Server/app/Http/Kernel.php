@@ -17,11 +17,11 @@ class Kernel extends HttpKernel
 
     protected $middlewareGroups = [
         'web' => [
-    // \App\Http\Middleware\EncryptCookies::class, // Không dùng session/cookie thì có thể bỏ
+    \App\Http\Middleware\EncryptCookies::class, // Không dùng session/cookie thì có thể bỏ
     \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
     \Illuminate\Session\Middleware\StartSession::class,
     \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-    // \App\Http\Middleware\VerifyCsrfToken::class, // Chỉ cần nếu có form POST
+     \App\Http\Middleware\VerifyCsrfToken::class, // Chỉ cần nếu có form POST
     \Illuminate\Routing\Middleware\SubstituteBindings::class,
 ],
 
