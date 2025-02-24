@@ -246,5 +246,7 @@ class CategoryController extends Controller
         }
 
         return ApiResponse::responsePage(ProductResource::collection($products));
+    }   
     }
 }
+
