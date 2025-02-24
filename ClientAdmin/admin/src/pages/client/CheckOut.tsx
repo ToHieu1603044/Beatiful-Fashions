@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import axios from "axios";
+import React, { useEffect, useState } from "react";
 const users = [
     {
         email: "vgiang2701@gmail.com",
@@ -7,12 +8,64 @@ const users = [
         id: 1,
     },
 ];
+interface Province {
+    code: string;
+    name: string;
+}
 
+interface District {
+    code: string;
+    name: string;
+}
+
+interface Ward {
+    code: string;
+    name: string;
+}
 const CheckOut = () => {
     const userJson = localStorage.getItem("user");
     const user = userJson ? JSON.parse(userJson)!.user : null;
     const [bank, setBank] = useState<undefined | number>();
-    console.log("bank", bank);
+    // console.log("bank", bank);
+    const [provinces, setProvinces] = useState<Province[]>([]);
+    const [districts, setDistricts] = useState<District[]>([]);
+    const [wards, setWards] = useState<Ward[]>([]);
+    const [selectedProvince, setSelectedProvince] = useState("");
+    const [selectedDistrict, setSelectedDistrict] = useState("");
+    const [selectedWard, setSelectedWard] = useState("");
+    // call api đia chỉ
+    useEffect(() => {
+        axios
+            .get("https://provinces.open-api.vn/api/p/")
+            .then((response) => setProvinces(response.data))
+            .catch((error) =>
+                console.error("Error fetching provinces:", error)
+            );
+    }, []);
+    useEffect(() => {
+        if (selectedProvince) {
+            axios
+                .get(
+                    `https://provinces.open-api.vn/api/p/${selectedProvince}?depth=2`
+                )
+                .then((response) => setDistricts(response.data.districts))
+                .catch((error) =>
+                    console.error("Error fetching districts:", error)
+                );
+        }
+    }, [selectedProvince]);
+    useEffect(() => {
+        if (selectedDistrict) {
+            axios
+                .get(
+                    `https://provinces.open-api.vn/api/d/${selectedDistrict}?depth=2`
+                )
+                .then((response) => setWards(response.data.wards))
+                .catch((error) =>
+                    console.error("Error fetching wards:", error)
+                );
+        }
+    }, [selectedDistrict]);
     return (
         <>
             <div
@@ -108,30 +161,86 @@ const CheckOut = () => {
                                             style={{ height: "45px" }}
                                         />
                                     </div>
+                                     {/* tỉnh thành   */}
+                                     <div className="mb-3">
+                                        <select
+                                            value={selectedProvince}
+                                            onChange={(e) =>
+                                                setSelectedProvince(
+                                                    e.target.value
+                                                )
+                                            }
+                                            className="form-select"
+                                        >
+                                            <option value="" disabled selected>
+                                                Chọn tỉnh thành
+                                            </option>
+                                            {provinces.map(
+                                                (province: Province) => (
+                                                    <option
+                                                        key={province.code}
+                                                        value={province.code}
+                                                    >
+                                                        {province.name}
+                                                    </option>
+                                                )
+                                            )}
+                                        </select>
+                                    </div>
+                                    {/* Quận Huyện    */}
+                                    <div className="mb-3">
+                                        <select
+                                            value={selectedDistrict}
+                                            onChange={(e) =>
+                                                setSelectedDistrict(
+                                                    e.target.value
+                                                )
+                                            }
+                                            className="form-select"
+                                        >
+                                            <option value="" disabled selected>
+                                                Chọn quận huyện
+                                            </option>
+                                            {districts.map(
+                                                (district: District) => (
+                                                    <option
+                                                        key={district.code}
+                                                        value={district.code}
+                                                    >
+                                                        {district.name}
+                                                    </option>
+                                                )
+                                            )}
+                                        </select>
+                                    </div>
+                                    {/* Phường xã   */}
+                                    <div className="mb-3">
+                                        <select
+                                            value={selectedWard}
+                                            onChange={(e) =>
+                                                setSelectedWard(e.target.value)
+                                            }
+                                            className="form-select"
+                                        >
+                                            <option value="" disabled selected>
+                                                Chọn phường xã
+                                            </option>
+                                            {wards.map((ward: Ward) => (
+                                                <option
+                                                    key={ward.code}
+                                                    value={ward.name}
+                                                >
+                                                    {ward.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     {/* Địa chỉ  */}
                                     <div className="mb-3">
                                         <input
                                             type="text"
                                             className="form-control"
                                             placeholder="Địa chỉ"
-                                            style={{ height: "45px" }}
-                                        />
-                                    </div>
-                                    {/* tỉnh thành   */}
-                                    <div className="mb-3">
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            placeholder="Tỉnh thành"
-                                            style={{ height: "45px" }}
-                                        />
-                                    </div>
-                                    {/* Phường xã   */}
-                                    <div className="mb-3">
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            placeholder="Phường xã"
                                             style={{ height: "45px" }}
                                         />
                                     </div>
