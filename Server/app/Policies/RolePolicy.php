@@ -8,11 +8,17 @@ use Spatie\Permission\Models\Role;
 class RolePolicy
 {
  
-    public function viewAny(User $user)
+    public function viewAny(?User $user)
     {
-        
-        return $user->hasPermissionTo('view roles');
+        if (!$user) {
+            \Log::error('User is null in RolePolicy::viewAny');
+            return false;
+        }
+    
+        \Log::info("User {$user->id} checking permission: view_roles");
+        return $user->hasPermissionTo('view_any_role');
     }
+    
 
     public function view(User $user, Role $role)
     {
