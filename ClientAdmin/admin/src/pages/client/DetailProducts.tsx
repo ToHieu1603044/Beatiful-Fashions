@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { getProductById } from "../../services/homeService";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { Send, User } from "lucide-react";
 
 const DetailProducts: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    console.log(id);
     const [quantity, setQuantity] = useState<number>(1);
     const [product, setProduct] = useState<any>(null);
     const [selectedAttributes, setSelectedAttributes] = useState<{ [key: string]: string }>({});
@@ -12,22 +14,40 @@ const DetailProducts: React.FC = () => {
     const [errorMessage, setErrorMessage] = useState<string>("");
     const [mainImage, setMainImage] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>("description");
-    const [popularProducts, setPopularProducts] = useState([]);
 
+    const [popularProducts, setPopularProducts] = useState([]);
+    const [comments, setComments] = useState([
+        { id: 1, name: "Nguyễn Văn A", text: "Sản phẩm rất tốt!", avatar: "https://i.pravatar.cc/40?img=1" },
+        { id: 2, name: "Trần Thị B", text: "Chất lượng tuyệt vời!", avatar: "https://i.pravatar.cc/40?img=2" }
+    ]);
+    const [newComment, setNewComment] = useState("");
+
+    const handleAddComment = () => {
+        if (newComment.trim() !== "") {
+            setComments([
+                ...comments,
+                { id: comments.length + 1, name: "Bạn", text: newComment, avatar: "https://i.pravatar.cc/40?img=3" }
+            ]);
+            setNewComment("");
+        }
+    };
     useEffect(() => {
         fetchProduct();
-    }, [id]); // Cập nhật sản phẩm khi `id` thay đổi
+    }, [id]);
 
     const fetchProduct = async () => {
         setLoading(true);
         try {
             const response = await getProductById(id);
+
+            console.log("Dữ liệu API---:", response.data);
             const productData = response.data.data.data;
-            const popular = response.data.data.popularProducts;
+            const popular = response.data.data.popular;
+            console.log("kbdw", popular)
             console.log("Dữ liệu sản phẩm: ", productData);
             setProduct(productData);
             setPopularProducts(popular);
-            
+
             setMainImage(`http://127.0.0.1:8000/storage/${productData.images}`);
 
             if (productData.variants?.length > 0) {
@@ -43,7 +63,7 @@ const DetailProducts: React.FC = () => {
         }
         setLoading(false);
     };
-    
+
 
     const selectedVariant = useMemo(() => {
         if (!product || !product.variants) return null;
@@ -68,6 +88,31 @@ const DetailProducts: React.FC = () => {
 
     const handleImageClick = (imageUrl: string) => {
         setMainImage(imageUrl);
+    };
+    const handleShowModal = (product) => {
+        setSelectedProduct(product);
+        setSelectedVariant(null);
+
+        const allAttributes = [...new Set(product.variants.flatMap((variant) => variant.attributes.map((attr) => attr.name)))];
+        // Loc tat ca variants va lay ra ten cac thuoc tinh -> dung Set de ne cac truong giong nhau-> chuyen thnanh mang
+
+        const initialSelectedAttributes = Object.fromEntries(allAttributes.map((attr) => [attr, null]));
+
+        const initialAvailableOptions = {};
+        allAttributes.forEach((attrName) => {
+            initialAvailableOptions[attrName] = [
+                ...new Set(
+                    product.variants.flatMap((variant) =>
+                        variant.attributes
+                            .filter((attr) => attr.name === attrName)
+                            .map((attr) => attr.value)
+                    )
+                ),
+            ];
+        });
+
+        setSelectedAttributes(initialSelectedAttributes);
+        setAvailableOptions(initialAvailableOptions);
     };
 
     return (
@@ -150,12 +195,113 @@ const DetailProducts: React.FC = () => {
                             <p className="mt-3 text-muted">Mã sản phẩm: {selectedVariant ? selectedVariant.sku : product.id}</p>
                         </div>
                     </div>
+
+
+                    {/* Tabs Mô tả & Bình luận */}
+                    <div className="mt-4">
+                        <ul className="nav nav-tabs">
+                            <li className="nav-item">
+                                <button className={`nav-link ${activeTab === "description" ? "active" : ""}`} onClick={() => setActiveTab("description")}>
+                                    Mô tả
+                                </button>
+                            </li>
+                            <li className="nav-item">
+                                <button className={`nav-link ${activeTab === "comments" ? "active" : ""}`} onClick={() => setActiveTab("comments")}>
+                                    Bình luận
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div className="tab-content mt-3">
+                            {activeTab === "description" ? (
+                                <div className="card p-3">
+                                    <h4 className="fw-bold">Thông tin sản phẩm</h4>
+                                    <p className="text-muted">{product.description || "Chưa có mô tả cho sản phẩm này."}</p>
+                                </div>
+                            ) : (
+                                <div className="mt-3">
+                                    <h3 className="fw-bold">Bình luận</h3>
+                                    <div className="mt-3">
+                                        {comments.map((comment) => (
+                                            <div key={comment.id} className="d-flex align-items-start p-2 border rounded mb-2 bg-light">
+                                                <img src={comment.avatar} alt={comment.name} className="rounded-circle me-2" width="40" height="40" />
+                                                <div>
+                                                    <p className="fw-bold mb-1">{comment.name}</p>
+                                                    <p className="mb-0">{comment.text}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Nhập bình luận */}
+                                    <div className="d-flex align-items-center border rounded p-2 mt-3 bg-white">
+                                        <img src="https://i.pravatar.cc/40?img=3" alt="User" className="rounded-circle me-2" width="40" height="40" />
+                                        <input
+                                            type="text"
+                                            value={newComment}
+                                            onChange={(e) => setNewComment(e.target.value)}
+                                            placeholder="Viết bình luận..."
+                                            className="form-control border-0 shadow-none"
+                                        />
+                                        <button onClick={handleAddComment} className="btn btn-primary btn-sm ms-2">
+                                            <Send size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {/* SẢN PHẨM LIÊN QUAN */}
+                    <div className="mt-5">
+                        <h3 className="fw-bold">Sản phẩm liên quan</h3>
+                        {popularProducts.length > 0 ? (
+                            <div className="row mt-3">
+                                {popularProducts.map((product: any) => (
+                                    <div key={product.id} className="col-md-3 mb-4">
+                                        <div className="card shadow-sm">
+                                            <Link to={`/products/${product.id}/detail`}>
+                                                <img
+                                                    src={product.images && product.images !== "null"
+                                                        ? `http://127.0.0.1:8000/storage/${product.images}`
+                                                        : "https://placehold.co/200x200?text=No+Image"}
+                                                    className="card-img-top"
+                                                    alt={product.name || "Sản phẩm"}
+                                                    style={{ height: "200px", width: "100%", objectFit: "cover", borderRadius: "8px" }}
+                                                />
+                                            </Link>
+
+                                            <div className="card-body text-center">
+                                                <h6 className="card-title fw-bold">{product.name}</h6>
+                                                <p className="text-danger fw-bold">
+                                                    {product.price.toLocaleString()}đ
+                                                    {product.old_price && (
+                                                        <del className="text-muted ms-2">{product.old_price.toLocaleString()}đ</del>
+                                                    )}
+                                                </p>
+                                                <button className="btn btn-primary btn-sm" onClick={() => handleShowModal(product)}>
+                                                    Mua ngay
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-muted">Không có sản phẩm liên quan.</p>
+                        )}
+                    </div>
+
                     <br />
 
                 </>
-            )}
 
-        </div>
+
+
+
+            )
+            }
+
+        </div >
     );
 };
 
