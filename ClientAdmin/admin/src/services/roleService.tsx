@@ -5,11 +5,13 @@ const API_URL = "http://localhost:8000/api";
 // Lấy token từ localStorage
 const getAuthHeader = () => {
   const token = localStorage.getItem("access_token");
+
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+
 // Lấy danh sách vai trò
-export const getRoles = async (params?: { search?: string }) => {
+export const getRoles = async (params?: { search?: string }) => {   // Lay ra tat ca roles //api/roles
   try {
     return await axios.get(`${API_URL}/roles`, { params, headers: getAuthHeader() });
   } catch (error) {
@@ -19,7 +21,8 @@ export const getRoles = async (params?: { search?: string }) => {
 };
 
 // Lấy danh sách quyền
-export const getPermissions = async () => {
+
+export const getPermissions = async () => {        //api/permissions
   try {
     return await axios.get(`${API_URL}/permissions`, { headers: getAuthHeader() });
   } catch (error) {
@@ -29,7 +32,8 @@ export const getPermissions = async () => {
 };
 
 // Lấy quyền của một vai trò
-export const getRolePermissions = async (roleId: number) => {
+
+export const getRolePermissions = async (roleId: number) => {   // can truyen vao 1 id
   try {
     return await axios.get(`${API_URL}/roles/${roleId}/permissions`, { headers: getAuthHeader() });
   } catch (error) {

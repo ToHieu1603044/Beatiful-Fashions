@@ -98,6 +98,7 @@ function App() {
       element: <CheckOut />,
     },
     { path: "403", element: <Authorization /> },
+
   ]);
 
   return routes;
