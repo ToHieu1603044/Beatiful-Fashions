@@ -23,9 +23,8 @@ import Register from "./pages/client/Register";
 import Account from "./pages/client/Account";
 
 import Cart from "./pages/client/Cart";
-
+import Authorization from "./pages/403";
 import Roles from "./pages/admin/roles/Roles";
-
 
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const role = localStorage.getItem("role"); 
@@ -98,6 +97,8 @@ function App() {
       path: "/checkout",
       element: <CheckOut />,
     },
+    { path: "403", element: <Authorization /> },
+
   ]);
 
   return routes;
