@@ -1,7 +1,10 @@
 <?php
    namespace App\Http\Controllers\Api;
 
+   use App\Helpers\ApiResponse;
+   use App\Http\Resources\UserResource;
    use App\Models\User;
+   use App\Traits\ApiDataTrait;
    use Illuminate\Http\Request;
    use Illuminate\Support\Facades\Auth;
    use Illuminate\Support\Facades\Hash;
@@ -10,7 +13,7 @@
    
 class AuthController extends Controller
 {
-  
+  use ApiDataTrait;
     // Đăng nhập
     public function login(Request $request)
     {
@@ -51,7 +54,7 @@ class AuthController extends Controller
         ]);
 
         // Gán quyền mặc định là 'user'
-        $user->assignRole('user');
+     //   $user->assignRole('');
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -60,6 +63,10 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
             'user' => $user
         ]);
+
+    }
+    public function listUser(Request $request){
+      return $this->getAllData(new User, 'Danh sách người dùng', [], ['role','name','email','phone'],[],UserResource::class);
 
     }
 

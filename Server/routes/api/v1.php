@@ -28,8 +28,9 @@ Route::post('/register', [AuthController::class, 'register']);
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
-
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
+    
+
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
 
     Route::apiResource('carts', CartController::class);
@@ -38,6 +39,8 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::post('/refresh', [AuthController::class, 'refreshToken']);
+
+    Route::get('/listUsers', [App\Http\Controllers\Api\AuthController::class, 'listUser']);
 
     Route::get('/users', [App\Http\Controllers\Api\AuthController::class, 'index']);
 
@@ -84,8 +87,13 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::delete('/roles/{id}', [RolePermissionController::class, 'deleteRole']);
     Route::delete('/permissions/{id}', [RolePermissionController::class, 'deletePermission']);
 
-    Route::post('/roles/assign-all-permissions', [RolePermissionController::class, 'assignAllPermissionsToRole']);
+   // Route::post('/roles/{id}/assign-all-permissions', [RolePermissionController::class, 'assignAllPermissionsToRole']);
+   
+    Route::post('/roles/{id}/update-permissions', [RolePermissionController::class, 'updatePermissions']);
+
     Route::post('/roles/remove-all-permissions', [RolePermissionController::class, 'removeAllPermissionsFromRole']);
+
+    Route::get('/roles/{id}/permissions', [RolePermissionController::class, 'getRolePermissions']);
 
     Route::apiResource('brands', BrandController::class);
     Route::apiResource('categories', CategoryController::class);

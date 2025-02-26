@@ -58,6 +58,9 @@ const Products = () => {
       console.log("Dữ liệu API:", response.data);
       setProducts(Array.isArray(response.data) ? response.data : response.data.data || []);
     } catch (error) {
+      if(error.response.status === 403){
+        navigate("/403");
+      }
       console.error("Lỗi khi lấy sản phẩm:", error);
       setProducts([]);
     } finally {
