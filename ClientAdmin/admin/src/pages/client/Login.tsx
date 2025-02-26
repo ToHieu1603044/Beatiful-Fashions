@@ -1,10 +1,21 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useLocation } from "react-router-dom";
-import axios from "axios"; // Thêm axios để thiết lập token
-import { login } from "../../services/homeService";
+import axios from "axios";
+
+// Cấu hình API
+const API_BASE_URL = "http://127.0.0.1:8000/api";
+axios.defaults.baseURL = API_BASE_URL;
+
+// Kiểm tra và thiết lập token từ localStorage khi reload trang
+const token = localStorage.getItem("accessToken");
+if (token) {
+  axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+} else {
+  delete axios.defaults.headers.common["Authorization"];
+}
 
 // Schema kiểm tra dữ liệu đầu vào
 const schema = z.object({
@@ -13,64 +24,73 @@ const schema = z.object({
 });
 
 const Login = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setError,
+  } = useForm({
     resolver: zodResolver(schema),
   });
 
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation(); // Lấy thông tin location để kiểm tra ReturnUrl
+  const location = useLocation();
 
-  // Lưu ReturnUrl nếu có từ query params
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const returnUrl = params.get("ReturnUrl");
-
     if (returnUrl) {
-      // Lưu ReturnUrl vào sessionStorage (hoặc localStorage) để sử dụng sau khi đăng nhập
       sessionStorage.setItem("returnUrl", returnUrl);
+    } else {
+      sessionStorage.removeItem("returnUrl");
     }
   }, [location]);
 
+  const login = async (email: string, password: string) => {
+    return axios.post("/login", { email, password }).then(res => res.data);
+  };
+
   const onSubmit = async (data: { email: string; password: string }) => {
+    setLoading(true);
+    
     try {
-      console.log("Dữ liệu gửi đi:", data); // Debug dữ liệu trước khi gửi
-
       const response = await login(data.email, data.password);
-
-      console.log("Phản hồi từ server:", response); // Debug phản hồi API
-
+  
       if (response.access_token) {
-        // Lưu thông tin người dùng và token vào localStorage
-        localStorage.setItem("user", JSON.stringify(response.user));
+        console.log("Access Token:", response); // ✅ Hiển thị token trên Console
+  
         localStorage.setItem("accessToken", response.access_token);
-        
-        // Thiết lập header Authorization cho axios
+        localStorage.setItem("role", response.role[0]); // Lưu chuỗi "admin"
+
+        localStorage.setItem("user", JSON.stringify(response.user));
+  
         axios.defaults.headers.common["Authorization"] = `Bearer ${response.access_token}`;
-
-        // Lấy ReturnUrl từ sessionStorage nếu có
+  
         const returnUrl = sessionStorage.getItem("returnUrl");
-
-        if (returnUrl) {
-          // Điều hướng đến ReturnUrl nếu có, rồi xóa ReturnUrl
-          navigate(returnUrl);
-          sessionStorage.removeItem("returnUrl");
+        sessionStorage.removeItem("returnUrl");
+  
+        const userRoles = response.user.roles?.map(role => role.name);
+        if (userRoles && userRoles.includes("admin")) {
+          navigate("/admin");
         } else {
-          // Kiểm tra vai trò của người dùng và điều hướng đến trang phù hợp
-          const userRoles = response.user.roles?.map(role => role.name);
-          if (userRoles && userRoles.includes("admin")) {
-            navigate(`/admin`); // Điều hướng đến trang admin nếu là admin
-          } else {
-            navigate(`/account`); // Điều hướng đến trang chính hoặc trang người dùng
-          }
+          navigate(returnUrl || "/");
         }
-      } else {
-        alert("Đăng nhập không thành công.");
       }
     } catch (error: any) {
-      console.error("Lỗi khi đăng nhập:", error.response?.data || error);
-      alert(error.response?.data?.message || "Lỗi đăng nhập!");
+      if (error.response?.status === 401) {
+        setError("email", { message: "Email hoặc mật khẩu không đúng" });
+        setError("password", { message: "Vui lòng kiểm tra lại" });
+      } else if (error.response?.status === 403) {
+        navigate("/403");
+      } else {
+        console.error("Lỗi khi đăng nhập:", error);
+      }
+    } finally {
+      setLoading(false);
     }
   };
+  
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="p-4 border rounded bg-light">
@@ -97,7 +117,9 @@ const Login = () => {
       </div>
 
       <div>
-        <button type="submit" className="btn btn-primary">Đăng nhập</button>
+        <button type="submit" className="btn btn-primary" disabled={loading}>
+          {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+        </button>
       </div>
     </form>
   );
