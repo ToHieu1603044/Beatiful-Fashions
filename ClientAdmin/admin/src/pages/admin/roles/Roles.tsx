@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -7,13 +6,13 @@ import {
   getRolePermissions,
   updateRolePermissions,
   removeAllPermissionsFromRole,
-} from "../../../services/roleService";  // import tu service 
+} from "../../../services/roleService";
 import { Modal, Button, Table, Form, Accordion, Spinner } from "react-bootstrap";
 
 const Roles = () => {
-  const navigate = useNavigate(); 
-  const [roles, setRoles] = useState([]);   //quyen  admin = 30  content = 10
-  const [permissions, setPermissions] = useState([]);   // cho phep  Vd them san pham xoa san pham 30
+  const navigate = useNavigate();
+  const [roles, setRoles] = useState([]);
+  const [permissions, setPermissions] = useState([]);
   const [groupedPermissions, setGroupedPermissions] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -21,22 +20,15 @@ const Roles = () => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedPermissions, setSelectedPermissions] = useState([]);
 
-  // 5
-  // setSelectedRole(5)
-
-  // selectedRole(setSelectedRole) 5  
-
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         const [rolesRes, permissionsRes] = await Promise.all([
-          getRoles({ search: searchTerm }),  // lay ra tat ca roles vd admin content
-          getPermissions(),   // Lay ra tat ca permisisons vd create products, delete products
+          getRoles({ search: searchTerm }),
+          getPermissions(),
         ]);
         setRoles(rolesRes.data);
-       console.log(rolesRes.data);
-       console.log(permissionsRes.data);  
         setPermissions(permissionsRes.data);
 
         const grouped = permissionsRes.data.reduce((acc, perm) => {
@@ -57,13 +49,11 @@ const Roles = () => {
 
   // Mở modal phân quyền
   const handleShowPermissions = async (role) => {
-    setSelectedRole(role); 
+    setSelectedRole(role);
     setShowModal(true);
     try {
       const response = await getRolePermissions(role.id);
       setSelectedPermissions(response.data.map((perm) => perm.id));
-
-
     } catch (error) {
       console.error("Error fetching role permissions:", error);
     }
@@ -82,7 +72,13 @@ const Roles = () => {
   };
 
   // Chọn tất cả quyền trong một nhóm
-
+  const handleSelectAll = (model) => {
+    const modelPermissions = groupedPermissions[model].map((p) => p.id);
+    const isAllSelected = modelPermissions.every((id) => selectedPermissions.includes(id));
+    setSelectedPermissions((prev) =>
+      isAllSelected ? prev.filter((id) => !modelPermissions.includes(id)) : [...prev, ...modelPermissions]
+    );
+  };
 
   // Chọn tất cả quyền
   const handleSelectAllPermissions = () => {
@@ -91,6 +87,18 @@ const Roles = () => {
 
   const handleClearAllPermissions = () => {
     setSelectedPermissions([]);
+  };
+
+  const handleRemoveAllPermissions = async (roleId) => {
+    if (!window.confirm("Are you sure you want to remove all permissions?")) return;
+
+    try {
+      await removeAllPermissionsFromRole(roleId);
+      alert("All permissions removed successfully!");
+      setShowModal(false);
+    } catch (error) {
+      console.error("Error removing permissions:", error);
+    }
   };
 
   // Lưu quyền
@@ -168,7 +176,7 @@ const Roles = () => {
                 <Accordion.Item eventKey={index.toString()} key={model}>
                   <Accordion.Header>
                     {model}
-      
+                    <Button size="sm" className="ms-3" onClick={() => handleSelectAll(model)}>Select All</Button>
                   </Accordion.Header>
                   <Accordion.Body>
                     <div className="d-flex flex-wrap">
@@ -191,6 +199,7 @@ const Roles = () => {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleCloseModal}>Close</Button>
+          <Button variant="danger" onClick={() => handleRemoveAllPermissions(selectedRole.id)}>Remove All</Button>
           <Button variant="primary" onClick={handleSavePermissions}>Save</Button>
         </Modal.Footer>
       </Modal>
