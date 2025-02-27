@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\RolePermissionController;
+use App\Http\Controllers\Api\UserController;
 
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,12 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
 
+    Route::get('/users', [UserController::class, 'index']); // Lấy danh sách users
+    Route::post('/users', [UserController::class, 'store']); // Thêm user mới
+    Route::get('/users/{id}', [UserController::class, 'show']); // Xem chi tiết user
+    Route::put('/users/{id}', [UserController::class, 'update']); // Cập nhật user
+    Route::delete('/users/{id}', [UserController::class, 'destroy']); // Xóa user
+
     Route::apiResource('carts', CartController::class);
     Route::delete('carts', [CartController::class, 'clearCart']);
 
@@ -40,7 +47,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::post('/refresh', [AuthController::class, 'refreshToken']);
 
     Route::get('/users', [App\Http\Controllers\Api\AuthController::class, 'index']);
-
+// route dành cho fontend muốn xem thông tin cá nhân của chính mình
     Route::get('/user', [AuthController::class, 'userProfile']);
 
     Route::get('products', [ProductController::class, 'index']);
@@ -93,9 +100,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
     Route::apiResource('attributes', AttributeController::class);
     Route::apiResource('attribute-options', AttributeOptionController::class);
-    
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
-
 });
 
 ?>
