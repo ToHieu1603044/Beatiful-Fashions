@@ -68,6 +68,7 @@ class CartController
                 \Log::error("SKU {$sku->id} không có attributeOptions");
             }
 
+
             if ($sku->stock < $request->quantity) {
                 return ApiResponse::errorResponse(422, "Số lượng không hợp lệ, tồn kho còn {$sku->stock}");
             }
@@ -83,7 +84,6 @@ class CartController
             ];
 
 
-            // Kiểm tra số lượng có hợp lệ không
             if ($request->quantity > $sku->stock) {
                 return response()->json([
                     'message' => "Số lượng không hợp lệ, chỉ còn {$sku->stock} sản phẩm trong kho.",
@@ -103,6 +103,8 @@ class CartController
 
             return ApiResponse::responseSuccess($cart, 200, 'Thêm giỏ hàng thành công');
         } catch (\Throwable $th) {
+            \Log::error("Lỗi giỏ hàng: " . $th->getMessage());
+
             \Log::error("Lỗi giỏ hàng: " . $th->getMessage());
 
             \Log::error("Lỗi giỏ hàng:", [$th->getMessage()]);
