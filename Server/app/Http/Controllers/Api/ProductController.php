@@ -52,6 +52,7 @@ class ProductController extends Controller
                 'category_id' => $validated['category_id'],
                 'description' => $request->input('description'),
                 'images' => $validated['images'] ?? null,
+                'active' => $validated['active'],
                 'total_rating' => 0,
                 'total_sold' => 0,
             ]);

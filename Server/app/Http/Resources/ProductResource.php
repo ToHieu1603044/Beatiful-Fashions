@@ -26,6 +26,7 @@ class ProductResource extends JsonResource
                 'id' => $this->category->id,
                 'name' => $this->category->name
             ],
+            'active' => $this->active,
             'images' => $this->images,
             'galleries' => $this->galleries,
             'price' => $this->skus->min('price'),

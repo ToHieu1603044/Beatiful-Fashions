@@ -25,7 +25,6 @@ class UserController extends Controller
             'password' => 'required|string|min:6',
             'phone' => 'nullable|string|max:15',
             'address' => 'nullable|string|max:255',
-            'role' => ['required', Rule::in(['1','2'])], // 1: Admin, 2: User
         ]);
 
         $user = User::create([
@@ -34,7 +33,6 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'phone' => $request->phone,
             'address' => $request->address,
-            'role' => $request->role,
         ]);
 
         return response()->json($user, 201);

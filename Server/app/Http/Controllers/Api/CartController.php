@@ -57,21 +57,22 @@ class CartController
             'sku_id' => 'required|exists:product_skus,id',
             'quantity' => 'required|integer|min:1'
         ]);
-    
+
         try {
             $user = Auth::user();
             $session_id = session()->getId();
-    
+
             $sku = ProductSku::with('attributeOptions.attribute')->findOrFail($request->sku_id);
-    
+
             if ($sku->attributeOptions->isEmpty()) {
                 \Log::error("SKU {$sku->id} không có attributeOptions");
             }
-    
+
+
             if ($sku->stock < $request->quantity) {
                 return ApiResponse::errorResponse(422, "Số lượng không hợp lệ, tồn kho còn {$sku->stock}");
             }
-    
+
             $variant_detail = [
                 'sku_id' => $sku->id,
                 'price' => $sku->price,
@@ -81,16 +82,15 @@ class CartController
                 })->toArray(),
                 'product' => $sku->product
             ];
-    
 
-            // Kiểm tra số lượng có hợp lệ không
+
             if ($request->quantity > $sku->stock) {
                 return response()->json([
                     'message' => "Số lượng không hợp lệ, chỉ còn {$sku->stock} sản phẩm trong kho.",
                     'data' => []
                 ], 400);
             }
-    
+
             $cart = Cart::updateOrCreate([
                 'sku_id' => $request->sku_id,
                 'user_id' => $user ? $user->id : null,
@@ -100,65 +100,65 @@ class CartController
                 'quantity' => $request->quantity,
                 'variant_detail' => json_encode($variant_detail, JSON_UNESCAPED_UNICODE)
             ]);
-    
+
             return ApiResponse::responseSuccess($cart, 200, 'Thêm giỏ hàng thành công');
         } catch (\Throwable $th) {
             \Log::error("Lỗi giỏ hàng: " . $th->getMessage());
-    
+
+            \Log::error("Lỗi giỏ hàng: " . $th->getMessage());
+
             \Log::error("Lỗi giỏ hàng:", [$th->getMessage()]);
-    
+
             return ApiResponse::errorResponse(500, $th->getMessage());
 
         }
     }
-    
+
     public function update(Request $request, string $id)
     {
         $request->validate([
             'quantity' => 'required|integer|min:1'
         ]);
-    
+
         $cart = Cart::findOrFail($id);
         if (!$cart) {
             return response()->json([
 
                 'message' => 'Không tìm thấy sản phẩm '
             ], 200);
-=======
-                'message' => 'Không tìm thấy sản phẩm trong giỏ hàng'
-            ], 404);
         }
-    
+
         try {
 
             if ($cart->sku->stock < $request->quantity) {
                 return response()->json([
                     'message' => 'Số lượng trong kho không đủ'
                 ], 200);
-            $sku = $cart->sku;
-    
-            // Kiểm tra số lượng có hợp lệ không
-            if ($request->quantity > $sku->stock) {
-                return response()->json([
-                    'message' => "Số lượng không hợp lệ, chỉ còn {$sku->stock} sản phẩm trong kho.",
-                ], 400);
+                $sku = $cart->sku;
+
+                // Kiểm tra số lượng có hợp lệ không
+                if ($request->quantity > $sku->stock) {
+                    return response()->json([
+                        'message' => "Số lượng không hợp lệ, chỉ còn {$sku->stock} sản phẩm trong kho.",
+                    ], 400);
+
+                }
+
+                $cart->update([
+                    'quantity' => $request->quantity
+                ]);
+                return ApiResponse::responseSuccess('', 200);
+
+                return ApiResponse::responseSuccess('', 200, 'Cập nhật giỏ hàng thành công');
 
             }
-    
-            $cart->update([
-                'quantity' => $request->quantity
-            ]);
-            return ApiResponse::responseSuccess('', 200);
-    
-            return ApiResponse::responseSuccess('', 200, 'Cập nhật giỏ hàng thành công');
-
         } catch (\Throwable $th) {
             \Log::error("Lỗi khi cập nhật giỏ hàng:", [$th->getMessage()]);
-    
+
             return ApiResponse::errorResponse(500, $th->getMessage());
         }
     }
-    
+
     public function destroy(string $id)
     {
         $cart = Cart::findOrFail($id);
@@ -201,5 +201,4 @@ class CartController
             return ApiResponse::errorResponse(500, $th->getMessage());
         }
     }
-
 }

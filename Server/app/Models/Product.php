@@ -24,6 +24,10 @@ class Product extends Model
         'updated_at',
         'deleted_at'
     ];
+    protected $casts = [
+        'active' => 'boolean',
+    ];
+    
 
     public function brand(){
         return $this->belongsTo(Brand::class);

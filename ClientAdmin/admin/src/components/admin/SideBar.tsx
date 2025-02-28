@@ -3,7 +3,7 @@ import {
   RiHome2Line, RiInstanceLine, RiFlashlightLine, RiSettings2Line,
   RiListSettingsLine, RiShoppingCart2Line, RiUser3Line,
 } from "react-icons/ri";
-import { TbBrandDiscord } from "react-icons/tb";
+import { TbBrandDiscord, TbShieldCheck, TbShieldLock } from "react-icons/tb";
 const menuItems = [
   { to: "/", icon: <RiHome2Line />, label: "Dashboard" },
   { to: "/admin/categories", icon: <RiInstanceLine />, label: "Danh Mục" },
@@ -12,6 +12,7 @@ const menuItems = [
   { to: "/admin/orders", icon: <RiShoppingCart2Line />, label: "Đơn Hàng" },
 
   { to: "/admin/brands", icon: <TbBrandDiscord />, label: "Brands" },
+  { to: "/admin/roles", icon: <TbShieldLock />, label: "Roles" },
 
   { to: "/admin/users", icon: <RiUser3Line />, label: "Thành Viên" },
   { to: "/admin/settings", icon: <RiSettings2Line />, label: "Cài Đặt" },
