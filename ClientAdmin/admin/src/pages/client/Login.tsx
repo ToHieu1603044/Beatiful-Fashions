@@ -20,7 +20,7 @@ if (token) {
 // Schema kiểm tra dữ liệu đầu vào
 const schema = z.object({
   email: z.string().email({ message: "Email không hợp lệ" }),
-  password: z.string().min(6, { message: "Mật khẩu phải có ít nhất 6 ký tự" }),
+  password: z.string().min(5, { message: "Mật khẩu phải có ít nhất 6 ký tự" }),
 });
 
 const Login = () => {
@@ -58,18 +58,19 @@ const Login = () => {
       const response = await login(data.email, data.password);
   
       if (response.access_token) {
-        console.log("Access Token:", response); // ✅ Hiển thị token trên Console
-  
-        localStorage.setItem("accessToken", response.access_token);
-        localStorage.setItem("role", response.role[0]); // Lưu chuỗi "admin"
-
+        console.log("Access Token:", response.access_token); // Kiểm tra token
+        
+        localStorage.setItem("access_token", response.access_token);
+        console.log("Token đã lưu:", localStorage.getItem("access_token")); // Kiểm tra lưu thành công chưa
+        
+        localStorage.setItem("role", response.role[0]);
         localStorage.setItem("user", JSON.stringify(response.user));
-  
+      
         axios.defaults.headers.common["Authorization"] = `Bearer ${response.access_token}`;
-  
+      
         const returnUrl = sessionStorage.getItem("returnUrl");
         sessionStorage.removeItem("returnUrl");
-  
+      
         const userRoles = response.user.roles?.map(role => role.name);
         if (userRoles && userRoles.includes("admin")) {
           navigate("/admin");
@@ -77,6 +78,7 @@ const Login = () => {
           navigate(returnUrl || "/");
         }
       }
+      
     } catch (error: any) {
       if (error.response?.status === 401) {
         setError("email", { message: "Email hoặc mật khẩu không đúng" });

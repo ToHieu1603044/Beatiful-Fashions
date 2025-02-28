@@ -12,6 +12,7 @@ use App\Models\ProductSku;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class OrderController
@@ -37,66 +38,111 @@ class OrderController
             return ApiResponse::responseError($th->getMessage());
         }
    }
-   public function store(StoreOrderRequest $request){
+   public function store(Request $request)
+   {
+       $request->validate([
+           'payment_method' => 'required|in:cod,online',
+           'name' => 'required|string|max:255',
+           'email' => 'nullable|email|max:255',
+           'phone' => 'required|string|max:15',
+           'city' => 'required|string|max:255',
+           'district' => 'required|string|max:255',
+           'ward' => 'required|string|max:255',
+           'note' => 'nullable|string|max:500',
+       ]);
+   
+       try {
+           $user = Auth::user();
+           $session_id = session()->getId();
+   
+           $carts = Cart::where(function ($query) use ($user, $session_id) {
+               if ($user) {
+                   $query->where('user_id', $user->id);
+               } else {
+                   $query->where('session_id', $session_id);
+               }
+           })->get();
+   
+           if ($carts->isEmpty()) {
+               return ApiResponse::errorResponse(400, 'Giỏ hàng trống!');
+           }
+   
+           DB::beginTransaction(); // Bat dau giao dichdich
+         
+           $order = Order::create([
+               'user_id' => $user ? $user->id : null,
+               'total_amount' => 0, 
+               'status' => 'pending',
+               'payment_method' => $request->payment_method,
+               'is_paid' => false, 
+               'name' => $request->name,
+               'email' => $request->email,
+               'phone' => $request->phone,
+               'city' => $request->city,
+               'district' => $request->district,
+               'ward' => $request->ward,
+               'note' => $request->note,
+           ]);
+   
+           $totalAmount = 0;
+   
+           foreach ($carts as $cart) {
+        
+               $sku = ProductSku::where('id', $cart->sku_id)
+                   ->lockForUpdate() 
+                   ->first();
+   
+               if (!$sku || $sku->stock < $cart->quantity) {
+                   DB::rollBack();
+                   return ApiResponse::errorResponse(400, "Sản phẩm '{$cart->sku_id}' không đủ hàng.");
+               }
+   
+               $variantDetails = $sku->attributeOptions->pluck('value', 'attribute.name')->toArray();
+   
+               $subtotal = $sku->price * $cart->quantity;
+   
+               OrderDetail::create([
+                   'order_id' => $order->id,
+                   'product_name' => $sku->product->name,
+                   'variant_details' => json_encode($variantDetails),
+                   'quantity' => $cart->quantity,
+                   'price' => $sku->price,
+                   'subtotal' => $subtotal,
+               ]);
+   
+               $affected = ProductSku::where('id', $sku->id)
+                   ->where('stock', '>=', $cart->quantity) // Kiểm tra tồn kho lần nữa
+                   ->decrement('stock', $cart->quantity);
+   
+               if ($affected === 0) {
+                   DB::rollBack();
+                   return ApiResponse::errorResponse(400, "Sản phẩm '{$sku->sku}' đã hết hàng.");
+               }
+   
+               $totalAmount += $subtotal;
+           }
 
-        $validate = $request->validated();
+           $order->update(['total_amount' => $totalAmount]);
+   
+           Cart::where(function ($query) use ($user, $session_id) {
+               if ($user) {
+                   $query->where('user_id', $user->id);
+               } else {
+                   $query->where('session_id', $session_id);
+               }
+           })->delete();
+   
+           DB::commit(); 
+   
+           return ApiResponse::responseSuccess($order, 201, 'Đặt hàng thành công');
+       } catch (\Exception $e) {
+           \Log::error($e->getMessage());
 
-        $user = Auth::user();
-        \DB::beginTransaction();
-        try {
-            foreach ($validate['cart'] as $item) {
-                $sku = ProductSku::find($item['sku_id']);
-                if($sku->stock < $item['quantity']){
-                    throw ValidationException::withMessages(["sku_{$sku->id}" => "Sản phẩm {$sku->sku} không đủ hàng tồn"]);
-                }
-            }
-
-            $order = Order::create([
-                'user_id' => $user->id,
-                'total_amount' => $validate['total_amount'],
-                'status' => $validate['status'],
-                'name'=> $validate['name'],
-                'email' => $validate['email'],
-                'phone' => $validate['phone'],
-                'address' => $validate['address'],
-                'ward' => $validate['ward'],
-                'district' => $validate['district'],
-                'city' => $validate['city'],
-                'zip_code' => $validate['zip_code'],
-                'payment_method' => $validate['payment_method'],
-                'note' => $validate['note'],
-
-            ]);
-
-            foreach ($validate['cart'] as $item) {
-                $sku = ProductSku::findOrFail($item['sku_id']);
-
-                OrderDetail::create([
-                    'order_id' => $order->id,
-                    'sku_id' => $sku->id,
-                    'quantity' => $item['quantity'],
-                    'price' => $sku->price,
-                    'subtotal' => $sku->price * $item['quantity']
-                ]);
-
-                $sku->decrement('stock', $item['quantity']);
-            }
-            if($user){
-                Cart::where('user_id', $user->id)->delete();
-            }
-            \DB::commit();
-
-            return response()->json([
-                'message' => 'Đặt hàng thành công',
-                'data' => new OrderResource($order->load('orderDetails.sku'))
-            ]);
-
-        }catch(Exception $e){
-            \DB::rollBack();
-            \Log::error($e->getMessage());
-            return ApiResponse::errorResponse($e->errors());
-        }
+           DB::rollBack();
+           return ApiResponse::errorResponse(500, 'Lỗi khi đặt hàng: ' . $e->getMessage());
+       }
    }
+   
    public function show(Order $order)
    {
        return new OrderResource($order->load('orderDetails.productSku'));

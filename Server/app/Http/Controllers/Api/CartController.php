@@ -17,20 +17,20 @@ class CartController
         try {
             $user = Auth::user();
             $session_id = session()->getId(); // Sử dụng session ID cho khách
-    
+
             // Bắt đầu truy vấn cart với eager loading
             $cartQuery = Cart::with(['sku.product', 'attributeOptions.attribute']);
-    
+
             // Nếu người dùng đã đăng nhập, lọc theo user_id, nếu không thì theo session_id
             if ($user) {
                 $cartQuery->where('user_id', $user->id);
             } else {
                 $cartQuery->where('session_id', $session_id);
             }
-    
+
             // Lấy danh sách cart
             $cart = $cartQuery->get();
-    
+
             // Kiểm tra xem giỏ hàng có trống không
             if ($cart->isEmpty()) {
                 return response()->json([
@@ -38,10 +38,10 @@ class CartController
                     'data' => []
                 ], 200);
             }
-    
+
             // Trả về các item trong giỏ dưới dạng CartResource collection
-            return  CartResource::collection($cart);
-            
+            return CartResource::collection($cart);
+
         } catch (\Exception $e) {
             // Xử lý lỗi nếu có
             return response()->json([
@@ -50,42 +50,52 @@ class CartController
             ], 500);
         }
     }
-    
+
     public function store(Request $request)
     {
         $request->validate([
             'sku_id' => 'required|exists:product_skus,id',
             'quantity' => 'required|integer|min:1'
         ]);
-
+    
         try {
-            // Auth::loginUsingId(2); // 2 là ID của user bạn muốn test
-            // nếu muốn test thì phải login user trước
             $user = Auth::user();
             $session_id = session()->getId();
     
-            $sku = ProductSku::findOrFail($request->sku_id);
+            $sku = ProductSku::with('attributeOptions.attribute')->findOrFail($request->sku_id);
+    
+            if ($sku->attributeOptions->isEmpty()) {
+                \Log::error("SKU {$sku->id} không có attributeOptions");
+            }
     
             if ($sku->stock < $request->quantity) {
-                return response()->json([
-                    'message' => "Số lượng khó hợp lệ",
-                    'data' => []
-                ], 200);
+                return ApiResponse::errorResponse(422, "Số lượng không hợp lệ, tồn kho còn {$sku->stock}");
             }
+    
+            $variant_detail = [
+                'sku_id' => $sku->id,
+                'price' => $sku->price,
+                'stock' => $sku->stock,
+                'attributes' => $sku->attributeOptions->mapWithKeys(function ($option) {
+                    return [$option->attribute->name ?? 'unknown' => $option->value ?? 'unknown'];
+                })->toArray(),
+                'product' => $sku->product
+            ];
+    
             $cart = Cart::updateOrCreate([
                 'sku_id' => $request->sku_id,
-                'session_id' => $session_id ? $session_id : null,
                 'user_id' => $user ? $user->id : null,
-    
+                'session_id' => $user ? null : $session_id,
             ], [
-                'quantity' => $request->quantity
+                'quantity' => $request->quantity,
+                'variant_detail' => json_encode($variant_detail, JSON_UNESCAPED_UNICODE)
             ]);
-
-        return ApiResponse::responseSuccess($cart,200,'Thêm giỏ hàng thành công');
+    
+            return ApiResponse::responseSuccess($cart, 200, 'Thêm giỏ hàng thành công');
         } catch (\Throwable $th) {
-            \Log::error("Lỗi giỏ hàng:", $th->getMessage());
-
-            return ApiResponse::errorResponse(500, $th->getMessage());
+            \Log::error("Lỗi giỏ hàng: " . $th->getMessage());
+    
+            return ApiResponse::errorResponse(500, "Lỗi");
         }
     }
 
@@ -96,24 +106,24 @@ class CartController
         ]);
 
         $cart = Cart::findOrFail($id);
-        if(!$cart){
+        if (!$cart) {
             return response()->json([
                 'message' => 'Không tìm thấy sản phẩm '
-            ],200);
+            ], 200);
         }
 
         try {
-            if($cart->sku->stock < $request->quantity){
+            if ($cart->sku->stock < $request->quantity) {
                 return response()->json([
-                    'message'=>'Số lượng trong kho không đủ'
-                ],200);
+                    'message' => 'Số lượng trong kho không đủ'
+                ], 200);
             }
 
             $cart->update([
                 'quantity' => $request->quantity
             ]);
-        
-            return ApiResponse::responseSuccess('',200);
+
+            return ApiResponse::responseSuccess('', 200);
 
         } catch (\Throwable $th) {
             \Log::error("Lỗi khi cập nhật giỏ hàng:", $th->getMessage());
@@ -129,9 +139,9 @@ class CartController
         try {
             $cart->delete();
 
-        return response()->json([
-            'message' => 'Xóa thành công',
-        ],204);
+            return response()->json([
+                'message' => 'Xóa thành công',
+            ], 204);
         } catch (\Throwable $th) {
             \Log::error("Lỗi giỏ hàng:", $th->getMessage());
 
@@ -139,30 +149,30 @@ class CartController
         }
     }
     public function clearCart()
-{
-    try {
-        // Auth::loginUsingId(2); // 2 là ID của user bạn muốn test
-        $user = Auth::user();
-        $session_id = session()->getId();
+    {
+        try {
+            // Auth::loginUsingId(2); // 2 là ID của user bạn muốn test
+            $user = Auth::user();
+            $session_id = session()->getId();
 
-        if (!$user) {
+            if (!$user) {
+                return response()->json([
+                    'message' => "Bạn chưa đăng nhập"
+                ], 401);
+            }
+
+            // Xóa toàn bộ giỏ hàng của user hoặc session_id
+            Cart::where('user_id', $user->id)
+                ->orWhere('session_id', $session_id)
+                ->delete();
+
             return response()->json([
-                'message' => "Bạn chưa đăng nhập"
-            ], 401);
+                'message' => 'Đã xóa toàn bộ giỏ hàng thành công'
+            ], 200);
+        } catch (\Throwable $th) {
+            \Log::error("Lỗi khi xóa toàn bộ giỏ hàng:", [$th->getMessage()]);
+            return ApiResponse::errorResponse(500, $th->getMessage());
         }
-
-        // Xóa toàn bộ giỏ hàng của user hoặc session_id
-        Cart::where('user_id', $user->id)
-            ->orWhere('session_id', $session_id)
-            ->delete();
-
-        return response()->json([
-            'message' => 'Đã xóa toàn bộ giỏ hàng thành công'
-        ], 200);
-    } catch (\Throwable $th) {
-        \Log::error("Lỗi khi xóa toàn bộ giỏ hàng:", [$th->getMessage()]);
-        return ApiResponse::errorResponse(500, $th->getMessage());
     }
-}
 
 }

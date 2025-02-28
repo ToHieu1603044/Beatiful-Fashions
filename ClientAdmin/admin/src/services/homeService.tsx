@@ -81,4 +81,11 @@ export const updateCart = async (data: any, id: number) => {
   });
 };
 
+export const storeCart = async (data: any)  => {
+  const token = getAuthToken();
+  return axios.post(`${API_BASE_URL}/carts`, data, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+}
+
 

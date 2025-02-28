@@ -4,7 +4,6 @@ const API_URL = "http://127.0.0.1:8000/api/products";
 
 // Lấy token từ localStorage
 const getAuthToken = () => localStorage.getItem("access_token");
-
 export const getProducts = async (params?: { search?: string; category_id?: string; brand?: string; date?: string; price?: number; mix_price?: number; max_price: number; priceRange?: string }) => {
   const token = getAuthToken();
   return await axios.get(API_URL, {

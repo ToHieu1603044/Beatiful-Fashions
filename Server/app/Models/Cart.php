@@ -11,6 +11,7 @@ class Cart extends Model
         'session_id',
         'sku_id',
         'quantity',
+        'variant_detail'
     ];
 
     public function sku(){

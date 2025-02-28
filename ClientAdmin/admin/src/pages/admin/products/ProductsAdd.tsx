@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { TagsInput } from "react-tag-input-component";
-import axios from "axios";
+
 import "bootstrap/dist/css/bootstrap.min.css";
 import { createProduct } from "../../../services/productService";
+import { axiosInstance} from "../../../services/axiosInstance";
 
 export default function AddProductForm() {
   const [product, setProduct] = useState({
@@ -33,8 +34,8 @@ export default function AddProductForm() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const brandRes = await axios.get("http://127.0.0.1:8000/api/brands");
-        const categoryRes = await axios.get("http://127.0.0.1:8000/api/categories");
+        const brandRes = await axiosInstance.get("/brands"); // ✅ Tự động gửi token
+        const categoryRes = await axiosInstance.get("/categories"); // ✅ Tự động gửi token
 
         setBrands(brandRes.data.data || []);
         setCategories(categoryRes.data || []);
