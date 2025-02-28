@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ProductController;
 
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
 
@@ -29,8 +28,9 @@ Route::post('/register', [AuthController::class, 'register']);
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
-
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
+    
+
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
 
     Route::get('/users', [UserController::class, 'index']); // Lấy danh sách users
@@ -45,6 +45,8 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::post('/refresh', [AuthController::class, 'refreshToken']);
+
+    Route::get('/listUsers', [App\Http\Controllers\Api\AuthController::class, 'listUser']);
 
     Route::get('/users', [App\Http\Controllers\Api\AuthController::class, 'index']);
 // route dành cho fontend muốn xem thông tin cá nhân của chính mình
@@ -91,8 +93,13 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::delete('/roles/{id}', [RolePermissionController::class, 'deleteRole']);
     Route::delete('/permissions/{id}', [RolePermissionController::class, 'deletePermission']);
 
-    Route::post('/roles/assign-all-permissions', [RolePermissionController::class, 'assignAllPermissionsToRole']);
+   // Route::post('/roles/{id}/assign-all-permissions', [RolePermissionController::class, 'assignAllPermissionsToRole']);
+   
+    Route::post('/roles/{id}/update-permissions', [RolePermissionController::class, 'updatePermissions']);
+
     Route::post('/roles/remove-all-permissions', [RolePermissionController::class, 'removeAllPermissionsFromRole']);
+
+    Route::get('/roles/{id}/permissions', [RolePermissionController::class, 'getRolePermissions']);
 
     Route::apiResource('brands', BrandController::class);
     Route::apiResource('categories', CategoryController::class);
@@ -100,6 +107,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
     Route::apiResource('attributes', AttributeController::class);
     Route::apiResource('attribute-options', AttributeOptionController::class);
+
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
 });
 

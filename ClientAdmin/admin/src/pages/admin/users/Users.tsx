@@ -14,7 +14,11 @@ const Users = () => {
 
   const getAll = async () => {
     try {
-      const response = await axios.get("http://127.0.0.1:8000/api/users");
+      const response = await axios.get("http://127.0.0.1:8000/api/listUsers",{
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
       setUsers(response.data.data);
     } catch (error) {
       console.log(error);

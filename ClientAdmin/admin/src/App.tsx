@@ -1,4 +1,4 @@
-import { useRoutes } from "react-router-dom";
+import { Navigate, useRoutes } from "react-router-dom";
 import Admin from "./layouts/admin/Admin";
 import Categories from "./pages/admin/categories/Categories";
 import Attributes from "./pages/admin/attributes/Attributes";
@@ -23,13 +23,18 @@ import Register from "./pages/client/Register";
 import Account from "./pages/client/Account";
 
 import Cart from "./pages/client/Cart";
+import Authorization from "./pages/403";
+import Roles from "./pages/admin/roles/Roles";
 
-
+const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
+  const role = localStorage.getItem("role"); 
+  return role === "admin" ? element : <Navigate to="/403" />;
+};
 function App() {
   const routes = useRoutes([
     {
       path: "/admin",
-      element: <Admin />,
+      element: <ProtectedRoute element={<Admin />} />,
       children: [
         {
           path: "categories",
@@ -65,33 +70,34 @@ function App() {
           ],
         },
         { path: "users", element: <Users /> },
+
+        {
+          path: "roles",
+          element: <Roles />,
+          children: [
+           
+          ],
+        },
       ],
     },
     {
-      // Client Route
       path: "/",
       element: <Clients />,
       children: [
-        { path: "/category/:id/:slug", element: <ProductCategories /> },
+        { path: "category/:id/:slug", element: <ProductCategories /> },
         { path: "products/:id/detail", element: <DetailProducts /> },
-
-        {
-          path: "/login",
-          element: <Login />,
-        },
-        { path: "/register", element: <Register /> },
-        { path: "/account", element: <Account /> },
-      ]
-        {
-          path: "/cart",
-          element: <Cart />,
-        },
+        { path: "login", element: <Login /> },
+        { path: "register", element: <Register /> },
+        { path: "account", element: <Account /> },
+        { path: "cart", element: <Cart /> },
+       
       ],
     },
     {
       path: "/checkout",
       element: <CheckOut />,
     },
+    { path: "403", element: <Authorization /> },
 
   ]);
 
@@ -99,3 +105,4 @@ function App() {
 }
 
 export default App;
+

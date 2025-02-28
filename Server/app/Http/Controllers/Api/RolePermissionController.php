@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Policies\RolePolicy;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
@@ -9,12 +11,17 @@ use App\Models\User;
 
 class RolePermissionController extends Controller
 {
+    use AuthorizesRequests;
     public function indexRoles()
     {
         $this->authorize('viewAny', Role::class);
-        
-        return response()->json(Role::all(), 200);
 
+        return response()->json(Role::all(), 200);
+    }
+    public function getRolePermissions($id)
+    {
+        $role = Role::findOrFail($id);
+        return response()->json($role->permissions);
     }
 
     public function indexPermissions()
@@ -128,28 +135,40 @@ class RolePermissionController extends Controller
 
         return response()->json(['message' => 'Permission deleted successfully'], 200);
     }
-  
-    public function assignAllPermissionsToRole(Request $request)
+    public function updatePermissions(Request $request, $id)
     {
-        $request->validate([
-            'role_name' => 'required|string|exists:roles,name',
-        ]);
+        $role = Role::findOrFail($id);
 
-        $role = Role::where('name', $request->role_name)->firstOrFail();
-        $permissions = Permission::pluck('name')->toArray(); 
+        $role->syncPermissions($request->permissions ?? []);
 
-        $role->syncPermissions($permissions); 
-        return response()->json(['message' => 'All permissions assigned successfully'], 200);
+        return response()->json(
+            ['message' => 'Successfully']
+            ,
+            200
+        );
     }
-  
+
+    // public function assignAllPermissionsToRole(Request $request, $id)
+    // {
+    //     $role = Role::findOrFail($id); // Tìm role theo ID
+
+    //     $permissions = Permission::pluck('name')->toArray(); 
+
+    //     $role->syncPermissions($permissions); 
+
+    //     return response()->json(['message' => 'All permissions assigned successfully'], 200);
+    // }
+
+
     public function removeAllPermissionsFromRole(Request $request)
     {
         $request->validate([
-            'role_name' => 'required|string|exists:roles,name',
+            'role_id' => 'required|string|exists:roles,id',
         ]);
 
-        $role = Role::where('name', $request->role_name)->firstOrFail();
-        $role->syncPermissions([]); // Xóa hết quyền
+        $role = Role::findOrFail($request->role_id);
+
+        $role->syncPermissions([]); 
 
         return response()->json(['message' => 'All permissions removed successfully'], 200);
     }
