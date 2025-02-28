@@ -16,7 +16,7 @@ const Users = () => {
     try {
       const response = await axios.get("http://127.0.0.1:8000/api/listUsers",{
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
       });
       setUsers(response.data.data);
@@ -69,6 +69,7 @@ const Users = () => {
           <option value="admin">Admin</option>
         </select>
       </div>
+      <Link  className="btn btn-primary mb-3">Add</Link>
       <div className="table-responsive">
         <table className="table table-bordered table-striped table-sm text-center">
           <thead className="table-dark">

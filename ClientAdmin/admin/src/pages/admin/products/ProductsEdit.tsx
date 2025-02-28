@@ -4,6 +4,7 @@ import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { getProductById, updateProduct } from "../../../services/productService";
 import { useParams } from "react-router-dom";
+import axiosInstance from "../../../services/axiosInstance";
 
 export default function EditProductForm() {
   const { id } = useParams();
@@ -12,6 +13,7 @@ export default function EditProductForm() {
     brand_id: "",
     category_id: "",
     description: "",
+    active: false,
     image: [],
     galleryImages: [],
     attributes: [],
@@ -34,8 +36,8 @@ export default function EditProductForm() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const brandRes = await axios.get("http://127.0.0.1:8000/api/brands");
-        const categoryRes = await axios.get("http://127.0.0.1:8000/api/categories");
+        const brandRes = await axiosInstance.get("/brands");
+        const categoryRes = await axiosInstance.get("/categories");
         const productRes = await getProductById(id);
 
         console.log("Dữ liệu sản phẩm: ", productRes.data.data); // Debug API response
@@ -57,7 +59,7 @@ export default function EditProductForm() {
             }
           });
         });
-        
+
 
         setProduct({
           id: productData.id,
@@ -65,6 +67,7 @@ export default function EditProductForm() {
           brand_id: productData.brand?.id || "",
           category_id: productData.category?.id || "",
           description: productData.description || "",
+          active: productData.active || false,
           images: productData.images || "",
           image: productData.image || [],
           attributes: extractedAttributes, // Gán danh sách thuộc tính lấy từ variants
@@ -179,7 +182,7 @@ export default function EditProductForm() {
     }));
   };
   const handleGalleryChange = (e) => {
-    const files = Array.from(e.target.files); 
+    const files = Array.from(e.target.files);
     setProduct((prev) => ({
       ...prev,
       galleryImages: files,
@@ -194,12 +197,13 @@ export default function EditProductForm() {
       description: product.description,
       category_id: product.category_id,
       brand_id: product.brand_id,
+      active: Boolean(product.active),
       stock: product.stock,
       attributes: product.attributes.map((attr) => ({
         name: attr.name,
         values: Array.isArray(attr.value) ? attr.value : attr.value.split(", "),
       })),
-      
+
       variant_values: product.variant_values.map((variant) => ({
         variant_combination: variant.variant_combination,
         price: variant.price,
@@ -233,7 +237,7 @@ export default function EditProductForm() {
         onChange={(e) => setProduct({ ...product, name: e.target.value })}
       />
 
-<label className="form-label" htmlFor="Image">Image</label>
+      <label className="form-label" htmlFor="Image">Image</label>
       <input
         type="file"
         className="form-control mb-2"
@@ -278,7 +282,18 @@ export default function EditProductForm() {
         value={product.description}
         onChange={(e) => setProduct({ ...product, description: e.target.value })}
       />
-
+      <div className="form-check form-switch mt-3">
+        <input
+          className="form-check-input"
+          type="checkbox"
+          id="activeSwitch"
+          checked={product.active}
+          onChange={(e) => setProduct({ ...product, active: e.target.checked })}
+        />
+        <label className="form-check-label" htmlFor="activeSwitch">
+          {product.active ? "Sản phẩm đang hoạt động" : "Sản phẩm bị vô hiệu hóa"}
+        </label>
+      </div>
       <h4>Thuộc tính</h4>
       <input
         className="form-control mb-2"

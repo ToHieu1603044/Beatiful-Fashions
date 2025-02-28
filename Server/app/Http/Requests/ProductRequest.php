@@ -22,6 +22,8 @@ class ProductRequest extends FormRequest
      */
     public function rules(): array
     {
+        \Log::info('Active value:', ['active' => $this->input('active'), 'type' => gettype($this->input('active'))]);
+
         return [
             'name' => [
                 'required',
@@ -35,6 +37,7 @@ class ProductRequest extends FormRequest
             'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string',
             'images' => 'nullable',
+            'active' => 'required|boolean',
             'attributes' => 'required|array',
             'attributes.*.name' => 'required|string',
             'attributes.*.values' => 'required|array|min:1',
@@ -46,5 +49,12 @@ class ProductRequest extends FormRequest
             'variant_values.*.stock' => 'required|integer',
         ];
     }
+    protected function prepareForValidation()
+{
+    $this->merge([
+        'active' => filter_var($this->input('active'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
+    ]);
+}
+
 
 }
