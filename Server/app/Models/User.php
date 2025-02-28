@@ -31,6 +31,7 @@ class User extends Authenticatable
         'district',
         'ward',
         'zip_code',
+        'active',
         'role',
     ];
 

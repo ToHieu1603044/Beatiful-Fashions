@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('district');
             $table->string('ward');
             $table->string('zip_code')->nullable();
-            $table->integer('role')->default(0);
+            $table->boolean('active')->default(true);
             $table->timestamps();
         });
 

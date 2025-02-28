@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('order_details', function (Blueprint $table) {
+        Schema::create('invoices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained()->onDelete('cascade');
-            $table->string('product_name'); // Lưu tên sản phẩm tại thời điểm đặt hàng
-            $table->json('variant_details'); // Lưu biến thể sản phẩm (VD: {"color": "Red", "size": "M"})
-            $table->integer('quantity');
-            $table->bigInteger('price');
-            $table->bigInteger('subtotal');
+            $table->string('invoice_number')->unique();
+            $table->bigInteger('total_amount');
+            $table->string('status')->default('unpaid'); // paid, unpaid, refunded
+            $table->timestamp('issued_at');
+            $table->timestamp('due_at')->nullable();
             $table->timestamps();
         });
     }
@@ -28,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('order_details');
+        Schema::dropIfExists('invoices');
     }
 };

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { getProductById } from "../../services/homeService";
+import { getProductById, storeCart } from "../../services/homeService";
 import { Link, useParams } from "react-router-dom";
 import { Send, User } from "lucide-react";
 
@@ -78,12 +78,32 @@ const DetailProducts: React.FC = () => {
         setSelectedAttributes((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!selectedVariant) {
             alert("Vui lòng chọn biến thể.");
             return;
         }
-        console.log("Dữ liệu gửi đi:", { quantity, sku_id: selectedVariant.sku_id });
+
+        const data = {
+            sku_id: selectedVariant.sku_id,
+            quantity: quantity
+        };
+
+        console.log("Dữ liệu gửi đi:", data);
+
+        try {
+            const response = await storeCart(data);
+            console.log("Phản hồi từ API:", response.data);
+
+            if (response.status === 200) {
+                alert("Thêm vào giỏ hàng thành công!");
+            } else {
+                alert("Có lỗi xảy ra, vui lòng thử lại.");
+            }
+        } catch (error: any) {
+            console.error("Lỗi khi thêm vào giỏ hàng:", error);
+            alert(error.response?.data?.message || "Không thể thêm vào giỏ hàng.");
+        }
     };
 
     const handleImageClick = (imageUrl: string) => {
@@ -112,7 +132,7 @@ const DetailProducts: React.FC = () => {
         });
 
         setSelectedAttributes(initialSelectedAttributes);
-        setAvailableOptions(initialAvailableOptions);
+        //  setAvailableOptions(initialAvailableOptions);
     };
 
     return (
@@ -156,9 +176,9 @@ const DetailProducts: React.FC = () => {
                         <div className="col-md-6">
                             <h3 className="fw-bold">Tên sản phẩm: {product.name}</h3>
                             <h4 className="text-danger fw-bold">
-                                Giá: {selectedVariant ? selectedVariant.price.toLocaleString() : product.price.toLocaleString()}đ
+                                Giá: {selectedVariant ? selectedVariant.price : product.price}đ
                                 {selectedVariant?.old_price && (
-                                    <del className="text-muted ms-2">{selectedVariant.old_price.toLocaleString()}đ</del>
+                                    <del className="text-muted ms-2">{selectedVariant.old_price}đ</del>
                                 )}
                             </h4>
                             <p className="fw-semibold">Trạng thái: <span className={selectedVariant?.stock > 0 ? "text-success" : "text-danger"}>{selectedVariant?.stock > 0 ? "Còn hàng" : "Hết hàng"}</span></p>
@@ -273,9 +293,9 @@ const DetailProducts: React.FC = () => {
                                             <div className="card-body text-center">
                                                 <h6 className="card-title fw-bold">{product.name}</h6>
                                                 <p className="text-danger fw-bold">
-                                                    {product.price.toLocaleString()}đ
+                                                    {product.price}đ
                                                     {product.old_price && (
-                                                        <del className="text-muted ms-2">{product.old_price.toLocaleString()}đ</del>
+                                                        <del className="text-muted ms-2">{product.old_price}đ</del>
                                                     )}
                                                 </p>
                                                 <button className="btn btn-primary btn-sm" onClick={() => handleShowModal(product)}>

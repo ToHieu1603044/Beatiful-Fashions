@@ -15,7 +15,8 @@ class Product extends Model
         'category_id',
         'total_rating',
         'total_sold',
-        'images'
+        'images',
+        'active',
     ];
 
     protected $dates = [
