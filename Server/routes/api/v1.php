@@ -34,6 +34,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::apiResource('discounts', DiscountController::class);
 Route::post('discounts', [DiscountController::class, 'applyDiscount']);
 
+
 Route::get('/momo/callback', [MoMoController::class, 'callback']);
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 

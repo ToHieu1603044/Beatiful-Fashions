@@ -73,6 +73,12 @@ export const getCart = async () => {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 };
+export const deleteCartItem  = async (id: number) => {
+  const token = getAuthToken();
+  return await axios.delete(`${API_BASE_URL}/carts/${id}`,{
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+};
 
 export const updateCart = async (data: any, id: number) => {
   const token = getAuthToken();

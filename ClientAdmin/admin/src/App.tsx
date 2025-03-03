@@ -25,6 +25,9 @@ import Account from "./pages/client/Account";
 import Cart from "./pages/client/Cart";
 import Authorization from "./pages/403";
 import Roles from "./pages/admin/roles/Roles";
+import RolesAdd from "./pages/admin/roles/Rolesadd";
+import EditRole from "./pages/admin/roles/Rolesedit";
+
 import { Children } from "react";
 import AddUser from "./pages/admin/users/AddUser";
 import EditUser from "./pages/admin/users/EditUser";
@@ -80,20 +83,12 @@ function App() {
           ],
         },
 
-        { path: "users", element: <Users />,
-          children: [
-            { path: "add", element: <AddUser/> },
-            { path: ":id/edit", element: <EditUser /> },
-          ]
-         },
+
+        { path: "roles", element: <Roles /> },
+        { path: "roles/create", element: <RolesAdd /> },
+        { path: "roles/:id/edit", element: <EditRole /> },
         
-        {
-          path: "roles",
-          element: <Roles />,
-          children: [
-           
-          ],
-        },
+
       ],
     },
     {
