@@ -16,32 +16,35 @@ class RolePolicy
         }
     
         \Log::info("User {$user->id} checking permission: view_roles");
-        return $user->hasPermissionTo('view_any_role');
+        return $user->hasPermissionTo('view_any_role','api');
     }
     
 
     public function view(User $user, Role $role)
     {
-        return $user->hasPermissionTo('view role');
+        return $user->hasPermissionTo('view_role');
     }
 
     public function create(User $user)
     {
-        return $user->hasPermissionTo('create role');
+        return $user->hasPermissionTo('create_role');
     }
 
     public function update(User $user, Role $role)
     {
-        return $user->hasPermissionTo('edit role');
+        return $user->hasPermissionTo('edit_role','api');
     }
 
     public function delete(User $user, Role $role)
     {
-        return $user->hasPermissionTo('delete role');
+        if ($role->name === 'admin') {
+            return false;
+        }
+        return $user->hasPermissionTo('delete_role','api');
     }
 
     public function assignPermissions(User $user, Role $role)
     {
-        return $user->hasPermissionTo('assign permissions');
+        return $user->hasPermissionTo('assign_permissions','api');
     }
 }

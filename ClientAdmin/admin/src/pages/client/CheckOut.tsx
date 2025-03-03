@@ -1,38 +1,69 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-const users = [
-    {
-        email: "vgiang2701@gmail.com",
-        password:
-            "$2a$10$FdEYp8SMaRxl3YSCNNwenekP8gACpg.BFuBvGda/4WEW9.RJulaoW",
-        id: 1,
-    },
-];
-interface Province {
-    code: string;
-    name: string;
-}
+import { getCart } from "../../services/homeService";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify"; // Make sure toastify is imported for alerts
+import axiosInstance from "../../services/axiosInstance";
 
-interface District {
-    code: string;
-    name: string;
-}
-
-interface Ward {
-    code: string;
-    name: string;
-}
 const CheckOut = () => {
     const userJson = localStorage.getItem("user");
-    const user = userJson ? JSON.parse(userJson)!.user : null;
+    const user = userJson ? JSON.parse(userJson).user : null;
     const [bank, setBank] = useState<undefined | number>();
-    // console.log("bank", bank);
-    const [provinces, setProvinces] = useState<Province[]>([]);
-    const [districts, setDistricts] = useState<District[]>([]);
-    const [wards, setWards] = useState<Ward[]>([]);
+    const [provinces, setProvinces] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [wards, setWards] = useState([]);
     const [selectedProvince, setSelectedProvince] = useState("");
     const [selectedDistrict, setSelectedDistrict] = useState("");
     const [selectedWard, setSelectedWard] = useState("");
+    const [totalAmount, setTotalAmount] = useState(0);
+    const [discountedTotal, setDiscountedTotal] = useState(0);
+    const [formData, setFormData] = useState({
+        email: "",
+        name: "",
+        phone: "",
+        address: "",
+        discount: "",
+        total_amount: discountedTotal,
+        payment_method: "",
+        note: "",
+        province: "",
+        city: "",
+        district: "",
+        district_name: "",
+        ward: ""
+    });
+    const [products, setProducts] = useState([]);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        fetchCarts();
+    }, []);
+    useEffect(() => {
+        setFormData((prev) => ({
+            ...prev,
+            total_amount: discountedTotal
+        }));
+    }, [discountedTotal]);
+    
+    const fetchCarts = async () => {
+        try {
+            const response = await getCart();
+            const cartData = response.data.data.map(item => ({
+                ...item,
+                quantity: item.quantity || 1,
+            }));
+            setProducts(cartData);
+            calculateTotal(cartData);
+        } catch (error) {
+            if (error.response && error.response.status === 401) {
+                navigate("/login");
+            } else {
+                toast.error("Lỗi khi lấy giỏ hàng. Vui lòng thử lại!");
+                console.error("Lỗi khi lấy giỏ hàng:", error);
+            }
+        }
+    };
+
     // call api đia chỉ
     useEffect(() => {
         axios
@@ -66,6 +97,62 @@ const CheckOut = () => {
                 );
         }
     }, [selectedDistrict]);
+    const calculateTotal = (items: any[]) => {
+        const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        console.log("Total amount:", total);
+        
+        setTotalAmount(total);
+        setDiscountedTotal(total); 
+    };
+
+    const applyDiscount = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formData.discount) {
+            toast.error("Vui lòng nhập mã giảm giá.");
+            return;
+        }
+
+        try {
+            const response = await axios.post("http://127.0.0.1:8000/api/discounts", {
+                discountCode: formData.discount,
+                totalAmount: totalAmount
+            });
+
+            const discount = response.data.discountAmount || 0; 
+            console.log("Discount amount:", discount);
+            const newTotal = Math.max(totalAmount - discount, 0);
+            setDiscountedTotal(newTotal);
+            toast.success("Giảm giá áp dụng thành công!");
+        } catch (error) {
+            toast.error("Lỗi khi áp dụng mã giảm giá. Vui lòng thử lại!");
+            console.error("Error applying discount:", error);
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log("Dữ liệu đã gửi:", formData); 
+        console.log("Dữ liệu đã gửi:", JSON.stringify(formData, null, 2));
+
+
+        try {
+            const response = await axiosInstance.post('/orders', formData,{
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            console.log("Response từ backend:", response.data); 
+            if (response.data.payUrl) {
+                console.log("🔗 Chuyển hướng đến MoMo:", response.data.payUrl);
+                
+                // Thử mở URL trong cửa sổ mới
+                window.open(response.data.payUrl, "_self");  // Hoặc _blank để mở tab mới
+            }
+            
+        } catch (error) {
+            console.error("Error sending data:", error);
+        }
+    };
     return (
         <>
             <div
@@ -133,13 +220,11 @@ const CheckOut = () => {
                                     cursor: user ? "not-allowed" : "auto",
                                 }}
                             >
-                                <form action="">
+                                <form onSubmit={handleSubmit}>
                                     {/* email */}
                                     <div className="mb-3">
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            placeholder="Email"
+                                        <input type="text" className="form-control" placeholder="Email"
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                             style={{ height: "45px" }}
                                         />
                                     </div>
@@ -149,112 +234,108 @@ const CheckOut = () => {
                                             type="text"
                                             className="form-control"
                                             placeholder="Họ và tên"
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                             style={{ height: "45px" }}
                                         />
                                     </div>
-                                    {/* số điện thoại  */}
+                                    {/* số điện thoại */}
                                     <div className="mb-3">
                                         <input
                                             type="text"
                                             className="form-control"
                                             placeholder="Số điện thoại"
+                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                             style={{ height: "45px" }}
                                         />
                                     </div>
-                                     {/* tỉnh thành   */}
-                                     <div className="mb-3">
+                                    {/* tỉnh thành */}
+                                    <div className="mb-3">
                                         <select
                                             value={selectedProvince}
-                                            onChange={(e) =>
-                                                setSelectedProvince(
-                                                    e.target.value
-                                                )
-                                            }
+                                            onChange={(e) => {
+                                                const provinceCode = e.target.value;
+                                                const provinceName = provinces.find(p => p.code == provinceCode)?.name || "";
+
+                                                setSelectedProvince(provinceCode);
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    province: provinceCode,
+                                                    city: provinceName,
+                                                   
+                                                }));
+                                            }}
                                             className="form-select"
                                         >
-                                            <option value="" disabled selected>
-                                                Chọn tỉnh thành
-                                            </option>
-                                            {provinces.map(
-                                                (province: Province) => (
-                                                    <option
-                                                        key={province.code}
-                                                        value={province.code}
-                                                    >
-                                                        {province.name}
-                                                    </option>
-                                                )
-                                            )}
+                                            <option value="" disabled>Chọn tỉnh thành</option>
+                                            {provinces.map(province => (
+                                                <option key={province.code} value={province.code}>{province.name}</option>
+                                            ))}
                                         </select>
+
                                     </div>
-                                    {/* Quận Huyện    */}
+                                    {/* Quận Huyện */}
                                     <div className="mb-3">
                                         <select
                                             value={selectedDistrict}
-                                            onChange={(e) =>
-                                                setSelectedDistrict(
-                                                    e.target.value
-                                                )
-                                            }
+                                            onChange={(e) => {
+                                                const districtCode = e.target.value;
+                                                const districtName = districts.find(d => d.code == districtCode)?.name || "";
+
+                                                setSelectedDistrict(districtCode);
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    district: districtCode, // Lưu mã quận/huyện
+                                                    district_name: districtName, // Lưu tên quận/huyện
+                                                    ward: "" // Reset phường/xã khi thay đổi quận/huyện
+                                                }));
+                                            }}
                                             className="form-select"
                                         >
-                                            <option value="" disabled selected>
-                                                Chọn quận huyện
-                                            </option>
-                                            {districts.map(
-                                                (district: District) => (
-                                                    <option
-                                                        key={district.code}
-                                                        value={district.code}
-                                                    >
-                                                        {district.name}
-                                                    </option>
-                                                )
-                                            )}
+                                            <option value="" disabled>Chọn quận huyện</option>
+                                            {districts.map(district => (
+                                                <option key={district.code} value={district.code}>{district.name}</option>
+                                            ))}
                                         </select>
+
                                     </div>
-                                    {/* Phường xã   */}
+                                    {/* Phường xã */}
                                     <div className="mb-3">
                                         <select
                                             value={selectedWard}
-                                            onChange={(e) =>
-                                                setSelectedWard(e.target.value)
-                                            }
+                                            onChange={(e) => {
+                                                setSelectedWard(e.target.value);
+                                                setFormData({ ...formData, ward: e.target.value });
+                                            }}
                                             className="form-select"
                                         >
-                                            <option value="" disabled selected>
-                                                Chọn phường xã
-                                            </option>
-                                            {wards.map((ward: Ward) => (
-                                                <option
-                                                    key={ward.code}
-                                                    value={ward.name}
-                                                >
-                                                    {ward.name}
-                                                </option>
+                                            <option value="" disabled selected>Chọn phường xã</option>
+                                            {wards.map(ward => (
+                                                <option key={ward.code} value={ward.name}>{ward.name}</option>
                                             ))}
                                         </select>
                                     </div>
-                                    {/* Địa chỉ  */}
+                                    {/* Địa chỉ */}
                                     <div className="mb-3">
                                         <input
                                             type="text"
                                             className="form-control"
                                             placeholder="Địa chỉ"
+                                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                                             style={{ height: "45px" }}
                                         />
                                     </div>
-                                    {/* Ghi chú   */}
+                                    {/* Ghi chú */}
                                     <div className="mb-3">
                                         <textarea
-                                            name=""
-                                            id=""
                                             cols={10}
                                             rows={5}
                                             placeholder="Ghi chú"
                                             className="form-control"
+                                            onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                                         ></textarea>
                                     </div>
+                                    {/* Nút submit */}
+                                    <button type="submit" className="btn btn-primary">Gửi</button>
                                 </form>
                             </div>
                         </div>
@@ -283,7 +364,7 @@ const CheckOut = () => {
                                         name="flexRadioDefault"
                                         id="flexRadioDefault"
 
-                                        // checked: nếu muốn như mẫu thì bỏ cmt(check để tự động chọn mà ko cần ng dùng bấm chọn)
+                                    // checked: nếu muốn như mẫu thì bỏ cmt(check để tự động chọn mà ko cần ng dùng bấm chọn)
                                     />
                                     <div className="d-flex">
                                         {" "}
@@ -325,6 +406,8 @@ const CheckOut = () => {
                                             name="flexRadioDefault"
                                             id="flexRadioDefault1"
                                             onClick={() => setBank(1)}
+                                            value={"online"}
+                                            onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
                                         />
                                         <label
                                             className="form-check-label"
@@ -354,15 +437,15 @@ const CheckOut = () => {
                                             Quý Khách vui lòng ghi rõ nội dung
                                             chuyển tiền :
                                         </p>
-                                       
+
                                         <p>★ TÊN + MÃ ĐƠN HÀNG</p>
-                                       
+
                                         <p>
                                             Nhận được chuyển khoản shop sẽ gửi
                                             email thông báo xác nhận thanh toán
                                             và đóng gói / gửi hàng ngay .
                                         </p>
-                                       
+
                                         <p>
                                             Ngân hàng TMCP Công thương Việt Nam
                                         </p>
@@ -384,7 +467,9 @@ const CheckOut = () => {
                                             type="radio"
                                             name="flexRadioDefault"
                                             id="flexRadioDefault2"
+                                            value={"cod"}
                                             onClick={() => setBank(2)}
+                                            onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
                                         />
                                         <label
                                             className="form-check-label"
@@ -421,51 +506,18 @@ const CheckOut = () => {
                     </div>
                 </div>
                 {/* right */}
-                <div
-                    className="pt-3"
-                    style={{
-                        width: "35%",
-                        backgroundColor: "#EEEEEEE",// mã màu chuẩn #fafafa
-                        paddingLeft: "25px",
-                    }}
-                >
-                    <p className="fs-5 fw-bolder mb-4">Đơn hàng (5 sản phẩm)</p>
-                    {/* product order */}
-                    <div
-                        className="py-3"
-                        style={{
-                            borderTop: "1px solid #C0C0C0",
-                            borderBottom: "1px solid #C0C0C0",
-                            width: "400px",
-                            maxHeight: "200px",
-                            overflow: "hidden",
-                            overflowY: "scroll",
-                            scrollbarWidth: "thin",
-                        }}
-                    >
-                        {/* sẩn phẩm 1 */}
-                        <div
-                            className="d-flex align-items-center "
-                            style={{ fontSize: "13px",marginBottom:"-10px" }}
-                        >
-                            {/* img */}
-                            <div
-                                className="position-relative"
-                                style={{ width: "100px" }}
-                            >
-                                <img
-                                    src="https://bizweb.dktcdn.net/thumb/thumb/100/347/891/products/781-jpeg.jpg?v=1640953694857"
-                                    alt=""
-                                    style={{
-                                        width: "50px",
-                                        height: "50px",
-                                        objectFit: "cover",
-                                        border: "1px solid #C0C0C0",
-                                        borderRadius: "5px",
-                                    }}
-                                />
-                                <p
-                                    style={{
+                <div className="pt-3" style={{ width: "35%", backgroundColor: "#EEEEEEE", paddingLeft: "25px" }}>
+                    <p className="fs-5 fw-bolder mb-4">Đơn hàng ({products.length} sản phẩm)</p>
+                    <div className="py-3" style={{ borderTop: "1px solid #C0C0C0", borderBottom: "1px solid #C0C0C0", maxHeight: "200px", overflowY: "scroll" }}>
+                        {products.map((item, index) => (
+                            <div key={index} className="d-flex align-items-center">
+                                <div className="position-relative" style={{ width: "100px" }}>
+                                    <img
+                                        src={item.product.image || "https://placeholder.com/50"}
+                                        alt=""
+                                        style={{ width: "50px", height: "50px", objectFit: "cover", border: "1px solid #C0C0C0", borderRadius: "5px" }}
+                                    />
+                                    <p style={{
                                         position: "absolute",
                                         top: "-5px",
                                         right: "40px",
@@ -474,303 +526,53 @@ const CheckOut = () => {
                                         fontSize: "12px",
                                         backgroundColor: "red",
                                         borderRadius: "50%",
+                                        color: "white",
                                         display: "flex",
                                         justifyContent: "center",
-                                        alignItems: "center",
-                                        color: "white",
-                                    }}
-                                >
-                                    1
-                                </p>
+                                        alignItems: "center"
+                                    }}>{item.quantity}</p>
+                                </div>
+                                <div style={{ marginLeft: "-30px", width: "230px" }}>
+                                    <p>{item.product.name}</p>
+                                    {item.product.attributes && item.product.attributes.map((attr, attrIndex) => (
+                                        <p key={attrIndex} style={{ marginTop: "-15px" }}>
+                                            {attr.attribute}: {attr.value}
+                                        </p>
+                                    ))}
+                                </div>
+                                <p style={{ marginLeft: "60px" }}>{item.price.toLocaleString()}₫</p>
                             </div>
-                            {/* name sản phẩm  */}
-                            <div
-                                className=""
-                                style={{ marginLeft: "-30px", width: "230px" }}
-                            >
-                                <p>
-                                    Quần TB Striped Arm Band Black Trouser cx2
-                                </p>
-                                <p style={{marginTop: "-15px"}}>28</p>
-                            </div>
-                            {/* price sản phẩm  */}
-                            <p style={{ marginLeft: "60px" }}>440.000₫</p>
-                        </div>
-                        {/* sẩn phẩm 2 */}
-                        <div
-                            className="d-flex align-items-center "
-                            style={{ fontSize: "13px",marginBottom:"-10px" }}
-                        >
-                            {/* img */}
-                            <div
-                                className="position-relative"
-                                style={{ width: "100px" }}
-                            >
-                                <img
-                                    src="https://bizweb.dktcdn.net/thumb/thumb/100/347/891/products/781-jpeg.jpg?v=1640953694857"
-                                    alt=""
-                                    style={{
-                                        width: "50px",
-                                        height: "50px",
-                                        objectFit: "cover",
-                                        border: "1px solid #C0C0C0",
-                                        borderRadius: "5px",
-                                    }}
-                                />
-                                <p
-                                    style={{
-                                        position: "absolute",
-                                        top: "-5px",
-                                        right: "40px",
-                                        width: "20px",
-                                        height: "20px",
-                                        fontSize: "12px",
-                                        backgroundColor: "red",
-                                        borderRadius: "50%",
-                                        display: "flex",
-                                        justifyContent: "center",
-                                        alignItems: "center",
-                                        color: "white",
-                                    }}
-                                >
-                                    1
-                                </p>
-                            </div>
-                            {/* name sản phẩm  */}
-                            <div
-                                className=""
-                                style={{ marginLeft: "-30px", width: "230px" }}
-                            >
-                                <p>
-                                    Quần TB Striped Arm Band Black Trouser cx2
-                                </p>
-                                <p style={{marginTop: "-15px"}}>28</p>
-                            </div>
-                            {/* price sản phẩm  */}
-                            <p style={{ marginLeft: "60px" }}>440.000₫</p>
-                        </div>
-                        {/* sẩn phẩm 3 */}
-                        <div
-                            className="d-flex align-items-center "
-                            style={{ fontSize: "13px",marginBottom:"-10px" }}
-                        >
-                            {/* img */}
-                            <div
-                                className="position-relative"
-                                style={{ width: "100px" }}
-                            >
-                                <img
-                                    src="https://bizweb.dktcdn.net/thumb/thumb/100/347/891/products/781-jpeg.jpg?v=1640953694857"
-                                    alt=""
-                                    style={{
-                                        width: "50px",
-                                        height: "50px",
-                                        objectFit: "cover",
-                                        border: "1px solid #C0C0C0",
-                                        borderRadius: "5px",
-                                    }}
-                                />
-                                <p
-                                    style={{
-                                        position: "absolute",
-                                        top: "-5px",
-                                        right: "40px",
-                                        width: "20px",
-                                        height: "20px",
-                                        fontSize: "12px",
-                                        backgroundColor: "red",
-                                        borderRadius: "50%",
-                                        display: "flex",
-                                        justifyContent: "center",
-                                        alignItems: "center",
-                                        color: "white",
-                                    }}
-                                >
-                                    1
-                                </p>
-                            </div>
-                            {/* name sản phẩm  */}
-                            <div
-                                className=""
-                                style={{ marginLeft: "-30px", width: "230px" }}
-                            >
-                                <p>
-                                    Quần TB Striped Arm Band Black Trouser cx2
-                                </p>
-                                <p style={{marginTop: "-15px"}}>28</p>
-                            </div>
-                            {/* price sản phẩm  */}
-                            <p style={{ marginLeft: "60px" }}>440.000₫</p>
-                        </div>
-                         {/* sẩn phẩm 3 */}
-                         <div
-                            className="d-flex align-items-center "
-                            style={{ fontSize: "13px",marginBottom:"-10px" }}
-                        >
-                            {/* img */}
-                            <div
-                                className="position-relative"
-                                style={{ width: "100px" }}
-                            >
-                                <img
-                                    src="https://bizweb.dktcdn.net/thumb/thumb/100/347/891/products/781-jpeg.jpg?v=1640953694857"
-                                    alt=""
-                                    style={{
-                                        width: "50px",
-                                        height: "50px",
-                                        objectFit: "cover",
-                                        border: "1px solid #C0C0C0",
-                                        borderRadius: "5px",
-                                    }}
-                                />
-                                <p
-                                    style={{
-                                        position: "absolute",
-                                        top: "-5px",
-                                        right: "40px",
-                                        width: "20px",
-                                        height: "20px",
-                                        fontSize: "12px",
-                                        backgroundColor: "red",
-                                        borderRadius: "50%",
-                                        display: "flex",
-                                        justifyContent: "center",
-                                        alignItems: "center",
-                                        color: "white",
-                                    }}
-                                >
-                                    1
-                                </p>
-                            </div>
-                            {/* name sản phẩm  */}
-                            <div
-                                className=""
-                                style={{ marginLeft: "-30px", width: "230px" }}
-                            >
-                                <p>
-                                    Quần TB Striped Arm Band Black Trouser cx2
-                                </p>
-                                <p style={{marginTop: "-15px"}}>28</p>
-                            </div>
-                            {/* price sản phẩm  */}
-                            <p style={{ marginLeft: "60px" }}>440.000₫</p>
-                        </div>
-                         {/* sẩn phẩm 3 */}
-                         <div
-                            className="d-flex align-items-center "
-                            style={{ fontSize: "13px",marginBottom:"-10px" }}
-                        >
-                            {/* img */}
-                            <div
-                                className="position-relative"
-                                style={{ width: "100px" }}
-                            >
-                                <img
-                                    src="https://bizweb.dktcdn.net/thumb/thumb/100/347/891/products/781-jpeg.jpg?v=1640953694857"
-                                    alt=""
-                                    style={{
-                                        width: "50px",
-                                        height: "50px",
-                                        objectFit: "cover",
-                                        border: "1px solid #C0C0C0",
-                                        borderRadius: "5px",
-                                    }}
-                                />
-                                <p
-                                    style={{
-                                        position: "absolute",
-                                        top: "-5px",
-                                        right: "40px",
-                                        width: "20px",
-                                        height: "20px",
-                                        fontSize: "12px",
-                                        backgroundColor: "red",
-                                        borderRadius: "50%",
-                                        display: "flex",
-                                        justifyContent: "center",
-                                        alignItems: "center",
-                                        color: "white",
-                                    }}
-                                >
-                                    1
-                                </p>
-                            </div>
-                            {/* name sản phẩm  */}
-                            <div
-                                className=""
-                                style={{ marginLeft: "-30px", width: "230px" }}
-                            >
-                                <p>
-                                    Quần TB Striped Arm Band Black Trouser cx2
-                                </p>
-                                <p style={{marginTop: "-15px"}}>28</p>
-                            </div>
-                            {/* price sản phẩm  */}
-                            <p style={{ marginLeft: "60px" }}>440.000₫</p>
-                        </div>
+                        ))}
                     </div>
-                    {/* mã giảm giá */}
-                    <div
-                        className="py-3 pl-5"
-                        style={{
-                            borderBottom: "1px solid #C0C0C0",
-                            width: "400px",
-                        }}
-                    >
-                        <form action="" className="d-flex">
+                    <div className="py-3 pl-5" style={{ borderBottom: "1px solid #C0C0C0" }}>
+                        <form onSubmit={applyDiscount} className="d-flex">
                             <input
                                 type="text"
                                 className="form-control me-2"
                                 placeholder="Nhập mã giảm giá"
                                 style={{ height: "50px", width: "250px" }}
+                                onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
                             />
-                            <button
-                                className="btn btn-warning"
-                                style={{ height: "48px" }}
-                            >
-                                Áp Dụng{" "}
-                            </button>
+                            <button type="submit" className="btn btn-warning mt-2">Áp Dụng</button>
                         </form>
                     </div>
-                    {/* tiền thanh toán */}
-                    <div
-                        className="py-3 pl-5"
-                        style={{
-                            borderBottom: "1px solid #C0C0C0",
-                            width: "400px",
-                        }}
-                    >
+                    <div className="py-3 pl-5" style={{ borderBottom: "1px solid #C0C0C0" }}>
                         <div className="d-flex justify-content-between mb-3">
                             <p>Tạm Tính</p>
-                            <p>1.440.000₫</p>
+                            <p>{totalAmount.toLocaleString()}₫</p>
                         </div>
                         <div className="d-flex justify-content-between">
                             <p>Phí Vận Chuyển</p>
                             <p>40.000₫</p>
                         </div>
                     </div>
-                    {/* tổng tiền*/}
-                    <div
-                        className="py-3 pl-5"
-                        style={{
-                            borderBottom: "1px solid #C0C0C0",
-                            width: "400px",
-                        }}
-                    >
+                    <div className="py-3 pl-5" style={{ borderBottom: "1px solid #C0C0C0" }}>
                         <div className="d-flex justify-content-between mb-2">
                             <p>Tổng cộng</p>
-                            <p>1.000.000₫</p>
+                            <p>{discountedTotal.toLocaleString()}₫</p>
                         </div>
                         <div className="d-flex justify-content-between align-items-center">
-                            <p className="text-danger">
-                                &#60; Quay về giỏ hàng
-                            </p>
-                            <button
-                                className="btn btn-warning"
-                                style={{ height: "48px", width: "120px" }}
-                            >
-                                Áp Dụng{" "}
-                            </button>
+                            <p className="text-danger"></p>
                         </div>
                     </div>
                 </div>

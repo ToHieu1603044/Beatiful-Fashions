@@ -5,6 +5,9 @@ use App\Http\Controllers\Api\AttributeOptionController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\DiscountController;
+use App\Http\Controllers\Api\MoMoController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 
 use App\Http\Controllers\Api\AuthController;
@@ -28,8 +31,12 @@ Route::post('/register', [AuthController::class, 'register']);
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::apiResource('discounts', DiscountController::class);
+Route::post('discounts', [DiscountController::class, 'applyDiscount']);
+
+Route::get('/momo/callback', [MoMoController::class, 'callback']);
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
-    
+
 
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
 
@@ -81,6 +88,10 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::post('/roles', [RolePermissionController::class, 'createRole']);
     Route::post('/permissions', [RolePermissionController::class, 'createPermission']);
 
+    Route::post('/momo/payment', [MoMoController::class, 'createPayment']);
+
+
+
     // Gán & xóa permission cho role
     Route::post('/roles/assign-permissions', [RolePermissionController::class, 'assignPermissionToRole']);
     Route::post('/roles/remove-permission', [RolePermissionController::class, 'removePermissionFromRole']);
@@ -90,7 +101,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::post('/users/remove-role', [RolePermissionController::class, 'removeRoleFromUser']);
 
     // Xóa role & permission
-    Route::delete('/roles/{id}', [RolePermissionController::class, 'deleteRole']);
+    Route::delete('/roles/{role}', [RolePermissionController::class, 'deleteRole']);
     Route::delete('/permissions/{id}', [RolePermissionController::class, 'deletePermission']);
 
    // Route::post('/roles/{id}/assign-all-permissions', [RolePermissionController::class, 'assignAllPermissionsToRole']);
