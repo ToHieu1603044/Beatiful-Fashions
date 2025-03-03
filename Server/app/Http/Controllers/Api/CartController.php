@@ -136,12 +136,6 @@ class CartController
                 ], 200);
                 $sku = $cart->sku;
 
-                // Kiểm tra số lượng có hợp lệ không
-                if ($request->quantity > $sku->stock) {
-                    return response()->json([
-                        'message' => "Số lượng không hợp lệ, chỉ còn {$sku->stock} sản phẩm trong kho.",
-                    ], 400);
-
                 }
 
                 $cart->update([
@@ -152,7 +146,7 @@ class CartController
                 return ApiResponse::responseSuccess('', 200, 'Cập nhật giỏ hàng thành công');
 
             }
-        } catch (\Throwable $th) {
+        catch (\Throwable $th) {
             \Log::error("Lỗi khi cập nhật giỏ hàng:", [$th->getMessage()]);
 
             return ApiResponse::errorResponse(500, $th->getMessage());

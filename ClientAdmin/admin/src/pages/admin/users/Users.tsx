@@ -14,7 +14,7 @@ const Users = () => {
 
   const getAll = async () => {
     try {
-      const response = await axios.get("http://127.0.0.1:8000/api/listUsers",{
+      const response = await axios.get("http://127.0.0.1:8000/api/listUsers", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
@@ -43,7 +43,7 @@ const Users = () => {
   const filteredUsers = users.filter(
     (user) =>
       (user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (roleFilter === "" || user.role === roleFilter)
   );
 
@@ -69,7 +69,11 @@ const Users = () => {
           <option value="admin">Admin</option>
         </select>
       </div>
-      <Link  className="btn btn-primary mb-3">Add</Link>
+
+      <button className="btn btn-success mb-3" onClick={() => navigate("/admin/users/add")}>
+        <i className="fa-solid fa-user-plus"></i> Add User
+      </button>
+
       <div className="table-responsive">
         <table className="table table-bordered table-striped table-sm text-center">
           <thead className="table-dark">
@@ -77,9 +81,9 @@ const Users = () => {
               <th>ID</th>
               <th>Name</th>
               <th>Email</th>
-              {/* <th>Email Verified At</th> */}
+              <th>Email Verified At</th>
               <th>Phone</th>
-              {/* <th>Address</th> */}
+              <th>Address</th>
               <th>City</th>
               <th>District</th>
               <th>Ward</th>
@@ -94,9 +98,9 @@ const Users = () => {
                 <td>{indexOfFirstUser + index + 1}</td>
                 <td>{item.name}</td>
                 <td>{item.email}</td>
-                {/* <td>{item.emailVerifiedAt}</td> */}
+                <td>{item.emailVerifiedAt}</td>
                 <td>{item.phone}</td>
-                {/* <td>{item.address}</td> */}
+                <td>{item.address}</td>
                 <td>{item.city}</td>
                 <td>{item.district}</td>
                 <td>{item.ward}</td>
@@ -104,12 +108,13 @@ const Users = () => {
                 <td>{item.role}</td>
                 <td className="text-center flex">
                   <button className="btn btn-warning " >
-                  <i className="fa-solid fa-eye"></i>
+                    <i className="fa-solid fa-eye"></i>
                   </button>
                   <button className="btn btn-primary mx-2" onClick={() => navigate(`/admin/users/${item.id}/edit`)}>
-                  <i className="fa-solid fa-pen-to-square"></i>
+                    <i className="fa-solid fa-pen-to-square"></i>
                   </button>
-                  <button className="btn btn-danger  "  onClick={() => handleDelete(item.id)}>
+                  <button className="btn btn-danger  " onClick={() => handleDelete(item.id)}>
+
                     <i className="fa-solid fa-trash"></i>
                   </button>
                 </td>

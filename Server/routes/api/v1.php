@@ -33,6 +33,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::apiResource('discounts', DiscountController::class);
 Route::post('discounts', [DiscountController::class, 'applyDiscount']);
+
+
+Route::get('/momo/callback', [MoMoController::class, 'callback']);
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
 
@@ -87,7 +90,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::post('/permissions', [RolePermissionController::class, 'createPermission']);
 
     Route::post('/momo/payment', [MoMoController::class, 'createPayment']);
-Route::get('/momo/callback', [MoMoController::class, 'callback']);
+
 
 
     // Gán & xóa permission cho role

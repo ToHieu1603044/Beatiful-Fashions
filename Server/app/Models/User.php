@@ -19,6 +19,7 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    protected $guard_name = 'sanctum';
     protected $fillable = [
         'name',
         'email',
@@ -70,4 +71,5 @@ class User extends Authenticatable
     public function membership(){
         return $this->hasOne(Membership::class);
     }
+    
 }
