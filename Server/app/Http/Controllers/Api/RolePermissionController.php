@@ -31,7 +31,7 @@ class RolePermissionController extends Controller
 
     public function createRole(Request $request)
     {
-        $this->authorize('create', Role::class);
+        $this->authorize('create', arguments: Role::class);
 
         $request->validate([
             'name' => 'required|string|unique:roles,name'
@@ -110,19 +110,14 @@ class RolePermissionController extends Controller
     }
 
 
-    public function deleteRole($id)
+    public function deleteRole(Role $role)
     {
-        $this->authorize('delete', Role::class);
-
-        $role = Role::find($id);
-        if (!$role) {
-            return response()->json(['message' => 'Role not found'], 404);
-        }
-
+       
         $role->delete();
-
+    
         return response()->json(['message' => 'Role deleted successfully'], 200);
     }
+    
 
     public function deletePermission($id)
     {
