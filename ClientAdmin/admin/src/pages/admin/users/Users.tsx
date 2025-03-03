@@ -69,9 +69,11 @@ const Users = () => {
           <option value="admin">Admin</option>
         </select>
       </div>
+
       <button className="btn btn-success mb-3" onClick={() => navigate("/admin/users/add")}>
         <i className="fa-solid fa-user-plus"></i> Add User
       </button>
+
       <div className="table-responsive">
         <table className="table table-bordered table-striped table-sm text-center">
           <thead className="table-dark">
@@ -112,6 +114,7 @@ const Users = () => {
                     <i className="fa-solid fa-pen-to-square"></i>
                   </button>
                   <button className="btn btn-danger  " onClick={() => handleDelete(item.id)}>
+
                     <i className="fa-solid fa-trash"></i>
                   </button>
                 </td>

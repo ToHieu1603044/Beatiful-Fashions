@@ -92,8 +92,7 @@ class ProductController extends Controller
                 }
 
                 sort($sku_values);
-                $sku = rand(100000, 999999) . "-" . $product->id . '-' . implode('-', $sku_values);
-
+                $sku = $product->id . '-' . implode('-', $sku_values);
                 // Kiểm tra SKU đã tồn tại chưa
                 if (ProductSku::where('sku', $sku)->exists()) {
                     return response()->json(['error' => 'SKU đã tồn tại!'], 422);
@@ -222,7 +221,7 @@ class ProductController extends Controller
                         }
                     }
                     sort($sku_values);
-                    $sku = rand(100000, 999999) . "-" . $product->id . '-' . implode('-', $sku_values);
+                    $sku = $product->id . '-' . implode('-', $sku_values);
                     if ($existingSkus->has($sku)) {
                         $productSku = ProductSku::findOrFail($existingSkus[$sku]);
                         $productSku->update([
