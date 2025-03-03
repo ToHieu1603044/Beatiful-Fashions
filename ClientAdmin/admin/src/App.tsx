@@ -25,6 +25,9 @@ import Account from "./pages/client/Account";
 import Cart from "./pages/client/Cart";
 import Authorization from "./pages/403";
 import Roles from "./pages/admin/roles/Roles";
+import { Children } from "react";
+import AddUser from "./pages/admin/users/AddUser";
+import EditUser from "./pages/admin/users/EditUser";
 
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const role = localStorage.getItem("role"); 
@@ -69,8 +72,13 @@ function App() {
             { path: ":id/edit", element: <ProductsEdit /> },
           ],
         },
-        { path: "users", element: <Users /> },
-
+        { path: "users", element: <Users />,
+          children: [
+            { path: "add", element: <AddUser/> },
+            { path: ":id/edit", element: <EditUser /> },
+          ]
+         },
+        
         {
           path: "roles",
           element: <Roles />,
@@ -105,4 +113,3 @@ function App() {
 }
 
 export default App;
-
