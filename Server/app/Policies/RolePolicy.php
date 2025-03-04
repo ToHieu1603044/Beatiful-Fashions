@@ -27,7 +27,7 @@ class RolePolicy
 
     public function create(User $user)
     {
-        return $user->hasPermissionTo('create_role');
+        return $user->hasPermissionTo('create_role','api');
     }
 
     public function update(User $user, Role $role)

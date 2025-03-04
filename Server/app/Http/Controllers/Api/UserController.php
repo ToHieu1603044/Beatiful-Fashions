@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Helpers\ApiResponse;
 use App\Http\Controllers\Api\Controller;
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -13,7 +15,9 @@ class UserController extends Controller
     // Lấy danh sách users
     public function index()
     {
-        return response()->json(User::all(), 200);
+       $users = User::all();
+
+       return ApiResponse::responsePage(UserResource::collection($users));
     }
 
     // Tạo user mới
@@ -52,7 +56,7 @@ class UserController extends Controller
         $user->assignRole($request->role);
     }
 
-    return response()->json($user, 201);
+    return ApiResponse::responseObject(new UserResource($user), 201, 'User created successfully');
 }
 
 
@@ -63,7 +67,7 @@ class UserController extends Controller
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
         }
-        return response()->json($user, 200);
+        return ApiResponse::responseObject(new UserResource($user));
     }
 
     // Cập nhật user
