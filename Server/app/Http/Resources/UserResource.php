@@ -20,7 +20,12 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'role' => $this->getRoleNames(),
             'phone' => $this->phone,
-            'address' => $this->address.' '.$this->ward.' '.$this->district.' '.$this->city,        
+            'city' => $this->city,
+            'ward' => $this->ward,
+            'district' => $this->district,
+            'address' => $this->address,
+            'zip_code' => $this->zip_code,
+            'active' => $this->active,
         ];
     }
 }
