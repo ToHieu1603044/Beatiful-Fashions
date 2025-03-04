@@ -56,7 +56,7 @@ class UserController extends Controller
         $user->assignRole($request->role);
     }
 
-    return response()->json($user, 201);
+    return ApiResponse::responseObject(new UserResource($user), 201, 'User created successfully');
 }
 
 
