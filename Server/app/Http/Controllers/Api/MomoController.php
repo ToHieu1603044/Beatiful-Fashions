@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\OrderCreated;
+use App\Mail\OrderPaidMail;
 use App\Models\Cart;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class MomoController
 {
@@ -38,6 +41,9 @@ class MomoController
                         $query->where('session_id', $session_id);
                     }
                 })->delete();
+                
+                OrderCreated::dispatch($order);
+
                 return redirect()->to(env('FRONTEND_URL') . "/order/success?orderId=$orderId");
 
             case 7002: // ⏳ Giao dịch đang xử lý
