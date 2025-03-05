@@ -32,7 +32,6 @@ import { Children } from "react";
 import AddUser from "./pages/admin/users/AddUser";
 import EditUser from "./pages/admin/users/EditUser";
 
-import AddUser from "./pages/admin/users/AddUser";
 import OrderCallback from "./pages/client/OrderCallback";
 import OrderSuccess from "./pages/client/OrderSuccess";
 import OrderFail from "./pages/client/OrderFail";
@@ -57,6 +56,12 @@ function App() {
             { path: ":id/edit", element: <CategoriesEdit /> },
           ],
         },
+
+        { path: "users", element: <Users />,
+        },
+        { path: "users/add", element: <AddUser/> },
+        { path: "users/:id/edit", element: <EditUser /> },
+
         {
           path: "attributes",
           element: <Attributes />,

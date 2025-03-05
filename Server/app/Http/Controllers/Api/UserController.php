@@ -18,25 +18,45 @@ class UserController extends Controller
 
     // Tạo user mới
     public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6',
-            'phone' => 'nullable|string|max:15',
-            'address' => 'nullable|string|max:255',
-        ]);
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|string|email|max:255|unique:users',
+        'password' => 'required|string|min:6|confirmed',
+        
+        'phone' => 'nullable|string|max:15',
+        'address' => 'nullable|string|max:255',
+        'city' => 'nullable|string|max:100',
+        'ward' => 'nullable|string|max:100',
+        'district' => 'nullable|string|max:100',
+        'zip_code' => 'nullable|string|max:10',
+        'active' => 'nullable|boolean',
+        'roles' => 'nullable|array', 
+        'roles.*' => 'string|exists:roles,name',
+    ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone' => $request->phone,
-            'address' => $request->address,
-        ]);
+    $user = User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'phone' => $request->phone,
+        'address' => $request->address,
+        'city' => $request->city,
+        'ward' => $request->ward,
+        'district' => $request->district,
+        'zip_code' => $request->zip_code,
+        'active' => $request->active ?? 0, 
+    ]);
 
-        return response()->json($user, 201);
+    if ($request->has('roles')) {
+        $roles = \Spatie\Permission\Models\Role::whereIn('name', $request->roles)->get();
+        $user->syncRoles($roles);
     }
+    
+
+    return response()->json($user, 201);
+}
+
 
     // Xem chi tiết user
     public function show($id)
@@ -51,31 +71,45 @@ class UserController extends Controller
     // Cập nhật user
     public function update(Request $request, $id)
     {
-        $user = User::find($id);
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
+        $user = User::findOrFail($id);
+    
         $request->validate([
             'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|string|email|max:255|unique:users,email,'.$id,
-            'password' => 'sometimes|string|min:6',
+            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $id,
+            'password' => 'sometimes|string|min:6|confirmed',
             'phone' => 'nullable|string|max:15',
             'address' => 'nullable|string|max:255',
-            'role' => ['sometimes', Rule::in(['1', '2'])],
+            'city' => 'nullable|string|max:100',
+            'ward' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'zip_code' => 'nullable|string|max:10',
+            'active' => 'nullable|boolean',
+            'roles' => 'nullable|array', 
+            'roles.*' => 'string|exists:roles,name',
         ]);
-
+    
         $user->update([
             'name' => $request->name ?? $user->name,
             'email' => $request->email ?? $user->email,
             'password' => $request->password ? Hash::make($request->password) : $user->password,
             'phone' => $request->phone ?? $user->phone,
             'address' => $request->address ?? $user->address,
-            'role' => $request->role ?? $user->role,
+            'city' => $request->city ?? $user->city,
+            'ward' => $request->ward ?? $user->ward,
+            'district' => $request->district ?? $user->district,
+            'zip_code' => $request->zip_code ?? $user->zip_code,
+            'active' => $request->active ?? $user->active,
         ]);
-
+    
+        if ($request->has('roles')) {
+            $roles = \Spatie\Permission\Models\Role::whereIn('name', $request->roles)->get();
+            $user->syncRoles($roles);
+        }
+        
+    
         return response()->json($user, 200);
     }
+    
 
     // Xóa user
     public function destroy($id)
