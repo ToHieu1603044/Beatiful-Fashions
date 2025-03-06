@@ -1,4 +1,43 @@
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { getOrders } from "../../../services/orderService";
+
+
 const Orders = () => {
+
+  const [orders, setOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState<[]| null>(null);
+  const [showModal, setShowModal] = useState(false);
+  useEffect(() => {
+    fetchOrders();
+
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const response = await getOrders();
+      console.log(response.data);
+      setOrders(response.data.data);
+
+
+    } catch (error) {
+
+
+    }
+  }
+  
+  const handleShowModal = (order: []) => {
+    setSelectedOrder(order);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedOrder(null);
+  };
+
+
+
   return (
     <div className="container mt-4">
       <h2 className="mb-3">Danh sách Orders</h2>
@@ -9,74 +48,104 @@ const Orders = () => {
               <th style={{ width: "40px" }}>ID</th>
               <th style={{ width: "70px" }}>User Id</th>
               <th style={{ width: "120px" }}>Total Amount</th>
-              <th style={{ width: "100px" }}>Status</th>
               <th style={{ width: "130px" }}>Shipping Status</th>
-              <th style={{ width: "150px" }}>Name</th>
-              <th>Email</th>
-              <th style={{ width: "100px" }}>Phone</th>
-              <th>Ward</th>
-              <th>District</th>
-              <th style={{ width: "120px" }}>City</th>
-              <th style={{ width: "80px" }}>Zip Code</th>
+
+
+              <th>Address</th>
+
+
               <th style={{ width: "130px" }}>Payment Method</th>
-              <th style={{ maxWidth: "200px", wordBreak: "break-word" }}>Note</th>
-              <th style={{ width: "100px" }}>Created</th>
-              <th style={{ width: "100px" }}>Updated</th>
+
+
               <th style={{ width: "200px" }} className="text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>1</td>
-              <td>101</td>
-              <td>500,000 VND</td>
-              <td>Đã xác nhận</td>
-              <td>Đang giao</td>
-              <td>Nguyễn Văn A</td>
-              <td>nguyenvana@example.com</td>
-              <td>0987654321</td>
-              <td>Phường 5</td>
-              <td>Quận 10</td>
-              <td>TP.HCM</td>
-              <td>700000</td>
-              <td>Chuyển khoản</td>
-              <td>Giao hàng trong giờ hành chính, gọi trước khi giao.</td>
-              <td>2024-02-01</td>
-              <td>2024-02-02</td>
-              <td className="text-center">
-                <button className="btn btn-warning btn-sm me-1" style={{ width: "80px" }}>View</button>
-                <button className="btn btn-primary btn-sm" style={{ width: "80px" }}>Edit</button>
-                <button className="btn btn-danger btn-sm me-1" style={{ width: "80px" }}>Delete</button>
-              </td>
-            </tr>
+            {/* {id: 92, user: 'Admin', total_amount: 'required|integer|min:0', status: 'pending', shipping_status: null, …} */}
+            {orders.map((order) => (
+              <tr>
+                <td>{order.id}</td>
+                <td>{order.user}</td>
+                <td>{order.total_amount}</td>
 
-            <tr>
-              <td>2</td>
-              <td>102</td>
-              <td>1,200,000 VND</td>
-              <td>Chờ xác nhận</td>
-              <td>Chưa giao</td>
-              <td>Trần Thị B</td>
-              <td>tranthib@example.com</td>
-              <td>0912345678</td>
-              <td>Phường 2</td>
-              <td>Quận 3</td>
-              <td>TP.HCM</td>
-              <td>700000</td>
-              <td>Tiền mặt</td>
-              <td>Gọi trước khi giao, có thể hẹn ngày nhận hàng.</td>
-              <td>2024-02-02</td>
-              <td>2024-02-03</td>
-              <td className="text-center">
-                <button className="btn btn-warning btn-sm me-1" style={{ width: "80px" }}>View</button>
-                <button className="btn btn-primary btn-sm" style={{ width: "80px" }}>Edit</button>
-                <button className="btn btn-danger btn-sm me-1" style={{ width: "80px" }}>Delete</button>
-              </td>
-            </tr>
+                <td>{order.shipping_status}</td>
+
+                <td>{`${order.city}-${order.district}-${order.ward}-${order.address}`}</td>
+                <td>{order.payment_method}</td>
+
+                <td className="text-center">
+                  <button className="btn btn-warning btn-sm me-1" style={{ width: "80px" }} onClick={() => handleShowModal(order)}>View</button>
+                  <button className="btn btn-primary btn-sm" style={{ width: "80px" }}>Edit</button>
+                  <button className="btn btn-danger btn-sm me-1" style={{ width: "80px" }}>Delete</button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
+
+      {selectedOrder && (
+        <div className={`modal fade ${showModal ? "show d-block" : ""}`} tabIndex={-1} style={{ background: "rgba(0,0,0,0.5)" }}>
+             <div className="modal-dialog modal-lg">
+        <div className="modal-content">
+          <div className="modal-header bg-primary text-white">
+            <h5 className="modal-title">Chi tiết đơn hàng #{selectedOrder.id}</h5>
+          
+            <button type="button" className="btn-close" onClick={handleCloseModal}></button>
+          </div>
+          <div className="modal-body">
+            <select name="" id="">
+              <option value="pending">Pending</option>
+
+              <option value="pending">Comple</option>
+
+              <option value="pending">Cancle</option>
+            </select>
+            <p><strong>Người đặt:</strong> {selectedOrder.user}</p>
+            <p><strong>Tổng tiền:</strong> {selectedOrder.total_amount.toLocaleString()} VND</p>
+            <p><strong>Trạng thái:</strong> {selectedOrder.status}</p>
+            <p><strong>Phương thức thanh toán:</strong> {selectedOrder.payment_method.toUpperCase()}</p>
+            <p><strong>Địa chỉ giao hàng:</strong> {`${selectedOrder.address}, ${selectedOrder.ward}, ${selectedOrder.city}`}</p>
+            <p><strong>Số điện thoại:</strong> {selectedOrder.phone}</p>
+            
+            <h6 className="mt-4">Sản phẩm:</h6>
+            <table className="table table-bordered">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Sản phẩm</th>
+                  <th>Size</th>
+                  <th>Màu sắc</th>
+                  <th>Số lượng</th>
+                  <th>Đơn giá</th>
+                  <th>Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedOrder.orderdetails.map((item, index) => (
+                  <tr key={index}>
+                    <td>{index + 1}</td>
+                    <td>Mã SKU: {item.sku}</td>
+                    <td>{item.variant_details.Size}</td>
+                    <td>{item.variant_details.Color}</td>
+                    <td>{item.quantity}</td>
+                    <td>{item.price.toLocaleString()} VND</td>
+                    <td>{item.subtotal.toLocaleString()} VND</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="modal-footer">
+            <button className="btn btn-secondary" onClick={handleCloseModal}>Đóng</button>
+          </div>
+        </div>
+      </div>
+  
+        </div>
+      )}
     </div>
+    
   );
 };
 

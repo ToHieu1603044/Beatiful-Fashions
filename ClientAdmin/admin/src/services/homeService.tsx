@@ -3,7 +3,8 @@ import axios from "axios";
 // Định nghĩa base URL API
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
-// API Sản phẩm
+const getAuthToken = () => localStorage.getItem("access_token");
+const token = getAuthToken();
 export const getProducts = async (params?: { 
   search?: string; 
   category_id?: string; 
@@ -65,4 +66,32 @@ export const login = async (email: string, password: string) => {
 export const registerUser = async (name: string, email: string, password: string) => {
   return await axios.post(`${API_BASE_URL}/register`, { name, email, password });
 };
+
+export const getCart = async () => {
+  const token = getAuthToken();
+  return await axios.get(`${API_BASE_URL}/carts`,{
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+};
+export const deleteCartItem  = async (id: number) => {
+  const token = getAuthToken();
+  return await axios.delete(`${API_BASE_URL}/carts/${id}`,{
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+};
+
+export const updateCart = async (data: any, id: number) => {
+  const token = getAuthToken();
+  return await axios.put(`${API_BASE_URL}/carts/${id}`, data, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+};
+
+export const storeCart = async (data: any)  => {
+  const token = getAuthToken();
+  return axios.post(`${API_BASE_URL}/carts`, data, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+}
+
 

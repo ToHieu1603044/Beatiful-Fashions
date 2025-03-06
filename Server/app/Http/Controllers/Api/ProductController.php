@@ -52,6 +52,7 @@ class ProductController extends Controller
                 'category_id' => $validated['category_id'],
                 'description' => $request->input('description'),
                 'images' => $validated['images'] ?? null,
+                'active' => $validated['active'],
                 'total_rating' => 0,
                 'total_sold' => 0,
             ]);
@@ -91,8 +92,7 @@ class ProductController extends Controller
                 }
 
                 sort($sku_values);
-                $sku = rand(100000, 999999) . "-" . $product->id . '-' . implode('-', $sku_values);
-
+                $sku = $product->id . '-' . implode('-', $sku_values);
                 // Kiểm tra SKU đã tồn tại chưa
                 if (ProductSku::where('sku', $sku)->exists()) {
                     return response()->json(['error' => 'SKU đã tồn tại!'], 422);
@@ -221,7 +221,7 @@ class ProductController extends Controller
                         }
                     }
                     sort($sku_values);
-                    $sku = rand(100000, 999999) . "-" . $product->id . '-' . implode('-', $sku_values);
+                    $sku = $product->id . '-' . implode('-', $sku_values);
                     if ($existingSkus->has($sku)) {
                         $productSku = ProductSku::findOrFail($existingSkus[$sku]);
                         $productSku->update([
@@ -301,5 +301,10 @@ class ProductController extends Controller
 
             return ApiResponse::errorResponse(500, $e->getMessage());
         }
+    }
+    public function search(Request $request)
+    {
+        $query = $request->input('q');
+        return response()->json(Product::searchElasticsearch($query));
     }
 }

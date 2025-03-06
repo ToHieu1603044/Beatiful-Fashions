@@ -18,7 +18,8 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained('categories')->onDelete('cascade');
             $table->integer('total_rating')->default(0);
             $table->integer('total_sold')->default(0);
-            $table->json('images')->nullable();
+            $table->string('images')->nullable();
+            $table->boolean('active')->default(true);
             $table->timestamps();
         });
     }

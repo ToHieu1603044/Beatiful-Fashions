@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { TagsInput } from "react-tag-input-component";
-import axios from "axios";
+
 import "bootstrap/dist/css/bootstrap.min.css";
 import { createProduct } from "../../../services/productService";
+import { axiosInstance } from "../../../services/axiosInstance";
 
 export default function AddProductForm() {
   const [product, setProduct] = useState({
@@ -10,6 +11,7 @@ export default function AddProductForm() {
     brand_id: "",
     category_id: "",
     description: "",
+    active: true,
     image: [],
     galleryImages: [],
     attributes: [],
@@ -33,8 +35,8 @@ export default function AddProductForm() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const brandRes = await axios.get("http://127.0.0.1:8000/api/brands");
-        const categoryRes = await axios.get("http://127.0.0.1:8000/api/categories");
+        const brandRes = await axiosInstance.get("/brands");
+        const categoryRes = await axiosInstance.get("/categories"); 
 
         setBrands(brandRes.data.data || []);
         setCategories(categoryRes.data || []);
@@ -59,7 +61,7 @@ export default function AddProductForm() {
   };
   const addAttribute = () => {
     if (!attributeName.trim() || !Array.isArray(attributeValues) || attributeValues.length === 0) return;
-  
+
     setProduct((prev) => {
       return {
         ...prev,
@@ -69,40 +71,40 @@ export default function AddProductForm() {
         ],
       };
     });
-  
+
     setAttributeName("");
     setAttributeValues([]);
   };
-  
+
 
   const generateVariants = () => {
     if (product.attributes.length === 0) {
       alert("Vui lòng thêm ít nhất một thuộc tính!");
       return;
     }
-  
+
     let combinations = [[]];
-  
+
     product.attributes.forEach((attr) => {
       let temp = [];
-      attr.values.forEach((value) => { 
+      attr.values.forEach((value) => {
         combinations.forEach((combo) => {
           temp.push([...combo, value]);
         });
       });
       combinations = temp;
     });
-  
+
     const variant_values = combinations.map((comb) => ({
       variant_combination: comb,
       price: 0,
       old_price: 0,
       stock: 0,
     }));
-  
+
     setProduct((prev) => ({ ...prev, variant_values }));
   };
-  
+
 
   const handleVariantChange = (index, field, value) => {
     setProduct((prev) => {
@@ -119,7 +121,7 @@ export default function AddProductForm() {
     }));
   };
   const handleGalleryChange = (e) => {
-    const files = Array.from(e.target.files); 
+    const files = Array.from(e.target.files);
     setProduct((prev) => ({
       ...prev,
       galleryImages: files,
@@ -132,12 +134,13 @@ export default function AddProductForm() {
       images: product.image,
       image: product.galleryImages,
       description: product.description,
+      active: product.active,
       category_id: product.category_id,
       brand_id: product.brand_id,
       stock: product.stock,
       attributes: product.attributes.map((attr) => ({
         name: attr.name,
-        values: attr.values, 
+        values: attr.values,
       })),
       variant_values: product.variant_values.map((variant) => ({
         variant_combination: variant.variant_combination,
@@ -148,7 +151,7 @@ export default function AddProductForm() {
     };
 
     try {
-      console.log("Dữ liệu gửi lên API:", outputData); 
+      console.log("Dữ liệu gửi lên API:", outputData);
       const response = await createProduct(outputData);
       console.log("Sản phẩm đã thêm:", response.data);
       alert("Sản phẩm đã được thêm thành công!");
@@ -216,6 +219,18 @@ export default function AddProductForm() {
         value={product.description}
         onChange={(e) => setProduct({ ...product, description: e.target.value })}
       />
+      <div className="form-check form-switch mt-3">
+        <input
+          className="form-check-input"
+          type="checkbox"
+          id="activeSwitch"
+          checked={product.active}
+          onChange={(e) => setProduct({ ...product, active: e.target.checked })}
+        />
+        <label className="form-check-label" htmlFor="activeSwitch">
+          {product.active ? "Sản phẩm đang hoạt động" : "Sản phẩm bị vô hiệu hóa"}
+        </label>
+      </div>
 
       <h4>Thuộc tính</h4>
       <input
@@ -231,12 +246,12 @@ export default function AddProductForm() {
 
       <h4 className="mt-4">Danh sách thuộc tính</h4>
       <ul className="list-group mb-3">
-  {product.attributes.map((attr, index) => (
-    <li key={index} className="list-group-item">
-      <strong>{attr.name}:</strong> {attr.values.join(", ")}
-    </li>
-  ))}
-</ul>
+        {product.attributes.map((attr, index) => (
+          <li key={index} className="list-group-item">
+            <strong>{attr.name}:</strong> {attr.values.join(", ")}
+          </li>
+        ))}
+      </ul>
 
 
       <button className="btn btn-success mt-3" onClick={generateVariants}>

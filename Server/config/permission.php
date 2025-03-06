@@ -188,4 +188,5 @@ return [
 
         'store' => 'default',
     ],
+    'guards' => ['web', 'api', 'sanctum'],
 ];

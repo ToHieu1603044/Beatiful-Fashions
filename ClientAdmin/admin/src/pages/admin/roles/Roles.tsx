@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import {
   getRoles,
   getPermissions,
@@ -8,6 +8,9 @@ import {
   removeAllPermissionsFromRole,
 } from "../../../services/roleService";
 import { Modal, Button, Table, Form, Accordion, Spinner } from "react-bootstrap";
+import axios from "axios";
+
+const getAuthToken = () => localStorage.getItem("access_token");
 
 const Roles = () => {
   const navigate = useNavigate();
@@ -88,6 +91,26 @@ const Roles = () => {
   const handleClearAllPermissions = () => {
     setSelectedPermissions([]);
   };
+// xóa
+const handleDelete = async (id) => {
+  if (!window.confirm("Bạn có chắc chắn muốn xóa vai trò này không?")) return;
+  const token = getAuthToken();
+
+  try {
+    await axios.delete(`http://127.0.0.1:8000/api/roles/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    // Cập nhật danh sách roles sau khi xóa thành công
+    setRoles((prevRoles) => prevRoles.filter((role) => role.id !== id));
+
+    alert("Xóa vai trò thành công!");
+  } catch (error) {
+    console.error("Lỗi khi xóa vai trò:", error);
+    alert("Xóa thất bại. Vui lòng thử lại!");
+  }
+};
+
 
   const handleRemoveAllPermissions = async (roleId) => {
     if (!window.confirm("Are you sure you want to remove all permissions?")) return;
@@ -100,7 +123,6 @@ const Roles = () => {
       console.error("Error removing permissions:", error);
     }
   };
-
   // Lưu quyền
   const handleSavePermissions = async () => {
     if (!selectedRole) return;
@@ -119,9 +141,8 @@ const Roles = () => {
     <div className="container mt-4">
       <div className="d-flex align-items-center mb-3">
         <h2 className="mb-0">Role Management</h2>
-        <Button variant="success" className="ms-3" onClick={() => navigate("/admin/roles/create")}>
-          Add New
-        </Button>
+        <Link  className="btn btn-success ms-3" to="create">Add New</Link>
+        
       </div>
 
       <input
@@ -143,6 +164,7 @@ const Roles = () => {
               <th>ID</th>
               <th>Name</th>
               <th>Actions</th>
+              <th>Hành Động</th>
             </tr>
           </thead>
           <tbody>
@@ -153,10 +175,19 @@ const Roles = () => {
                 <td>
                   <Button variant="primary" onClick={() => handleShowPermissions(role)}>Assign Permissions</Button>
                 </td>
+                <td>
+            <button className="btn btn-danger btn-sm me-1" onClick={() => handleDelete(role.id)}>
+              Xóa
+            </button>
+            <button className="btn btn-primary btn-sm" onClick={() => navigate(`/admin/roles/${role.id}/edit`)}>
+              Sửa
+            </button>
+          </td>
               </tr>
             ))}
           </tbody>
         </Table>
+        
       )}
 
       {/* Modal for Assigning Permissions */}
@@ -203,6 +234,8 @@ const Roles = () => {
           <Button variant="primary" onClick={handleSavePermissions}>Save</Button>
         </Modal.Footer>
       </Modal>
+            
+      <Outlet />
     </div>
   );
 };

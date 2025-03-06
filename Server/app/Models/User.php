@@ -19,6 +19,7 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    protected $guard_name = 'api';
     protected $fillable = [
         'name',
         'email',
@@ -31,6 +32,7 @@ class User extends Authenticatable
         'district',
         'ward',
         'zip_code',
+        'active',
         'role',
     ];
 
@@ -69,4 +71,5 @@ class User extends Authenticatable
     public function membership(){
         return $this->hasOne(Membership::class);
     }
+    
 }

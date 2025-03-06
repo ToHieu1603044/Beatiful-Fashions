@@ -13,12 +13,14 @@ return new class extends Migration
     {
         Schema::create('carts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
-            $table->string('session_id')->nullable();
-            $table->foreignId('sku_id')->constrained('product_skus')->onDelete('cascade');
-            $table->integer('quantity');
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete(); // nullable để hỗ trợ khách vãng lai
+            $table->string('session_id')->nullable(); // Lưu session ID nếu user chưa đăng nhập
+            $table->foreignId('sku_id')->constrained('product_skus')->cascadeOnDelete(); // Liên kết biến thể sản phẩm
+            $table->integer('quantity')->default(1);
+            $table->json('variant_detail')->nullable(); // Lưu chi tiết biến thể dưới dạng JSON
             $table->timestamps();
         });
+        
     }
 
     /**

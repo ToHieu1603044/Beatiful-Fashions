@@ -21,9 +21,11 @@ class Order extends Model
         'ward',
         'district',
         'city',
-        'zip_code',
+        'is_paid',
         'payment_method',
         'note',
+         'discount_amount',
+        'discount_code'
     ];
 
     public function user()

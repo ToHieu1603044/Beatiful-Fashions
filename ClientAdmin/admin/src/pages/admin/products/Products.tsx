@@ -18,6 +18,7 @@ type ProductType = {
   name: string;
   brand: { id: number; name: string };
   category: { id: number; name: string };
+  active: boolean;
   images?: string | null;
   variants: VariantType[];
   created_at?: string;
@@ -36,12 +37,12 @@ const Products = () => {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectCategory, setSelectedCategory] = useState("");
-  const [date, setDate]  = useState("");
+  const [date, setDate] = useState("");
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(1000000);
   useEffect(() => {
     fetchProducts();
-  }, [searchTerm, selectCategory,date, minPrice, maxPrice]);
+  }, [searchTerm, selectCategory, date, minPrice, maxPrice]);
 
   useEffect(() => {
     fetchCategory();
@@ -58,6 +59,9 @@ const Products = () => {
       console.log("Dữ liệu API:", response.data);
       setProducts(Array.isArray(response.data) ? response.data : response.data.data || []);
     } catch (error) {
+      if (error.response.status === 403) {
+        navigate("/403");
+      }
       console.error("Lỗi khi lấy sản phẩm:", error);
       setProducts([]);
     } finally {
@@ -137,22 +141,22 @@ const Products = () => {
           <br />
 
           <label htmlFor="Date" className="form-lable">Date</label>
-          <select className="form-select" name="" onChange={(e)=> setDate(e.target.value) }  id="">
+          <select className="form-select" name="" onChange={(e) => setDate(e.target.value)} id="">
             <option value="">-------------</option>
             <option value="desc">Desc</option>
             <option value="asc">Asc</option>
           </select>
           <Slider
-                range
-                min={10}
-                max={1000}
-                step={10}
-                defaultValue={[minPrice, maxPrice]}
-                onChange={(value) => {
-                    setMinPrice(value[0]);
-                    setMaxPrice(value[1]);
-                }}
-            />
+            range
+            min={10}
+            max={1000}
+            step={10}
+            defaultValue={[minPrice, maxPrice]}
+            onChange={(value) => {
+              setMinPrice(value[0]);
+              setMaxPrice(value[1]);
+            }}
+          />
           <br />
           <div className="table-responsive">
             <table className="table table-bordered table-striped">
@@ -162,8 +166,8 @@ const Products = () => {
                   <th>Tên</th>
                   <th>Thương hiệu</th>
                   <th>Danh mục</th>
+                  <th>Trang thái</th>
                   <th>Hình ảnh</th>
-
                   <th>Hành động</th>
                 </tr>
               </thead>
@@ -180,6 +184,15 @@ const Products = () => {
                       <td>{product.name}</td>
                       <td>{product.brand.name}</td>
                       <td>{product.category.name}</td>
+                      <td>
+                        {product.active ? (
+                          <span className="badge rounded-pill text-bg-success">Active</span>
+                        ) : (
+                          <span className="badge rounded-pill text-bg-success">Deactive</span>
+                        )}
+
+                      </td>
+
                       <td>
                         <div className="d-flex position-relative">
 
