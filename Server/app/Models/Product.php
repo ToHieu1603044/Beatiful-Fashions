@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\App;
 
 class Product extends Model
 {
@@ -71,6 +72,63 @@ public function attributeOptions()
         'id',                        // Khóa chính bảng products
         'attribute_option_id'        // Khóa ngoại ở bảng attribute_option_sku tham chiếu attribute_options
     );
+}
+public static function boot()
+{
+    parent::boot();
+
+    static::created(function ($product) {
+        $product->indexToElasticsearch();
+    });
+
+    static::updated(function ($product) {
+        $product->indexToElasticsearch();
+    });
+
+    static::deleted(function ($product) {
+        $product->deleteFromElasticsearch();
+    });
+}
+
+public function indexToElasticsearch()
+{
+    $client = App::make('Elasticsearch');
+    $client->index([
+        'index' => 'products',
+        'id' => $this->id,
+        'body' => $this->toArray()
+    ]);
+}
+
+public function deleteFromElasticsearch()
+{
+    $client = App::make('Elasticsearch');
+    $client->delete([
+        'index' => 'products',
+        'id' => $this->id
+    ]);
+}
+
+public static function searchElasticsearch($query)
+{
+    $client = App::make('Elasticsearch');
+
+    $params = [
+        'index' => 'products',
+        'body' => [
+            'query' => [
+                'multi_match' => [
+                    'query' => $query,
+                    'fields' => ['name']
+                ]
+            ]
+        ]
+    ];
+
+    $results = $client->search($params);
+    return collect($results['hits']['hits'])->map(function ($hit) {
+        return $hit['_source'];
+    });
 }
 
 }

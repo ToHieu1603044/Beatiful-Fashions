@@ -302,4 +302,9 @@ class ProductController extends Controller
             return ApiResponse::errorResponse(500, $e->getMessage());
         }
     }
+    public function search(Request $request)
+    {
+        $query = $request->input('q');
+        return response()->json(Product::searchElasticsearch($query));
+    }
 }

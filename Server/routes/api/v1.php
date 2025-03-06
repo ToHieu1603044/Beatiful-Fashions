@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return 'Hello World';
 });
-
+Route::get('/search', [ProductController::class, 'search']);
 Route::get('/products/web', [ProductController::class, 'indexWeb']);
 Route::get('/products/web/{id}/', [ProductController::class, 'productDetail']);
 Route::get('/products/categories/{id}', [CategoryController::class, 'getProductsByCategory']);
@@ -46,7 +46,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/refresh', [AuthController::class, 'refreshToken']);
     Route::get('/profile', [AuthController::class, 'profile']);
 
-    Route::get('/orders/user', [OrderController::class, 'orderUser']);
+    Route::get('/orders/users', [OrderController::class, 'orderUser']);
 
     Route::post('/momo/payment', [MoMoController::class, 'createPayment']);
 });

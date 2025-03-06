@@ -205,8 +205,8 @@ const CheckOut = () => {
                                                 cursor: "pointer",
                                             }}
                                         >
-                                            <i className="fa-regular fa-circle-user me-1"></i>
-                                            <span>Đăng nhập </span>
+                                            {/* <i className="fa-regular fa-circle-user me-1"></i>
+                                            <span>Đăng nhập </span> */}
                                         </p>
                                     </>
                                 )}
