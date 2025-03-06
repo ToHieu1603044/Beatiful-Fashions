@@ -250,5 +250,20 @@ class OrderController
         $orders = Order::onlyTrashed()->get();
         return response()->json($orders);
     }
+    public function cancelOrder(Request $request, Order $order){
+       
+        if($order->shipping_status != 'Đã gửi hàng'){
+            return ApiResponse::errorResponse(400, 'Không thể huy đơn hàng!');
+        }
 
+        $order->update([
+            'shipping_status' => 'Huy đơn hàng',
+            'status' => 'canceled',
+        ]);
+
+        return ApiResponse::responseSuccess();
+    }
+    public function refundOrder(Request $request, Order $order){
+        
+    }
 }
