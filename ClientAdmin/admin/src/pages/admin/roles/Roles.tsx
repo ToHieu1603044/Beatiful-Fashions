@@ -123,7 +123,7 @@ const handleDelete = async (id) => {
       console.error("Error removing permissions:", error);
     }
   };
- 
+
   // Lưu quyền
   const handleSavePermissions = async () => {
     if (!selectedRole) return;
