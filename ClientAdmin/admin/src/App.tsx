@@ -37,7 +37,7 @@ import OrderCallback from "./pages/client/OrderCallback";
 import OrderSuccess from "./pages/client/OrderSuccess";
 import OrderFail from "./pages/client/OrderFail";
 import OrderPending from "./pages/client/OrderPending";
-import DetailOrder from './pages/admin/orders/DetailOrder';
+
 
 
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
@@ -89,6 +89,7 @@ function App() {
         },
         { path: "users/add", element: <AddUser /> },
         { path: "users/:id/edit", element: <EditUser /> },
+
 
 
         { path: "roles", element: <Roles /> },
