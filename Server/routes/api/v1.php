@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
 
@@ -122,5 +123,20 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
 });
+
+// Cho phép tất cả mọi người xem danh sách và chi tiết đánh giá
+Route::get('/ratings', [RatingController::class, 'index']);
+Route::get('/ratings/{rating}', [RatingController::class, 'show']);
+Route::get('/ratings/product/{product_id}', [RatingController::class, 'getByProduct']);
+Route::get('/ratings/user/{user_id}', [RatingController::class, 'getByUser']);
+
+// Yêu cầu đăng nhập mới được tạo, cập nhật, xóa đánh giá
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/ratings', [RatingController::class, 'store']);
+    Route::put('/ratings/{rating}', [RatingController::class, 'update']);
+    Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
+});
+
+
 
 ?>

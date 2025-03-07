@@ -1,12 +1,15 @@
 <?php
 
 namespace App\Http\Controllers\Api;
+use App\Http\Resources\ProductResource;
+use App\Models\Product;
 use Illuminate\Support\Facades\Storage;
 
 use App\Helpers\ApiResponse;
 use App\Traits\ApiDataTrait;
 use Illuminate\Http\Request;
 use App\Models\Category;
+
 class CategoryController extends Controller
 {
     use ApiDataTrait;
