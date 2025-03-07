@@ -108,4 +108,19 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Đăng xuất thành công']);
     }
+    public function resetPassword(Request $request){
+      $request->validate([
+        'old_password' => 'required|string|min:6',
+        'password' => 'required|string|min:6|confirmed',
+      ]);
+      $user = Auth::user();
+      if(Hash::check($request->old_password, $user->password)){
+        $user->update([
+          'password' => Hash::make($request->password),
+        ]);
+        return ApiResponse::responseObject(new UserResource($user), 200, 'Reset password successfully');
+      }
+      return ApiResponse::errorResponse('Old password is incorrect', 400);
+
+    }
 }

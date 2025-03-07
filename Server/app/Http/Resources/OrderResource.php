@@ -28,6 +28,9 @@ class OrderResource extends JsonResource
             'phone' => $this->phone,
             'zip_code' => $this->zip_code,
             'note' => $this->note,
+            'discount_code' => $this->discount_code,
+            'discount_amount' => $this->discount_amount,
+            'is_paid' => $this->is_paid,
             'created_at' => $this->created_at,
             'orderdetails' => OrderDetailResource::collection($this->orderdetails),
         ];

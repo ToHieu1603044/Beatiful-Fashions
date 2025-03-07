@@ -106,7 +106,7 @@ class OrderController
                     return ApiResponse::errorResponse(400, "Sản phẩm '{$cart->sku_id}' không đủ hàng.");
                 }
 
-                $variantDetails = $sku->attributeOptions->toArray();
+                $variantDetails = $sku->attributeOptions->pluck('value','attribute.name')->toArray();
                 $subtotal = $sku->price * $cart->quantity;
 
                 OrderDetail::create([
