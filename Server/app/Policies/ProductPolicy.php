@@ -42,4 +42,12 @@ class ProductPolicy
     {
         return $user->hasPermissionTo('force delete products');
     }
+    // app/Policies/ProductPolicy.php
+
+public function viewDeleted(User $user)
+{
+    return $user->hasPermissionTo('view deleted products');
+}
+
+
 }

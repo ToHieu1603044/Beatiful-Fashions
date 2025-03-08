@@ -8,15 +8,18 @@ const getAuthHeader = () => {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
-export const getOrders = async (params?: {search?: string }) =>{ // laays toan bo don hang
+  export const getOrders = async (params?: { search?: string; page?: number }) => {  
     try {
-        return await axios.get(`${API_URL}/orders`,
-            { params, headers: getAuthHeader() });
+        return await axios.get(`${API_URL}/orders`, {
+            params,  
+            headers: getAuthHeader(),
+        });
     } catch (error) {
-        console.error("Error fetching roles:", error);
+        console.error("Error fetching orders:", error);
         throw error;
     }
-} 
+};
+
 export const getOrder = async (id:number) =>{ // lay ra mot don hang theo id
     try {
         return await axios.get(`${API_URL}/orders/${id}`,
@@ -26,7 +29,3 @@ export const getOrder = async (id:number) =>{ // lay ra mot don hang theo id
         throw error;
     }
 } 
-
-
-
-
