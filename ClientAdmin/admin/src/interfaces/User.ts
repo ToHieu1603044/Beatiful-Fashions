@@ -6,3 +6,19 @@ export interface User {
     age:number;
     confirmPassword:string;
 }
+export interface IUsers {
+    id: string;
+    name: string;
+    email: string;
+    password: string;
+    emailVerifiedAt: string;
+    phone: number;
+    address: string;
+    city: string;
+    district: string;
+    ward: string;
+    zipCode: number;
+    role: "member" | "admin";
+    createDate: string;
+  }
+  

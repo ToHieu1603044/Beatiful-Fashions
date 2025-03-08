@@ -1,51 +1,44 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { IUsers } from "../../../interfaces/User";
 
 const EditUser = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    district: "",
-    ward: "",
-    zipCode: "",
-    role: "member",
-  });
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<IUsers>();
 
   useEffect(() => {
     const getUser = async () => {
       try {
-        const response = await axios.get(`http://127.0.0.1:8000/api/users/${id}`, {
+        const response = await axios.get(`http://localhost:3000/users/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("access_token")}`,
           },
         });
-        setFormData(response.data);
+        reset(response.data);
       } catch (error) {
         console.error("Error fetching user", error);
       }
     };
     getUser();
-  }, [id]);
+  }, [id, reset]);
 
-  const handleChange = (e:any) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e:any ) => {
-    e.preventDefault();
+  const onSubmit = async (data:IUsers) => {
+    // console.log(data);
     try {
-      await axios.put(`http://127.0.0.1:8000/api/users/${id}`, formData, {
+      await axios.put(`http://localhost:3000/users/${id}`, data, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
       });
-      navigate("/admin/users");
+      navigate("/admin/users/staff");
     } catch (error) {
       console.error("Error updating user", error);
     }
@@ -54,26 +47,27 @@ const EditUser = () => {
   return (
     <div className="container mt-4">
       <h2 className="mb-3">Edit User</h2>
-      <form onSubmit={handleSubmit} className="w-50">
+      <form onSubmit={handleSubmit(onSubmit)} className="w-50">
         <div className="mb-3">
           <label className="form-label">Name</label>
-          <input type="text" className="form-control" name="name" value={formData.name} onChange={handleChange} required />
+          <input type="text" className="form-control" {...register("name")}/>
+          {errors.name && <p className="text-danger">Name is required</p>}
         </div>
         <div className="mb-3">
           <label className="form-label">Email</label>
-          <input type="email" className="form-control" name="email" value={formData.email} onChange={handleChange} required disabled />
+          <input type="email" className="form-control" {...register("email")} disabled />
         </div>
         <div className="mb-3">
           <label className="form-label">Phone</label>
-          <input type="text" className="form-control" name="phone" value={formData.phone} onChange={handleChange} />
+          <input type="text" className="form-control" {...register("phone")} />
         </div>
         <div className="mb-3">
           <label className="form-label">Address</label>
-          <input type="text" className="form-control" name="address" value={formData.address} onChange={handleChange} />
+          <input type="text" className="form-control" {...register("address")} />
         </div>
         <div className="mb-3">
           <label className="form-label">Role</label>
-          <select className="form-control" name="role" value={formData.role} onChange={handleChange}>
+          <select className="form-control" {...register("role")}>
             <option value="member">Member</option>
             <option value="admin">Admin</option>
           </select>

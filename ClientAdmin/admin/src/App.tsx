@@ -37,6 +37,10 @@ import OrderCallback from "./pages/client/OrderCallback";
 import OrderSuccess from "./pages/client/OrderSuccess";
 import OrderFail from "./pages/client/OrderFail";
 import OrderPending from "./pages/client/OrderPending";
+import Permission from "./pages/admin/permissions/Permission";
+import PermissionsAdd from "./pages/admin/permissions/PermissionsAdd";
+import PermissionsEdit from "./pages/admin/permissions/PermissionsEdit";
+import Staff from "./pages/admin/users/Staff";
 
 
 
@@ -75,7 +79,6 @@ function App() {
           ],
         },
         { path: "orders", element: <Orders /> },
-
         {
           path: "products",
           element: <Products />,
@@ -85,18 +88,19 @@ function App() {
           ],
         },
         {
-          path: "users", element: <Users />,
+          path: "users/customers", element: <Users />,
+        },
+        {
+          path: "users/staff", element: <Staff />,
         },
         { path: "users/add", element: <AddUser /> },
         { path: "users/:id/edit", element: <EditUser /> },
-
-
-
         { path: "roles", element: <Roles /> },
         { path: "roles/create", element: <RolesAdd /> },
         { path: "roles/:id/edit", element: <EditRole /> },
-
-
+        { path: "permissions", element: <Permission /> },
+        { path: "permissions/create", element: <PermissionsAdd /> },
+        { path: "permissions/:id/edit", element: <PermissionsEdit /> },
       ],
     },
     {
