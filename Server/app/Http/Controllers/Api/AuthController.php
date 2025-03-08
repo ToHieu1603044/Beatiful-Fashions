@@ -42,27 +42,43 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|string|email|unique:users',
-            'password' => 'required|string|min:6',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:6|confirmed',
+            
+            'phone' => 'nullable|string|max:15',
+            'address' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'ward' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'zip_code' => 'nullable|string|max:10',
+            'active' => 'nullable|boolean',
+            'roles' => 'nullable|array', 
+            'roles.*' => 'string|exists:roles,name',
         ]);
-
+    
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'phone' => $request->phone,
+            'address' => $request->address,
+            'city' => $request->city,
+            'ward' => $request->ward,
+            'district' => $request->district,
+            'zip_code' => $request->zip_code,
+            'active' => $request->active ?? 0, 
         ]);
-
-        // Gán quyền mặc định là 'user'
-     //   $user->assignRole('');
+    
+        if ($request->role) {
+            $user->assignRole($request->role);
+        }
+    
+      
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $user
-        ]);
+        return ApiResponse::responseObject(new UserResource($user), 201, 'User created successfully');
 
     }
     public function listUser(Request $request){
@@ -72,7 +88,16 @@ class AuthController extends Controller
 
     public function profile(Request $request) 
     {
-        return response()->json($request->user());
+        $user = Auth::user();
+      try{
+        if($user){
+          return ApiResponse::responseObject(new UserResource($user), 200, 'Thong tin nguoi dung');
+        }else{
+          return ApiResponse::errorResponse('User not found', 404);
+        }
+      }catch(\Exception $e){
+        return ApiResponse::errorResponse($e->getMessage(), 500);
+      }
     }
 
 
@@ -83,10 +108,19 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Đăng xuất thành công']);
     }
+    public function resetPassword(Request $request){
+      $request->validate([
+        'old_password' => 'required|string|min:6',
+        'password' => 'required|string|min:6|confirmed',
+      ]);
+      $user = Auth::user();
+      if(Hash::check($request->old_password, $user->password)){
+        $user->update([
+          'password' => Hash::make($request->password),
+        ]);
+        return ApiResponse::responseObject(new UserResource($user), 200, 'Reset password successfully');
+      }
+      return ApiResponse::errorResponse('Old password is incorrect', 400);
 
-    // Lấy thông tin người dùng
-    public function userProfile(Request $request)
-    {
-        return response()->json(['user' => $request->user()]);
     }
 }

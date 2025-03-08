@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
 import { getProducts, deleteProduct } from "../../../services/productService";
 import { getCategories } from "../../../services/categoryService";
 import { AxiosError } from "axios";
@@ -240,6 +240,7 @@ const Products = () => {
                 )}
               </tbody>
             </table>
+            <Link to="trash" >San pham da xoa</Link>
           </div>
         </>
       )}

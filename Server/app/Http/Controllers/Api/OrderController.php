@@ -28,13 +28,15 @@ class OrderController
             $orders = Order::with('orderDetails.sku')->paginate(10);
 
             return ApiResponse::responsePage(OrderResource::collection($orders));
+
         } catch (\Throwable $th) {
-            return ApiResponse::responseError($th->getMessage());
+
+            return ApiResponse::errorResponse(500, $th->getMessage());
         }
     }
     public function orderUser(Request $request)
     {
-        $user = 1;
+        $user = Auth::user();
 
         try {
             $orders = Order::with('orderDetails.sku')->where('user_id', $user->id)->paginate(10);
@@ -42,7 +44,7 @@ class OrderController
             return ApiResponse::responsePage(OrderResource::collection($orders));
 
         } catch (\Throwable $th) {
-            return ApiResponse::responseError($th->getMessage());
+             return ApiResponse::errorResponse(500, $th->getMessage());
         }
     }
     public function store(Request $request)
@@ -104,7 +106,7 @@ class OrderController
                     return ApiResponse::errorResponse(400, "Sản phẩm '{$cart->sku_id}' không đủ hàng.");
                 }
 
-                $variantDetails = $sku->attributeOptions->pluck('value', 'attribute.name')->toArray();
+                $variantDetails = $sku->attributeOptions->pluck('value','attribute.name')->toArray();
                 $subtotal = $sku->price * $cart->quantity;
 
                 OrderDetail::create([
@@ -204,13 +206,32 @@ class OrderController
 
     public function show(Order $order)
     {
-        return new OrderResource($order->load('orderDetails.productSku'));
+       try{
+            if($order){
+                return new OrderResource($order->load('orderDetails.sku'));
+            }else{
+                return ApiResponse::errorResponse(400, 'Không tìm thấy đơn hàng!');
+            }
+       }catch(\Exception $e){
+
+            return ApiResponse::errorResponse(500, 'Lỗi khi tìm kiếm đơn hàng: ' . $e->getMessage());
+       }
     }
     public function update(StoreOrderRequest $request, Order $order)
     {
-        $order->update($request->validated());
+        $validate = $request->validated();
 
-        return ApiResponse::responseSuccess(OrderResource::load('orderDetails.sku'));
+        $order->update($validate);
+
+        foreach ($order->orderDetails as $orderDetail) {
+            $orderDetail->update([
+                'price' => $orderDetail->sku->price,
+                'subtotal' => $orderDetail->sku->price * $orderDetail->quantity,
+            ]);
+        }
+
+        return ApiResponse::responseSuccess($order);
+      
     }
     public function destroy(Order $order)
     {
@@ -219,7 +240,7 @@ class OrderController
             $order->delete();
         }
 
-        return ApiResponse::responseSuccess();
+        return ApiResponse::responseSuccess('Xóa đơn hàng',204);
     }
     public function updateStatus(Request $request, Order $order)
     {
@@ -250,5 +271,20 @@ class OrderController
         $orders = Order::onlyTrashed()->get();
         return response()->json($orders);
     }
+    public function cancelOrder(Request $request, Order $order){
+       
+        if($order->shipping_status != 'Đã gửi hàng'){
+            return ApiResponse::errorResponse(400, 'Không thể huy đơn hàng!');
+        }
 
+        $order->update([
+            'shipping_status' => 'Huy đơn hàng',
+            'status' => 'canceled',
+        ]);
+
+        return ApiResponse::responseSuccess();
+    }
+    public function refundOrder(Request $request, Order $order){
+        
+    }
 }

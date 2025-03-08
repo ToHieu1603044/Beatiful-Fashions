@@ -36,13 +36,16 @@ export default function AddProductForm() {
     const fetchData = async () => {
       try {
         const brandRes = await axiosInstance.get("/brands");
-        const categoryRes = await axiosInstance.get("/categories"); 
+        const categoryRes = await axiosInstance.get("/categories");
 
         setBrands(brandRes.data.data || []);
         setCategories(categoryRes.data || []);
       } catch (err) {
-        console.error("Lỗi khi lấy dữ liệu:", err);
-        setError("Không thể lấy dữ liệu từ API. Kiểm tra lại server.");
+        if (err.response?.status === 403) {
+          window.location.href = "/403"; // Hoặc dùng useNavigate để điều hướng trong React Router
+        } else {
+          console.error("Lỗi khi tải dữ liệu:", err);
+        }
       } finally {
         setLoading(false);
       }

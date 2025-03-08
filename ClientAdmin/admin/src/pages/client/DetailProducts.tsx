@@ -3,7 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { getProductById, storeCart } from "../../services/homeService";
 import { Link, useParams } from "react-router-dom";
 import { Send, User } from "lucide-react";
-
+import Swal from 'sweetalert2'
 const DetailProducts: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     console.log(id);
@@ -96,13 +96,27 @@ const DetailProducts: React.FC = () => {
             console.log("Phản hồi từ API:", response.data);
 
             if (response.status === 200) {
-                alert("Thêm vào giỏ hàng thành công!");
+                Swal.fire({
+                    title: "Thêm giỏ hàng thành công!",
+                    icon: "success",
+                    draggable: true
+                });
             } else {
-                alert("Có lỗi xảy ra, vui lòng thử lại.");
+                Swal.fire({
+                    icon: "error",
+                    title: "Lỗi thử lại",
+                    text: "Something went wrong!",
+                    footer: '<a href="#">Why do I have this issue?</a>'
+                  });
             }
         } catch (error: any) {
             console.error("Lỗi khi thêm vào giỏ hàng:", error);
-            alert(error.response?.data?.message || "Không thể thêm vào giỏ hàng.");
+            Swal.fire({
+                icon: "error",
+                title: "Lỗi ".concat(error.message),
+                text: "Something went wrong!",
+                footer: '<a href="#">Why do I have this issue?</a>'
+              });
         }
     };
 

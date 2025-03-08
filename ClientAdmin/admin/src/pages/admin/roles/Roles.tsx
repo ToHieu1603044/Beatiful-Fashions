@@ -42,7 +42,11 @@ const Roles = () => {
         }, {});
         setGroupedPermissions(grouped);
       } catch (error) {
-        console.error("Error:", error);
+        if (error.response?.status === 403) {
+          window.location.href = "/403";
+        } else {
+          console.error("Lỗi khi tải dữ liệu:", error);
+        }
       } finally {
         setLoading(false);
       }
@@ -123,7 +127,7 @@ const handleDelete = async (id) => {
       console.error("Error removing permissions:", error);
     }
   };
- 
+
   // Lưu quyền
   const handleSavePermissions = async () => {
     if (!selectedRole) return;

@@ -7,15 +7,18 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Api\Controller;
 use App\Models\Brand;
 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class BrandController extends Controller
 {
 
-    // Lấy danh sách thương hiệu
+    use AuthorizesRequests;
     public function index()
     {
+        $this->authorize('viewAny', Brand::class);
+
         $brands = Brand::all();
         return response()->json(['data' => $brands], 200);
     }
@@ -23,6 +26,8 @@ class BrandController extends Controller
     // Thêm thương hiệu mới
     public function store(Request $req)
     {
+        $this->authorize('create', Brand::class);
+
         $validator = Validator::make($req->all(), [
             'name' => 'required|string|max:255',
             'status' => 'required|boolean',
@@ -40,8 +45,9 @@ class BrandController extends Controller
     // Cập nhật thương hiệu
     public function update(Request $req, $id)
     {
+       
         $brand = Brand::findOrFail($id);
-
+        $this->authorize('update', $brand);
         $validator = Validator::make($req->all(), [
             'name' => 'sometimes|string|max:255',
             'status' => 'sometimes|boolean',
@@ -60,6 +66,8 @@ class BrandController extends Controller
     public function destroy($id)
     {
         $brand = Brand::findOrFail($id);
+
+        $this->authorize('delete', $brand);
         $brand->delete();
 
         return response()->json(['message' => 'Xóa thành công'], 200);
