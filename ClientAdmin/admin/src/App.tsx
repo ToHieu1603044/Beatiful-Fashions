@@ -28,7 +28,6 @@ import Roles from "./pages/admin/roles/Roles";
 import RolesAdd from "./pages/admin/roles/Rolesadd";
 import EditRole from "./pages/admin/roles/Rolesedit";
 
-import { Children } from "react";
 import AddUser from "./pages/admin/users/AddUser";
 import EditUser from "./pages/admin/users/EditUser";
 
@@ -37,12 +36,13 @@ import OrderCallback from "./pages/client/OrderCallback";
 import OrderSuccess from "./pages/client/OrderSuccess";
 import OrderFail from "./pages/client/OrderFail";
 import OrderPending from "./pages/client/OrderPending";
+import ProductTrash from "./pages/admin/products/ProductTrash";
 
 
 
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const role = localStorage.getItem("role");
-  return role === "admin" ? element : <Navigate to="/403" />;
+  return role === "admin" || role === "manager" ? element : <Navigate to="/403" />;
 };
 function App() {
   const routes = useRoutes([
@@ -82,6 +82,7 @@ function App() {
           children: [
             { path: "create", element: <ProductsAdd /> },
             { path: ":id/edit", element: <ProductsEdit /> },
+            { path: "trash", element: <ProductTrash /> },
           ],
         },
         {

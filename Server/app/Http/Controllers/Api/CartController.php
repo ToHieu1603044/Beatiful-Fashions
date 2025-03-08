@@ -7,13 +7,16 @@ use App\Http\Resources\CartResource;
 use App\Models\Cart;
 use App\Models\ProductSku;
 use Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 
 class CartController
 {
+    use AuthorizesRequests;
 
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Cart::class);
         try {
             $user = Auth::user();
             $session_id = session()->getId(); // Sử dụng session ID cho khách

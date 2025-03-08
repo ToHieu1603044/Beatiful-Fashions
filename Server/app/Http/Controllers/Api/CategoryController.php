@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Api;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Storage;
 
 use App\Helpers\ApiResponse;
@@ -10,9 +11,10 @@ use App\Models\Category;
 class CategoryController extends Controller
 {
     use ApiDataTrait;
-    // Lấy danh mục theo dạng cây
+    use AuthorizesRequests;
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Category::class);
         $query = Category::query();
 
         // Lọc theo tên
@@ -72,6 +74,8 @@ class CategoryController extends Controller
     // Thêm danh mục mới
     public function store(Request $request)
     {
+        $this->authorize('create', Category::class);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'parent_id' => 'nullable|exists:categories,id',
@@ -89,6 +93,7 @@ class CategoryController extends Controller
 
     public function update(Request $req, $id)
     {
+        $this->authorize('update', Category::class);
 
         $req->validate([
             'name' => 'required|string|max:255',
@@ -123,6 +128,8 @@ class CategoryController extends Controller
     }
     public function show($id)
     {
+        $this->authorize('view', Category::class);
+
         $category = Category::with('children')->find($id);
 
         if (!$category) {
@@ -181,10 +188,11 @@ class CategoryController extends Controller
 
     public function destroy($id)
     {
-
+       
         $category = Category::findOrFail($id);
 
-
+        $this->authorize('delete', $category);
+        
         if ($category->children()->count() > 0) {
             return response()->json(['message' => 'Không thể xoá danh mục vì có danh mục con'], 400);
         }

@@ -45,3 +45,16 @@ export const deleteProduct = async (id: number) => {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 };
+export const getProductTrash = async (params?: { search?: string; category_id?: string; brand?: string; date?: string; price?: number; mix_price?: number; max_price: number; priceRange?: string }) => {
+  const token = getAuthToken();
+  return await axios.get(`${API_URL}/trash`, {
+    params,
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+};
+export const restoreProduct = async (id: number) => {
+  const token = getAuthToken();
+  return await axios.patch(`${API_URL}/${id}/restore`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+};

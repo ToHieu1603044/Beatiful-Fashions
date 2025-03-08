@@ -80,8 +80,11 @@ export default function EditProductForm() {
           })) ?? [],
         });
       } catch (err) {
-        console.error("Lỗi khi lấy dữ liệu:", err);
-        setError("Không thể lấy dữ liệu từ API. Kiểm tra lại server.");
+        if (err.response?.status === 403) {
+          window.location.href = "/403"; 
+        } else {
+          console.error("Lỗi khi tải dữ liệu:", err);
+        }
       } finally {
         setLoading(false);
       }
