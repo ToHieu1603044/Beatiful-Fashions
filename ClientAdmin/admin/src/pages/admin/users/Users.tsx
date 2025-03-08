@@ -1,6 +1,5 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-
 import { Link, useNavigate } from "react-router-dom";
 import { IUsers } from "../../../interfaces/Users";
 
@@ -30,9 +29,13 @@ const Users = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure??")) {
+    if (confirm("Are you sure?")) {
       try {
-        await axios.delete(`http://127.0.0.1:8000/api/users/${id}`);
+        await axios.delete(`http://127.0.0.1:8000/api/users/${id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        });
         getAll();
       } catch (error) {
         console.log(error);
@@ -91,6 +94,7 @@ const Users = () => {
               <th>Ward</th>
               <th>Zip Code</th>
               <th>Role</th>
+              <th>Active</th> {/* Thêm cột "Active" */}
               <th>Actions</th>
             </tr>
           </thead>
@@ -100,23 +104,23 @@ const Users = () => {
                 <td>{indexOfFirstUser + index + 1}</td>
                 <td>{item.name}</td>
                 <td>{item.email}</td>
-                <td>{item.emailVerifiedAt}</td>
-                <td>{item.phone}</td>
-                <td>{item.address}</td>
-                <td>{item.city}</td>
-                <td>{item.district}</td>
-                <td>{item.ward}</td>
-                <td>{item.zipCode}</td>
+                <td>{item.emailVerifiedAt || "Chưa xác minh"}</td>
+                <td>{item.phone || "Chưa có số điện thoại"}</td>
+                <td>{item.address || "Chưa có địa chỉ"}</td>
+                <td>{item.city || "Chưa có thành phố"}</td>
+                <td>{item.district || "Chưa có quận huyện"}</td>
+                <td>{item.ward || "Chưa có phường xã"}</td>
+                <td>{item.zip_code || "Chưa có mã bưu điện"}</td>
                 <td>{item.role}</td>
+                <td>{item.active ? "Hoạt động" : "Không hoạt động"}</td> {/* Hiển thị trạng thái "Active" */}
                 <td className="text-center flex">
-                  <button className="btn btn-warning " >
+                  <button className="btn btn-warning">
                     <i className="fa-solid fa-eye"></i>
                   </button>
                   <button className="btn btn-primary mx-2" onClick={() => navigate(`/admin/users/${item.id}/edit`)}>
                     <i className="fa-solid fa-pen-to-square"></i>
                   </button>
-                  <button className="btn btn-danger  " onClick={() => handleDelete(item.id)}>
-
+                  <button className="btn btn-danger" onClick={() => handleDelete(item.id)}>
                     <i className="fa-solid fa-trash"></i>
                   </button>
                 </td>

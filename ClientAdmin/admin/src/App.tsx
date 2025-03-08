@@ -20,7 +20,7 @@ import DetailProducts from "./pages/client/DetailProducts";
 import CheckOut from "./pages/client/CheckOut";
 import Login from "./pages/client/Login";
 import Register from "./pages/client/Register";
-import Account from "./pages/client/Account";
+
 
 import Cart from "./pages/client/Cart";
 import Authorization from "./pages/403";
@@ -36,6 +36,9 @@ import OrderCallback from "./pages/client/OrderCallback";
 import OrderSuccess from "./pages/client/OrderSuccess";
 import OrderFail from "./pages/client/OrderFail";
 import OrderPending from "./pages/client/OrderPending";
+
+import Profile from "./pages/client/Profile";
+
 import ProductTrash from "./pages/admin/products/ProductTrash";
 
 
@@ -58,6 +61,12 @@ function App() {
             { path: ":id/edit", element: <CategoriesEdit /> },
           ],
         },
+
+        { path: "users", element: <Users />,
+        },
+        { path: "users/add", element: <AddUser/> },
+        { path: "users/:id/edit", element: <EditUser /> },
+
         {
           path: "attributes",
           element: <Attributes />,
@@ -108,9 +117,10 @@ function App() {
         { path: "products/:id/detail", element: <DetailProducts /> },
         { path: "login", element: <Login /> },
         { path: "register", element: <Register /> },
-        { path: "account", element: <Account /> },
         { path: "cart", element: <Cart /> },
 
+        { path: "account", element: <Profile /> },
+       
       ],
     },
     {

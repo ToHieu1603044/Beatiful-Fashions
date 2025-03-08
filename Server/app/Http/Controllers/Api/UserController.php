@@ -52,9 +52,17 @@ class UserController extends Controller
         'active' => $request->active ?? 0, 
     ]);
 
-    if ($request->role) {
-        $user->assignRole($request->role);
-    }
+
+    if ($request->has('roles')) {
+        $roles = \Spatie\Permission\Models\Role::whereIn('name', $request->roles)->get();
+        $user->syncRoles($roles);
+
+   
+    
+
+    return response()->json($user, 201);
+}
+
 
     return ApiResponse::responseObject(new UserResource($user), 201, 'User created successfully');
 }
@@ -103,11 +111,11 @@ class UserController extends Controller
             'active' => $request->active ?? $user->active,
         ]);
     
-        if ($request->has('role')) {
-            $user->syncRoles([$request->role]); 
+
+        if ($request->has('roles')) {
+            $roles = \Spatie\Permission\Models\Role::whereIn('name', $request->roles)->get();
+            $user->syncRoles($roles);
         }
-    
-        return response()->json($user, 200);
     }
     
 
@@ -122,4 +130,15 @@ class UserController extends Controller
         $user->delete();
         return response()->json(['message' => 'User deleted successfully'], 200);
     }
+
+    
+ public function profile(Request $request)
+ {
+    // Lấy thông tin người dùng từ token (Auth::user() sẽ lấy người dùng dựa trên token)
+    $user = $request->user(); 
+
+    // Trả về thông tin người dùng
+    return ApiResponse::responseObject(new UserResource($user));
+ }
+
 }
