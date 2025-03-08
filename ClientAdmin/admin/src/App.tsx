@@ -28,7 +28,6 @@ import Roles from "./pages/admin/roles/Roles";
 import RolesAdd from "./pages/admin/roles/Rolesadd";
 import EditRole from "./pages/admin/roles/Rolesedit";
 
-import { Children } from "react";
 import AddUser from "./pages/admin/users/AddUser";
 import EditUser from "./pages/admin/users/EditUser";
 
@@ -37,11 +36,13 @@ import OrderCallback from "./pages/client/OrderCallback";
 import OrderSuccess from "./pages/client/OrderSuccess";
 import OrderFail from "./pages/client/OrderFail";
 import OrderPending from "./pages/client/OrderPending";
+import ProductTrash from "./pages/admin/products/ProductTrash";
+
 
 
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
-  const role = localStorage.getItem("role"); 
-  return role === "admin" ? element : <Navigate to="/403" />;
+  const role = localStorage.getItem("role");
+  return role === "admin" || role === "manager" ? element : <Navigate to="/403" />;
 };
 function App() {
   const routes = useRoutes([
@@ -74,24 +75,28 @@ function App() {
           ],
         },
         { path: "orders", element: <Orders /> },
+
         {
           path: "products",
           element: <Products />,
           children: [
             { path: "create", element: <ProductsAdd /> },
             { path: ":id/edit", element: <ProductsEdit /> },
+            { path: "trash", element: <ProductTrash /> },
           ],
         },
-        { path: "users", element: <Users />,
-         },
-         { path: "users/add", element: <AddUser/> },
-         { path: "users/:id/edit", element: <EditUser /> },
+        {
+          path: "users", element: <Users />,
+        },
+        { path: "users/add", element: <AddUser /> },
+        { path: "users/:id/edit", element: <EditUser /> },
+
 
 
         { path: "roles", element: <Roles /> },
         { path: "roles/create", element: <RolesAdd /> },
         { path: "roles/:id/edit", element: <EditRole /> },
-        
+
 
       ],
     },
@@ -105,7 +110,7 @@ function App() {
         { path: "register", element: <Register /> },
         { path: "account", element: <Account /> },
         { path: "cart", element: <Cart /> },
-       
+
       ],
     },
     {

@@ -14,6 +14,10 @@ return [
     */
 
     'name' => env('APP_NAME', 'Laravel'),
+// 'providers' => [
+//    // Illuminate\Filesystem\FilesystemServiceProvider::class,
+//     App\Providers\ElasticsearchServiceProvider::class,
+// ],
 
     /*
     |--------------------------------------------------------------------------
