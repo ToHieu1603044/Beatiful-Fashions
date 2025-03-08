@@ -12,7 +12,7 @@ const AddUser = () => {
     city: "",
     district: "",
     ward: "",
-    zipCode: "",
+    zip_code: "",
     password: "",
     password_confirmation: "",
     active: true,
@@ -48,8 +48,14 @@ const AddUser = () => {
   }, [navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+  
+    setFormData({
+      ...formData,
+      [name]: name === "active" ? value === "true" : value, // Chuyển đổi thành boolean
+    });
   };
+  
 
   const handleRoleChange = (roleName: string) => {
     setSelectedRoles((prevRoles) =>
@@ -70,7 +76,7 @@ const AddUser = () => {
     try {
       const userData = {
         ...formData,
-        roles: selectedRoles, // ✅ Đúng định dạng mảng chuỗi (["Admin", "Editor"])
+        roles: selectedRoles, 
       };
 
       const token = localStorage.getItem("access_token");
@@ -135,7 +141,7 @@ const AddUser = () => {
 
         <div className="mb-3">
           <label className="form-label">Mã Bưu Điện</label>
-          <input type="text" className="form-control" name="zipCode" value={formData.zipCode} onChange={handleChange} />
+          <input type="text" className="form-control" name="zip_code" value={formData.zip_code} onChange={handleChange} />
         </div>
 
         <div className="mb-3">
@@ -146,8 +152,8 @@ const AddUser = () => {
                 <input
                   type="checkbox"
                   value={role.name} // ✅ Sử dụng role.name
-                  checked={selectedRoles.includes(role.name)} // ✅ Kiểm tra theo name
-                  onChange={() => handleRoleChange(role.name)} // ✅ Gửi name thay vì ID
+                  checked={selectedRoles.includes(role.name)} 
+                  onChange={() => handleRoleChange(role.name)} 
                 />
                 {role.name}
               </label>

@@ -73,9 +73,11 @@ const Users = () => {
         </select>
       </div>
 
-      <button className="btn btn-success mb-3" onClick={() => navigate("/admin/users/add")}>
-        <i className="fa-solid fa-user-plus"></i> Add User
-      </button>
+      <Link to="/admin/users/add" className="btn btn-primary mb-3" >
+      <i className="fa-solid fa-user-plus"></i> Add User
+      </Link>
+        
+     
 
       <div className="table-responsive">
         <table className="table table-bordered table-striped table-sm text-center">
@@ -108,7 +110,7 @@ const Users = () => {
                 <td>{item.city || "Chưa có thành phố"}</td>
                 <td>{item.district || "Chưa có quận huyện"}</td>
                 <td>{item.ward || "Chưa có phường xã"}</td>
-                <td>{item.zipCode || "Chưa có mã bưu điện"}</td>
+                <td>{item.zip_code || "Chưa có mã bưu điện"}</td>
                 <td>{item.role}</td>
                 <td>{item.active ? "Hoạt động" : "Không hoạt động"}</td> {/* Hiển thị trạng thái "Active" */}
                 <td className="text-center flex">
