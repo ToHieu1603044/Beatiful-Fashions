@@ -37,6 +37,7 @@ import OrderSuccess from "./pages/client/OrderSuccess";
 import OrderFail from "./pages/client/OrderFail";
 import OrderPending from "./pages/client/OrderPending";
 import ProductTrash from "./pages/admin/products/ProductTrash";
+import ResetPassword from "./pages/client/ResetPassword";
 
 
 
@@ -110,6 +111,7 @@ function App() {
         { path: "register", element: <Register /> },
         { path: "account", element: <Account /> },
         { path: "cart", element: <Cart /> },
+        { path: "auth/reset-password", element: <ResetPassword /> },
 
       ],
     },
@@ -124,7 +126,7 @@ function App() {
     { path: "order/failed", element: <OrderFail /> },
 
     { path: "order/pending", element: <OrderPending /> },
-
+    
   ]);
 
   return routes;

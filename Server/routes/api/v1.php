@@ -40,6 +40,9 @@ Route::post('discounts', [DiscountController::class, 'applyDiscount']);
 Route::get('/momo/callback', [MoMoController::class, 'callback']);
 
 
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name('password.reset');
+
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('carts', CartController::class);
     Route::delete('carts', [CartController::class, 'clearCart']);
@@ -48,7 +51,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refreshToken']);
     Route::get('/profile', [AuthController::class, 'profile']);
-
     Route::get('/orders/users', [OrderController::class, 'orderUser']);
     Route::get('products/trash', [ProductController::class, 'productDelete'])->middleware('role:admin');
     Route::post('/momo/payment', [MoMoController::class, 'createPayment']);

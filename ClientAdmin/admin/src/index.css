@@ -53,4 +53,32 @@ h1 {
     font-weight: 400;
     line-height: 20px;
   }
+
+  .loading-spinner {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.8); /* Light overlay */
+  z-index: 1000; /* Ensure it appears on top */
+}
+
+.spinner {
+  border: 8px solid #f3f3f3; /* Light gray */
+  border-top: 8px solid #3498db; /* Blue */
+  border-radius: 50%;
+  width: 60px; /* Width of the spinner */
+  height: 60px; /* Height of the spinner */
+  animation: spin 1s linear infinite; /* Animation for rotation */
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
   
