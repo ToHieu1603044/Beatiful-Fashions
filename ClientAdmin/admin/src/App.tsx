@@ -40,6 +40,7 @@ import OrderPending from "./pages/client/OrderPending";
 import Profile from "./pages/client/Profile";
 
 import ProductTrash from "./pages/admin/products/ProductTrash";
+import ResetPassword from "./pages/client/ResetPassword";
 
 
 
@@ -118,6 +119,7 @@ function App() {
         { path: "login", element: <Login /> },
         { path: "register", element: <Register /> },
         { path: "cart", element: <Cart /> },
+        { path: "auth/reset-password", element: <ResetPassword /> },
 
         { path: "account", element: <Profile /> },
        
@@ -134,7 +136,7 @@ function App() {
     { path: "order/failed", element: <OrderFail /> },
 
     { path: "order/pending", element: <OrderPending /> },
-
+    
   ]);
 
   return routes;

@@ -116,7 +116,7 @@ class ProductController extends Controller
             }
 
             DB::commit();
-            Http::post("http://localhost:9200/products/_doc/{$product->id}", $product->toArray());
+           // Http::post("http://localhost:9200/products/_doc/{$product->id}", $product->toArray());
             return response()->json([
                 'message' => 'Sản phẩm đã được tạo thành công!',
                 'product' => $product->load('skus')

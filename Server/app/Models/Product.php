@@ -20,6 +20,7 @@ class Product extends Model
         'total_sold',
         'images',
         'active',
+        'description'
     ];
 
     protected $dates = [

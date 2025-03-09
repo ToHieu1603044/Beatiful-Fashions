@@ -177,9 +177,9 @@ const CheckOut = () => {
                 return;
             }
 
-            if (response.data.status === "success") {
+            if (response.status === 200) {
                 Swal.fire({
-                    title: response.data.message || "Đặt hàng thành công",
+                    title: "Đặt hàng thành công",
                     icon: "success",
                     confirmButtonText: "OK",
                 }).then(() => {

@@ -4,7 +4,7 @@ import { getProducts, deleteProduct } from "../../../services/productService";
 import { getCategories } from "../../../services/categoryService";
 import { AxiosError } from "axios";
 import { Slider } from "antd";
-
+import { BsEye, BsPencilSquare, BsTrash } from "react-icons/bs";
 type VariantType = {
   sku: string;
   price: number;
@@ -29,7 +29,8 @@ const Products = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isRootProducts = location.pathname === "/admin/products";
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
   const [products, setProducts] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
@@ -48,16 +49,25 @@ const Products = () => {
     fetchCategory();
   }, []);
 
-  const fetchProducts = async () => {
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= lastPage) {
+      fetchOrders(newPage);
+    }
+  };
+
+  const fetchProducts = async (page = 1) => {
     setLoading(true);
     try {
       const response = await getProducts({
         search: searchTerm,
         category_id: selectCategory ? Number(selectCategory) : undefined,
-        date: date
+        date: date,
+        page
       });
       console.log("Dữ liệu API:", response.data);
       setProducts(Array.isArray(response.data) ? response.data : response.data.data || []);
+      setCurrentPage(response.data.page.currentPage);
+      setLastPage(response.data.page.lastPage);
     } catch (error) {
       if (error.response.status === 403) {
         navigate("/403");
@@ -219,15 +229,24 @@ const Products = () => {
                           ))}
                         </div>
                       </td>
-                      <td>
-                        <button className="btn btn-warning btn-sm me-1" onClick={() => handleShowModal(product)}>
-                          Xem
+                      <td className="d-flex justify-content-start gap-2">
+                        <button
+                          className="btn btn-outline-primary btn-sm d-flex align-items-center"
+                          onClick={() => handleShowModal(product)}
+                        >
+                          <BsEye />
                         </button>
-                        <button className="btn btn-danger btn-sm me-1" onClick={() => handleDelete(product.id)}>
-                          Xóa
+                        <button
+                          className="btn btn-outline-danger btn-sm d-flex align-items-center"
+                          onClick={() => handleDelete(product.id)}
+                        >
+                          <BsTrash />
                         </button>
-                        <button className="btn btn-primary btn-sm" onClick={() => navigate(`/admin/products/${product.id}/edit`)}>
-                          Sửa
+                        <button
+                          className="btn btn-outline-success btn-sm d-flex align-items-center"
+                          onClick={() => navigate(`/admin/products/${product.id}/edit`)}
+                        >
+                          <BsPencilSquare />
                         </button>
                       </td>
                     </tr>
@@ -240,6 +259,24 @@ const Products = () => {
                 )}
               </tbody>
             </table>
+
+            <nav>
+              <ul className="pagination justify-content-center">
+                <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                  <button className="page-link" onClick={() => handlePageChange(currentPage - 1)}>← Trước</button>
+                </li>
+
+                {[...Array(lastPage)].map((_, i) => (
+                  <li key={i} className={`page-item ${currentPage === i + 1 ? "active" : ""}`}>
+                    <button className="page-link" onClick={() => handlePageChange(i + 1)}>{i + 1}</button>
+                  </li>
+                ))}
+
+                <li className={`page-item ${currentPage === lastPage ? "disabled" : ""}`}>
+                  <button className="page-link" onClick={() => handlePageChange(currentPage + 1)}>Sau →</button>
+                </li>
+              </ul>
+            </nav>
             <Link to="trash" >San pham da xoa</Link>
           </div>
         </>

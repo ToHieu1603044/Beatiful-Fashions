@@ -1,4 +1,4 @@
-import axios from "axios";
+
 import { useEffect, useState } from "react";
 import { getOrders } from "../../../services/orderService";
 
@@ -162,7 +162,8 @@ const Orders = () => {
                     <thead className="table-light">
                       <tr>
                         <th>#</th>
-                        <th>Sản phẩm</th>
+                        <th>Mã phẩm</th>
+                        <th>Tên sản phẩm</th>
                         {allVariantKeys.map((attr, i) => <th key={i}>{attr}</th>)}
                         <th>Số lượng</th>
                         <th>Đơn giá</th>
@@ -174,6 +175,7 @@ const Orders = () => {
                         <tr key={index}>
                           <td>{index + 1}</td>
                           <td><strong>Mã SKU:</strong> {item.sku}</td>
+                          <td>{item.product_name}</td>
                           {allVariantKeys.map((attr, i) => (
                             <td key={i}>{item.variant_details?.[attr] || "-"}</td>
                           ))}

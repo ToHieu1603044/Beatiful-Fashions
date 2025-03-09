@@ -15,7 +15,7 @@ class UserController extends Controller
     // Lấy danh sách users
     public function index()
     {
-       $users = User::all();
+       $users = User::paginate(10);
 
        return ApiResponse::responsePage(UserResource::collection($users));
     }

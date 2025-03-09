@@ -80,45 +80,71 @@ const DetailProducts: React.FC = () => {
 
     const handleSubmit = async () => {
         if (!selectedVariant) {
-            alert("Vui lòng chọn biến thể.");
+            Swal.fire({
+                icon: "warning",
+                title: "Vui lòng chọn biến thể.",
+            });
             return;
         }
-
+    
+        if (quantity <= 0) {
+            Swal.fire({
+                icon: "warning",
+                title: "Số lượng phải lớn hơn 0.",
+            });
+            return;
+        }
+    
         const data = {
             sku_id: selectedVariant.sku_id,
             quantity: quantity
         };
-
+    
         console.log("Dữ liệu gửi đi:", data);
-
+    
         try {
             const response = await storeCart(data);
             console.log("Phản hồi từ API:", response.data);
-
+    
             if (response.status === 200) {
                 Swal.fire({
                     title: "Thêm giỏ hàng thành công!",
                     icon: "success",
-                    draggable: true
+                    timer: 1500,
+                    showConfirmButton: false
                 });
             } else {
                 Swal.fire({
                     icon: "error",
-                    title: "Lỗi thử lại",
-                    text: "Something went wrong!",
-                    footer: '<a href="#">Why do I have this issue?</a>'
-                  });
+                    title: "Lỗi!",
+                    text: "Vui lòng thử lại sau.",
+                });
             }
         } catch (error: any) {
-            console.error("Lỗi khi thêm vào giỏ hàng:", error);
-            Swal.fire({
-                icon: "error",
-                title: "Lỗi ".concat(error.message),
-                text: "Something went wrong!",
-                footer: '<a href="#">Why do I have this issue?</a>'
-              });
+
+            if (error?.response?.status === 401) {
+                Swal.fire({
+                    icon: "error",
+                    title: "Bạn chưa đăng nhập!",
+                    text: "Vui lòng đăng nhập để tiếp tục.",
+                    confirmButtonText: "Đăng nhập"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = "/login";
+                    }
+                });
+            } else {
+               
+                Swal.fire({
+                    icon: "error",
+                    title: "Lỗi!",
+                    text: error?.response?.data?.message || "Đã có lỗi xảy ra, vui lòng thử lại!",
+                });
+            }
         }
     };
+    
+    
 
     const handleImageClick = (imageUrl: string) => {
         setMainImage(imageUrl);
@@ -195,6 +221,7 @@ const DetailProducts: React.FC = () => {
                                     <del className="text-muted ms-2">{selectedVariant.old_price}đ</del>
                                 )}
                             </h4>
+                            <p>Đã bán: {product.total_sold}</p>
                             <p className="fw-semibold">Trạng thái: <span className={selectedVariant?.stock > 0 ? "text-success" : "text-danger"}>{selectedVariant?.stock > 0 ? "Còn hàng" : "Hết hàng"}</span></p>
 
                             {product.variants?.[0]?.attributes?.map((attr: any, index: number) => (
@@ -241,7 +268,7 @@ const DetailProducts: React.FC = () => {
                             </li>
                             <li className="nav-item">
                                 <button className={`nav-link ${activeTab === "comments" ? "active" : ""}`} onClick={() => setActiveTab("comments")}>
-                                    Bình luận
+                                    Bình luận {"(" + product.total_rating+ ")"}
                                 </button>
                             </li>
                         </ul>

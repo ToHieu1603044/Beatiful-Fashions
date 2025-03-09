@@ -111,14 +111,22 @@ class OrderController
 
                 OrderDetail::create([
                     'order_id' => $order->id,
+                  
                     'product_name' => $sku->product->name,
                     'variant_details' => json_encode($variantDetails),
                     'quantity' => $cart->quantity,
                     'price' => $sku->price,
                     'subtotal' => $subtotal,
-                ]);
+                ]); 
 
+                if ($sku->product) {
+                    $sku->product->increment('total_sold', $cart->quantity);
+                } else {
+                    \Log::error("Không tìm thấy sản phẩm cho SKU ID: " . $sku->id);
+                }
+                
                 $sku->decrement('stock', $cart->quantity);
+
                 $totalAmount += $subtotal;
             }
 
@@ -190,19 +198,20 @@ class OrderController
                 return response()->json(['message' => 'Không tìm thấy đơn hàng!'], 400);
             }
 
+           
+
             \Log::info('Gửi mail với order:', ['order' => $order->toArray()]);
 
             // Mail::to("tthieu160304@gmail.com")->send(new OrderPaidMail($order));
 
             OrderCreated::dispatch($order);
 
-            return ApiResponse::responseSuccess($order, 201, 'Đặt hàng thành công');
+            return ApiResponse::responseSuccess($order, 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return ApiResponse::errorResponse(500, 'Lỗi khi đặt hàng: ' . $e->getMessage());
         }
     }
-
 
     public function show(Order $order)
     {
