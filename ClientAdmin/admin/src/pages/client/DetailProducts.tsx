@@ -86,7 +86,7 @@ const DetailProducts: React.FC = () => {
             });
             return;
         }
-    
+
         if (quantity <= 0) {
             Swal.fire({
                 icon: "warning",
@@ -94,18 +94,18 @@ const DetailProducts: React.FC = () => {
             });
             return;
         }
-    
+
         const data = {
             sku_id: selectedVariant.sku_id,
             quantity: quantity
         };
-    
+
         console.log("Dữ liệu gửi đi:", data);
-    
+
         try {
             const response = await storeCart(data);
             console.log("Phản hồi từ API:", response.data);
-    
+
             if (response.status === 200) {
                 Swal.fire({
                     title: "Thêm giỏ hàng thành công!",
@@ -134,7 +134,7 @@ const DetailProducts: React.FC = () => {
                     }
                 });
             } else {
-               
+
                 Swal.fire({
                     icon: "error",
                     title: "Lỗi!",
@@ -143,9 +143,6 @@ const DetailProducts: React.FC = () => {
             }
         }
     };
-    
-    
-
     const handleImageClick = (imageUrl: string) => {
         setMainImage(imageUrl);
     };
@@ -268,7 +265,7 @@ const DetailProducts: React.FC = () => {
                             </li>
                             <li className="nav-item">
                                 <button className={`nav-link ${activeTab === "comments" ? "active" : ""}`} onClick={() => setActiveTab("comments")}>
-                                    Bình luận {"(" + product.total_rating+ ")"}
+                                    Bình luận {"(" + product.total_rating + ")"}
                                 </button>
                             </li>
                         </ul>
@@ -355,10 +352,6 @@ const DetailProducts: React.FC = () => {
                     <br />
 
                 </>
-
-
-
-
             )
             }
 

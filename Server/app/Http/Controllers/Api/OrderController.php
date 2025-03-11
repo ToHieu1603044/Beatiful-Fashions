@@ -25,7 +25,7 @@ class OrderController
     public function index(Request $request)
     {
         try {
-            $orders = Order::with('orderDetails.sku')->paginate(10);
+            $orders = Order::with('orderDetails.sku')->orderBy('created_at', 'desc')->paginate(10);
 
             return ApiResponse::responsePage(OrderResource::collection($orders));
 
@@ -111,7 +111,7 @@ class OrderController
 
                 OrderDetail::create([
                     'order_id' => $order->id,
-                  
+                  //  'sku' => $sku->sku,
                     'product_name' => $sku->product->name,
                     'variant_details' => json_encode($variantDetails),
                     'quantity' => $cart->quantity,
@@ -251,16 +251,19 @@ class OrderController
 
         return ApiResponse::responseSuccess('Xóa đơn hàng',204);
     }
-    public function updateStatus(Request $request, Order $order)
-    {
-        $validate = $request->validate([
-            'shipping_status' => 'required|string'
-        ]);
+    public function updateStatus(Request $request, $id)
+{   
+    $order = Order::findOrFail($id);
 
-        $order->update($validate);
+    $request->validate([
+        'shipping_status' => 'required|string|in:pending,processing,shipped,delivered,cancelled'
+    ]);
 
-        return ApiResponse::responseSuccess();
-    }
+    $order->update(['tracking_status' => $request->shipping_status]);
+
+    return ApiResponse::responseSuccess($order, 200, "Cập nhật trạng thái thành công.");
+}
+
     public function restore($id)
     {
         $order = Order::onlyTrashed()->findOrFail($id);

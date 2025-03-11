@@ -1,12 +1,13 @@
 
 import React, { useEffect, useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
-import { getProductByCategory } from "../../services/homeService";
+import { getProductByCategory, storeCart } from "../../services/homeService";
 import { Link, useParams } from "react-router-dom";
+import Swal from 'sweetalert2'
 
 const ProductCategories = () => {
   const { id } = useParams<{ id: number }>();
-  console.log(id);
+  // console.log(id);
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -16,7 +17,18 @@ const ProductCategories = () => {
   const [price, setPrice] = useState("");
   const [priceRange, setPriceRange] = useState("");
   const [pagination, setPagination] = useState({ currentPage: 1, lastPage: 1, totalItems: 0 });
+  const handleIncrease = () => {
+    if (selectedVariant && quantity < selectedVariant.stock) {
+      setQuantity(quantity + 1);
+    }
+  };
+  const [quantity, setQuantity] = useState(1);
 
+  const handleDecrease = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -43,7 +55,7 @@ const ProductCategories = () => {
     setPriceRange(event.target.value);
   };
 
-  console.log(priceRange);
+  // console.log(priceRange);
   const handlePageChange = (page) => {
     if (page >= 1 && page <= pagination.lastPage) {
       setPagination((prev) => ({ ...prev, currentPage: page }));
@@ -96,7 +108,71 @@ const ProductCategories = () => {
       return newSelectedAttributes;
     });
   };
-
+    const handleSubmit = async () => {
+          if (!selectedVariant) {
+              Swal.fire({
+                  icon: "warning",
+                  title: "Vui lòng chọn biến thể.",
+              });
+              return;
+          }
+      
+          if (quantity <= 0) {
+              Swal.fire({
+                  icon: "warning",
+                  title: "Số lượng phải lớn hơn 0.",
+              });
+              return;
+          }
+      
+          const data = {
+              sku_id: selectedVariant.sku_id,
+              quantity: quantity
+          };
+      
+          console.log("Dữ liệu gửi đi:", data);
+      
+          try {
+              const response = await storeCart(data);
+              console.log("Phản hồi từ API:", response.data);
+      
+              if (response.status === 200) {
+                  Swal.fire({
+                      title: "Thêm giỏ hàng thành công!",
+                      icon: "success",
+                      timer: 1500,
+                      showConfirmButton: false
+                  });
+              } else {
+                  Swal.fire({
+                      icon: "error",
+                      title: "Lỗi!",
+                      text: "Vui lòng thử lại sau.",
+                  });
+              }
+          } catch (error: any) {
+  
+              if (error?.response?.status === 401) {
+                  Swal.fire({
+                      icon: "error",
+                      title: "Bạn chưa đăng nhập!",
+                      text: "Vui lòng đăng nhập để tiếp tục.",
+                      confirmButtonText: "Đăng nhập"
+                  }).then((result) => {
+                      if (result.isConfirmed) {
+                          window.location.href = "/login";
+                      }
+                  });
+              } else {
+                 
+                  Swal.fire({
+                      icon: "error",
+                      title: "Lỗi!",
+                      text: error?.response?.data?.message || "Đã có lỗi xảy ra, vui lòng thử lại!",
+                  });
+              }
+          }
+      };
   return (
     <div className="container mt-4">
 
@@ -113,9 +189,9 @@ const ProductCategories = () => {
               <Form.Select onChange={(e) => {
                 const value = e.target.value;
                 if (value === "asc" || value === "desc") {
-                  setPrice(value); 
+                  setPrice(value);
                 } else {
-                  setSortBy(value); 
+                  setSortBy(value);
                 }
               }}>
                 <option value="">Chọn bộ lọc</option>
@@ -124,7 +200,7 @@ const ProductCategories = () => {
                 <option value="asc">Giá thấp đến cao</option>
                 <option value="desc">Giá cao đến thấp</option>
               </Form.Select>
-              
+
               {/* Bộ lọc giá */}
               <h6 className="mb-2">Khoảng giá</h6>
               <Form>
@@ -251,60 +327,137 @@ const ProductCategories = () => {
         </div>
       </div>
 
-
       {selectedProduct && (
-        <Modal show={!!selectedProduct} onHide={handleCloseModal} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>{selectedProduct.name}</Modal.Title>
+        <Modal
+          show={!!selectedProduct}
+          onHide={handleCloseModal}
+          centered
+          size="lg"
+          className="product-modal"
+        >
+          <Modal.Header closeButton className="border-0 pb-0">
+            <Modal.Title className="fs-4 fw-bold">{selectedProduct.name}</Modal.Title>
           </Modal.Header>
-          <Modal.Body>
-            <img
-
-              src={selectedProduct.images ? `http://127.0.0.1:8000/storage/${selectedProduct.images}` : "https://placehold.co/50x50"}
-              className="img-fluid mb-3"
-              style={{ width: "500px", height: "300px", objectFit: "cover" }}
-              alt={selectedProduct.name}
-            />
-            <p>Thương hiệu: {selectedProduct.brand?.name}</p>
-            <p>Danh mục: {selectedProduct.category?.name}</p>
-
-            {Object.keys(selectedAttributes).map((attributeName, index) => (
-              <Form.Group key={index} className="mt-3">
-                <Form.Label>Chọn {attributeName}</Form.Label>
-                <div className="d-flex gap-2">
-                  {availableOptions[attributeName]?.map((attributeValue, idx) => (
-                    <Button
-                      key={idx}
-                      variant={selectedAttributes[attributeName] === attributeValue ? "primary" : "outline-secondary"}
-                      onClick={() => handleSelectAttribute(attributeName, attributeValue)}
-                    >
-                      {attributeValue}
-                    </Button>
-                  ))}
+          <Modal.Body className="px-4">
+            <div className="row">
+              <div className="col-md-6">
+                <div className="product-image-container">
+                  <img
+                    src={selectedProduct.images ? `http://127.0.0.1:8000/storage/${selectedProduct.images}` : "https://placehold.co/50x50"}
+                    className="img-fluid rounded shadow-sm"
+                    alt={selectedProduct.name}
+                  />
                 </div>
-              </Form.Group>
-            ))}
-
-            {selectedVariant && (
-              <div className="mt-3">
-                <p>
-                  Giá: <span className="text-danger">{selectedVariant.price.toLocaleString()}đ</span>
-                  {selectedVariant.old_price && (
-                    <span className="text-muted text-decoration-line-through">
-                      {" "}
-                      {selectedVariant.old_price.toLocaleString()}đ
-                    </span>
-                  )}
-                </p>
-                <p>Số lượng: {selectedVariant.stock}</p>
               </div>
-            )}
+              <div className="col-md-6">
+                <div className="product-details">
+                  <div className="brand-category mb-3">
+                    <span className="badge bg-light text-dark me-2">
+                      <i className="fas fa-tag me-1"></i>
+                      {selectedProduct.brand?.name}
+                    </span>
+                    <span className="badge bg-light text-dark">
+                      <i className="fas fa-folder me-1"></i>
+                      {selectedProduct.category?.name}
+                    </span>
+                  </div>
+
+                  {Object.keys(selectedAttributes).map((attributeName, index) => (
+                    <Form.Group key={index} className="mb-3">
+                      <Form.Label className="fw-semibold">{attributeName}</Form.Label>
+                      <div className="d-flex flex-wrap gap-2">
+                        {availableOptions[attributeName]?.map((attributeValue, idx) => (
+                          <Button
+                            key={idx}
+                            variant={selectedAttributes[attributeName] === attributeValue ? "primary" : "outline-primary"}
+                            className="rounded-pill px-3 py-1"
+                            onClick={() => handleSelectAttribute(attributeName, attributeValue)}
+                          >
+                            {attributeValue}
+                          </Button>
+                        ))}
+                      </div>
+                    </Form.Group>
+                  ))}
+
+                  {selectedVariant && (
+                    <div className="variant-details mt-4">
+                      <div className="price-container mb-3">
+                        <h5 className="mb-2">Giá bán:</h5>
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="fs-4 text-danger fw-bold">
+                            {selectedVariant.price.toLocaleString()}đ
+                          </span>
+                          {selectedVariant.old_price && (
+                            <span className="text-muted text-decoration-line-through fs-6">
+                              {selectedVariant.old_price.toLocaleString()}đ
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="stock-info mb-3">
+                        <h5 className="mb-2">Số lượng còn lại:</h5>
+                        <span className="badge bg-success">{selectedVariant.stock} sản phẩm</span>
+                      </div>
+
+                      <div className="quantity-selector">
+                        <h5 className="mb-2">Số lượng mua:</h5>
+                        <div className="d-flex align-items-center gap-2">
+                          <Button
+                            variant="outline-secondary"
+                            onClick={handleDecrease}
+                            disabled={quantity <= 1}
+                            className="rounded-circle"
+                          >
+                            <i className="fas fa-minus"></i>
+                          </Button>
+                          <Form.Control
+                            type="number"
+                            value={quantity}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value, 10);
+                              if (!isNaN(value) && value > 0 && value <= selectedVariant.stock) {
+                                setQuantity(value);
+                              }
+                            }}
+                            min="1"
+                            max={selectedVariant.stock}
+                            className="text-center rounded"
+                            style={{ width: "70px" }}
+                          />
+                          <Button
+                            variant="outline-secondary"
+                            onClick={handleIncrease}
+                            disabled={quantity >= selectedVariant.stock}
+                            className="rounded-circle"
+                          >
+                            <i className="fas fa-plus"></i>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal}>
+          <Modal.Footer className="border-0 pt-0">
+            <Button
+              variant="outline-secondary"
+              onClick={handleCloseModal}
+              className="rounded-pill px-4"
+            >
+              <i className="fas fa-times me-2"></i>
               Đóng
             </Button>
-            <Button variant="success" disabled={!selectedVariant}>
+            <Button
+              onClick={handleSubmit}
+              variant="success"
+              disabled={!selectedVariant}
+              className="rounded-pill px-4"
+            >
+              <i className="fas fa-shopping-cart me-2"></i>
               Thêm vào giỏ
             </Button>
           </Modal.Footer>

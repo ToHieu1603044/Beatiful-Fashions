@@ -49,9 +49,12 @@ trait ApiDataTrait
                         ->whereColumn('product_skus.product_id', 'products.id')
                 ])->orderBy('min_price', $flagPrice);
             }
-            
-            
-
+            if(isset($filters['active'])){
+                $query->where('active', $filters['active']);
+            }
+            if(isset($filters['category_id'])){
+                $query->where('category_id', $filters['category_id']);
+            }
             foreach ($dates as $date) {
                 if (isset($filters['start_date']) && isset($filters['end_date'])) {
                     $query->whereBetween($date, [$filters['start_date'], $filters['end_date']]);
