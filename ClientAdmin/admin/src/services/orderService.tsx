@@ -29,3 +29,17 @@ export const getOrder = async (id:number) =>{ // lay ra mot don hang theo id
         throw error;
     }
 } 
+export const updateOrderStatus = async (id: number, shipping_status: string) => {
+    try {
+        const response = await axios.put(
+            `${API_URL}/orders/${id}/update-status`,
+            { shipping_status: shipping_status }, 
+            { headers: getAuthHeader() }
+        );
+        console.log("Response from backend:", shipping_status, id);
+        return response.data;
+    } catch (error: any) {
+        console.error("Lỗi cập nhật trạng thái:", error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || "Cập nhật trạng thái thất bại");
+    }
+};

@@ -20,7 +20,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $relations = ['brand', 'category', 'skus.attributeOptions', 'galleries'];
-        $filterableFields = ['name', 'category_id', 'brand_id'];
+        $filterableFields = ['name', 'category_id', 'brand_id','active'];
 
         $dates = ['create_at'];
 

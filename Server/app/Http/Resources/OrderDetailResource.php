@@ -14,13 +14,15 @@ class OrderDetailResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return [
-            'sku' => $this->sku->id ?? $this->id,
+        return[
+            'id' => $this->id,
+            'sku' => $this->sku,
+            'sku_code' => $this->sku,
             'product_name' => $this->product_name,
             'quantity' => $this->quantity,
             'price' => $this->price,
             'subtotal' => $this->subtotal,
-            'variant_details' => json_decode($this->variant_details, true) ?? [],
+            'variant_details' => json_decode($this->variant_details,true) ?? [],
         ];
     }
 }

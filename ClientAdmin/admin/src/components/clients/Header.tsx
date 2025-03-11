@@ -2,15 +2,15 @@ import { FaSearch, FaUser, FaShoppingCart } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { getCategories } from "../../services/homeService";
 import { Category } from '../../interfaces/Categories';
-import { useNavigate } from 'react-router-dom'; // Để chuyển hướng
+import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const [categories, setCategories] = useState<Category[]>([]);
-  const navigate = useNavigate(); // Hook điều hướng
-  
-  // Lấy token từ localStorage khi component mount
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+
   const token = localStorage.getItem('accessToken');
-  
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -24,13 +24,10 @@ const Header = () => {
     fetchCategories();
   }, []);
 
-  // Kiểm tra xem người dùng đã đăng nhập chưa
   const checkLogin = () => {
     if (!token) {
-      // Nếu không có token, điều hướng đến trang đăng nhập
       navigate('/login');
     } else {
-      // Nếu có token, điều hướng đến trang tài khoản
       navigate('/account');
     }
   };
@@ -62,17 +59,24 @@ const Header = () => {
             ))}
 
             <li className="nav-item">
-              <a className="nav-link text-white" href="/search">
+              <a
+                className="nav-link text-white"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsSearchOpen(true);
+                }}
+              >
                 <FaSearch size={20} />
               </a>
             </li>
             <li className="nav-item">
               <a
                 className="nav-link text-white"
-                href="#"
+                href="/login"
                 onClick={(e) => {
-                  e.preventDefault(); // Ngừng hành động mặc định (chuyển hướng)
-                  checkLogin(); // Kiểm tra trạng thái đăng nhập
+                  e.preventDefault();
+                  checkLogin();
                 }}
               >
                 <FaUser size={20} />
@@ -86,6 +90,34 @@ const Header = () => {
           </ul>
         </div>
       </div>
+
+      {/* Modal tìm kiếm */}
+      {isSearchOpen && (
+        <div className="search-modal-container">
+          <div className="search-modal-content">
+            <button className="close-btn" onClick={() => setIsSearchOpen(false)}>
+              <span>×</span>
+            </button>
+            <div className="search-form">
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Tìm kiếm sản phẩm..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+              />
+              <button
+                className="search-btn"
+                onClick={() => navigate(`/search?query=${searchQuery}`)}
+              >
+                <FaSearch /> Tìm kiếm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </header>
   );
 };

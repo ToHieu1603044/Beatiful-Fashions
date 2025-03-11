@@ -1,21 +1,24 @@
 
 import { useEffect, useState } from "react";
-import { getOrders } from "../../../services/orderService";
+import { getOrders, updateOrderStatus } from "../../../services/orderService";
 
 
 const Orders = () => {
 
   const [orders, setOrders] = useState([]);
-  const [selectedOrder, setSelectedOrder] = useState<[] | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [orderStatus, setOrderStatus] = useState(selectedOrder?.status || "pending");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
+  const [showModal, setShowModal] = useState(false);
+
+  const [status, setStatus] = useState('pending');
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
 
   const handleStatusChange = (event) => {
-    setOrderStatus(event.target.value);
+    setStatus(event.target.value);
   };
+
+
   useEffect(() => {
     fetchOrders(currentPage);
 
@@ -42,6 +45,7 @@ const Orders = () => {
 
   const handleShowModal = (order: []) => {
     setSelectedOrder(order);
+    setStatus(order.shipping_status);
     setShowModal(true);
   };
 
@@ -55,6 +59,36 @@ const Orders = () => {
       fetchOrders(newPage);
     }
   };
+  const handleUpdateStatus = async () => {
+    if (!selectedOrder) return;
+  
+    try {
+      const updatedOrder = await updateOrderStatus(selectedOrder.id, status);
+      if (updatedOrder) {
+
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order.id === selectedOrder.id
+              ? { ...order, shipping_status: updatedOrder.shipping_status }
+              : order
+          )
+        );
+  
+        
+        setSelectedOrder((prevOrder) =>
+          prevOrder ? { ...prevOrder, shipping_status: updatedOrder.shipping_status } : null
+        );
+  
+        alert("Cập nhật thành công!");
+        handleCloseModal();
+       {
+        fetchOrders();}
+      }
+    } catch (error) {
+      alert("Lỗi cập nhật trạng thái!");
+    }
+  };
+  
 
   return (
     <div className="container mt-4">
@@ -146,12 +180,13 @@ const Orders = () => {
                 </div>
 
                 {/* Cập nhật trạng thái đơn hàng */}
-                <div className="mb-4">
-                  <label className="form-label"><strong>Trạng thái đơn hàng:</strong></label>
-                  <select className="form-select" value={orderStatus} onChange={handleStatusChange}>
-                    <option value="pending">🕒 Chờ xử lý</option>
-                    <option value="completed">✅ Đã hoàn thành</option>
-                    <option value="canceled">❌ Đã hủy</option>
+                <div>
+                  <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                    <option value="pending">Chờ xử lý</option>
+                    <option value="processing">Đang xử lý</option>
+                    <option value="shipped">Đã gửi</option>
+                    <option value="delivered">Đã giao</option>
+                    <option value="cancelled">Đã hủy</option>
                   </select>
                 </div>
 
@@ -192,7 +227,7 @@ const Orders = () => {
               {/* FOOTER */}
               <div className="modal-footer d-flex justify-content-between">
                 <button className="btn btn-secondary" onClick={handleCloseModal}>❌ Đóng</button>
-                <button className="btn btn-success">💾 Cập nhật đơn hàng</button>
+                <button className="btn btn-success"  onClick={handleUpdateStatus}>💾 Cập nhật đơn hàng</button>
               </div>
 
             </div>
