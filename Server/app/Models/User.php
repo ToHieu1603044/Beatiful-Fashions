@@ -62,24 +62,33 @@ class User extends Authenticatable
         ];
     }
 
-    public function orders(){
+    public function orders()
+    {
         return $this->hasMany(Order::class);
     }
-    public function cart(){
+    public function cart()
+    {
         return $this->hasOne(Cart::class);
     }
     public function ratings()
-{
-    return $this->hasMany(Rating::class);
-}
+    {
+        return $this->hasMany(Rating::class);
+    }
 
-    public function membership(){
+    public function membership()
+    {
         return $this->hasOne(Membership::class);
     }
 
     public function sendPasswordResetNotification($token)
-{
-    $this->notify(new ResetPasswordNotification($token));
-}
-    
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
+    public function notifications()
+    {
+        return $this->belongsToMany(Notification::class, 'notification_user')
+            ->withPivot('status', 'deleted')
+            ->withTimestamps();
+    }
+
 }

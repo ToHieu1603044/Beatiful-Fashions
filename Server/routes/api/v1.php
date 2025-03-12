@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DiscountController;
 use App\Http\Controllers\Api\MoMoController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 
@@ -21,7 +22,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return 'Hello World';
 });
-
+//Web
+Route::get('/momo/callback', [MoMoController::class, 'callback']);
 Route::get('/search', [ProductController::class, 'search']);
 Route::get('/products/web', [ProductController::class, 'indexWeb']);
 Route::get('/products/web/{id}/', [ProductController::class, 'productDetail']);
@@ -29,17 +31,14 @@ Route::get('/products/categories/{id}', [CategoryController::class, 'getProducts
 Route::get('/categories/web', [CategoryController::class, 'indexWeb']);
 Route::get('/categories/web{id}/', [CategoryController::class, 'categoryDetail']);
 
-Route::post('/register', [AuthController::class, 'register']);
-
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+//Discount
 Route::apiResource('discounts', DiscountController::class);
 Route::post('discounts', [DiscountController::class, 'applyDiscount']);
 
-
-Route::get('/momo/callback', [MoMoController::class, 'callback']);
-
-
+//Auth
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name('password.reset');
 
@@ -54,51 +53,59 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/orders/users', [OrderController::class, 'orderUser']);
     Route::get('products/trash', [ProductController::class, 'productDelete'])->middleware('role:admin');
     Route::post('/momo/payment', [MoMoController::class, 'createPayment']);
+
+    //Notification
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'deleteNotification']);
+    Route::get('/notifications', [NotificationController::class, 'getNotification']);
+    Route::post('/notifications', [NotificationController::class, 'store']);
 });
 
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
-    Route::get('/users', [UserController::class, 'index']); 
+    // User
+    Route::get('/users', [UserController::class, 'index']);
 
-    Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
-
-   
     Route::post('/users', [UserController::class, 'store']); // Thêm user mới
     Route::get('/users/{id}', [UserController::class, 'show']); // Xem chi tiết user
     Route::put('/users/{id}', [UserController::class, 'update']); // Cập nhật user
     Route::delete('/users/{id}', [UserController::class, 'destroy']); // Xóa user
-
     Route::get('/listUsers', [App\Http\Controllers\Api\AuthController::class, 'listUser']);
 
-   // Route::get('/users', [App\Http\Controllers\Api\AuthController::class, 'index']);
+    // Route::get('/users', [App\Http\Controllers\Api\AuthController::class, 'index']);
 
+    //Products
     Route::get('products', [ProductController::class, 'index']);
     Route::post('/products', [ProductController::class, 'store']);
     Route::delete('/products/{id}', [ProductController::class, 'destroy']);
     Route::get('/products/{id}', [ProductController::class, 'show']);
     Route::put('/products/{id}', [ProductController::class, 'update']);
-  
+    Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
 
-    Route::apiResource('attributes', AttributeController::class);
-    Route::apiResource('attribute-options', AttributeOptionController::class);
-
+    //Categories
     Route::apiResource('categories', CategoryController::class);
     Route::put('/categories/{id}', [CategoryController::class, 'update']);
-
+    Route::put('/categories/{id}', [CategoryController::class, 'update']);
     Route::apiResource('brands', BrandController::class);
 
+    //Attribute
     Route::apiResource('attributes', AttributeController::class);
     Route::apiResource('attribute-options', AttributeOptionController::class);
-    Route::put('/categories/{id}', [CategoryController::class, 'update']);
+    Route::apiResource('attributes', AttributeController::class);
+    Route::apiResource('attribute-options', AttributeOptionController::class);
+
+
+    //Cart
     Route::apiResource('carts', CartController::class);
 
+    //Order
     Route::apiResource('orders', OrderController::class);
-   
     Route::get('/orders/list-deleted', [OrderController::class, 'listDeleted']);
     Route::get('/orders/restore/{id}', [OrderController::class, 'restore']);
     Route::delete('/orders/force-delete/{id}', [OrderController::class, 'forceDelete']);
     Route::put('/orders/{id}/update-status', [OrderController::class, 'updateStatus']);
+
 
     Route::get('/roles', [RolePermissionController::class, 'indexRoles']);
     Route::get('/permissions', [RolePermissionController::class, 'indexPermissions']);

@@ -16,8 +16,8 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete(); // nullable nếu là thông báo chung
             $table->string('title');
             $table->text('message');
-            $table->string('type'); // order, promotion, system
-            $table->string('status')->default('unread'); // unread, read
+            $table->string('type'); 
+          //  $table->string('status')->default('unread'); 
             $table->timestamps();
         });
         
