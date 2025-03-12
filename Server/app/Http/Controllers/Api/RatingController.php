@@ -13,9 +13,47 @@ class RatingController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index()
+    public function index(Request $request)
     {
-        return Rating::with(['user', 'product'])->get();
+        // Khởi tạo truy vấn với quan hệ user và product (nếu cần)
+        $query = Rating::with(['user', 'product']);
+    
+        // Lọc theo rating (nếu có truyền, ví dụ ?rating=4)
+        if ($request->has('rating')) {
+            $query->where('rating', $request->rating);
+        }
+    
+        // Tìm kiếm trong trường review nếu có tham số q (ví dụ: ?q=good)
+        if ($request->has('q')) {
+            $q = $request->q;
+            $query->where('review', 'like', '%' . $q . '%');
+        }
+    
+        // Sắp xếp theo thời gian
+        // Nếu có truyền tham số sort = newest hoặc oldest, nếu không mặc định là newest
+        if ($request->has('sort')) {
+            $sort = $request->sort;
+            if ($sort === 'oldest') {
+                $query->orderBy('created_at', 'asc');
+            } else {
+                // newest hoặc giá trị khác mặc định là newest
+                $query->orderBy('created_at', 'desc');
+            }
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+    
+        // Nếu cần phân trang:
+        // $ratings = $query->paginate(10);
+        // return response()->json($ratings);
+    
+        $ratings = $query->get();
+    
+        return response()->json([
+            'code' => 200,
+            'message' => 'success',
+            'data' => $ratings
+        ]);
     }
 
     public function store(Request $request)
