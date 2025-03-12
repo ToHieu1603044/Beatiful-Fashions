@@ -30,7 +30,10 @@ class AuthController extends Controller
 
         $user = Auth::user();
         $token = $user->createToken('auth_token')->plainTextToken;
-
+        
+        if(!$user->role != "" || $user->role != null || isset($user->role)){
+          event(new \App\Events\UserLoggedIn($user));
+        }
         return response()->json([
             'message' => 'Đăng nhập thành công!',
             'access_token' => $token,
@@ -76,8 +79,6 @@ class AuthController extends Controller
             $user->assignRole($request->role);
         }
     
-      
-
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return ApiResponse::responseObject(new UserResource($user), 201, 'User created successfully');

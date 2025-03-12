@@ -43,8 +43,15 @@ import ResetPassword from "./pages/client/ResetPassword";
 
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const role = localStorage.getItem("role");
+  const token = localStorage.getItem("access_token"); // Kiểm tra token đăng nhập
+
+  if (!token) {
+    return <Navigate to="/403" />;
+  }
+
   return role === "admin" || role === "manager" ? element : <Navigate to="/403" />;
 };
+
 function App() {
   const routes = useRoutes([
     {

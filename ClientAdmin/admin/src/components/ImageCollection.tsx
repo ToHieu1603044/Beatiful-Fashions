@@ -36,10 +36,10 @@ const ImageCollection = () => {
  </Col>
  <Col md={4}>
  <img
- src={cls4} // Replace with your image URL
+ src={cls4} 
  alt="Image 4"
  className="img-fluid"
- style={{ height: '600px', objectFit: 'cover' }} // Adjust height as needed
+ style={{ height: '600px', objectFit: 'cover' }} 
  />
  </Col>
  </Row>

@@ -93,5 +93,44 @@ export const storeCart = async (data: any)  => {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 }
+export const fetchNotifications  = async () => {
+  const token = getAuthToken();
+  return await axios.get(`${API_BASE_URL}/notifications`,{
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+};
+
+export const updateNotificationStatus = async (id: number) => {
+  try {
+      const token = getAuthToken();
+      if (!token) throw new Error("Token không tồn tại");
+
+      const response = await axios.post(
+          `${API_BASE_URL}/notifications/${id}/read`, 
+          {}, // Không cần dữ liệu body
+          {
+              headers: { Authorization: `Bearer ${token}` }
+          }
+      );
+
+      return response.data;
+  } catch (error: any) {
+      console.error("Lỗi cập nhật thông báo:", error.response?.data || error.message);
+      throw error;
+  }
+};
+
+export const deleteNotification = async (id: number) => {
+  const token = getAuthToken();
+  return await axios.delete(`${API_BASE_URL}/notifications/${id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+};
+
+
+
+
+
+
 
 
