@@ -45,6 +45,7 @@ import Profile from "./pages/client/Profile";
 
 import ProductTrash from "./pages/admin/products/ProductTrash";
 import ResetPassword from "./pages/client/ResetPassword";
+import SearchProducts from "./pages/client/SearchProducts";
 
 
 
@@ -133,7 +134,7 @@ function App() {
         { path: "auth/reset-password", element: <ResetPassword /> },
 
         { path: "account", element: <Profile /> },
-       
+        { path: "searchs", element: <SearchProducts /> },
       ],
     },
     {
@@ -147,6 +148,7 @@ function App() {
     { path: "order/failed", element: <OrderFail /> },
 
     { path: "order/pending", element: <OrderPending /> },
+   
     
   ]);
 

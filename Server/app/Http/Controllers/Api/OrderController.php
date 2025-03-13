@@ -242,15 +242,31 @@ class OrderController
         return ApiResponse::responseSuccess($order);
       
     }
-    public function destroy(Order $order)
+    public function destroy($id)
     {
-
-        if ($order->shipping_status != 'Chờ xác nhận') {
-            $order->delete();
+        $order = Order::findOrFail($id);
+    
+        if ($order->shipping_status !== 'pending') {
+            return ApiResponse::errorResponse(400, 'Không thể hủy đơn hàng khi đã được xử lý');
         }
-
-        return ApiResponse::responseSuccess('Xóa đơn hàng',204);
+    
+        $order->delete();
+    
+        return ApiResponse::responseSuccess('Đơn hàng đã được hủy', 204);
     }
+    public function destroys($id)
+    {
+        $order = Order::findOrFail($id);
+    
+        if ($order->shipping_status !== 'pending') {
+            return ApiResponse::errorResponse(400, 'Không thể hủy đơn hàng khi đã được xử lý');
+        }
+    
+        $order->update(['status' => 'canceled']);
+    
+        return ApiResponse::responseSuccess('Đơn hàng đã được hủy', 204);
+    }
+    
     public function updateStatus(Request $request, $id)
 {   
     $order = Order::findOrFail($id);
@@ -280,8 +296,9 @@ class OrderController
     }
     public function listDeleted()
     {
-        $orders = Order::onlyTrashed()->get();
-        return response()->json($orders);
+       
+      $orders = Order::onlyTrashed()->with('orderDetails.sku')->orderBy('created_at', 'desc')->paginate(10);
+        return ApiResponse::responsePage(OrderResource::collection($orders));
     }
     public function cancelOrder(Request $request, Order $order){
        

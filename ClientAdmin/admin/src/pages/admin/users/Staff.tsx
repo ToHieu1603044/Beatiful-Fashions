@@ -17,7 +17,7 @@ const Staff = () => {
 
   const getAll = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/users", {
+      const response = await axios.get("http://127.0.0.1:8000/api/users", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },

@@ -148,8 +148,24 @@ export const deleteNotification = async (id: number) => {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 };
+const ELASTICSEARCH_URL = "http://localhost:9200/products/_search?pretty";
 
-
+export const searchProducts = async (query: string) => {
+  try {
+    const response = await axios.post(ELASTICSEARCH_URL, {
+      query: {
+        match: {
+          name: query,
+        },
+      },
+    });
+    console.log(response.data.hits.hits);
+    return response.data.hits.hits;
+  } catch (error) {
+    console.error("Lỗi tìm kiếm sản phẩm:", error);
+    return [];
+  }
+};
 
 
 

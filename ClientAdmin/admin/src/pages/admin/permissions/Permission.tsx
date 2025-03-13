@@ -9,7 +9,7 @@ const Permission = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const getAll = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/permissions");
+      const response = await axios.get("http://127.0.0.1:8000/api/permissions");
       console.log(response.data);
       setPermissions(response.data);
     } catch (error) {

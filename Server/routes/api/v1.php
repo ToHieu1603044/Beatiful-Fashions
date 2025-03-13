@@ -105,6 +105,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::get('/orders/restore/{id}', [OrderController::class, 'restore']);
     Route::delete('/orders/force-delete/{id}', [OrderController::class, 'forceDelete']);
     Route::put('/orders/{id}/update-status', [OrderController::class, 'updateStatus']);
+    Route::put('/orders/{id}/canceled', [OrderController::class, 'destroys']);
 
 
     Route::get('/roles', [RolePermissionController::class, 'indexRoles']);
