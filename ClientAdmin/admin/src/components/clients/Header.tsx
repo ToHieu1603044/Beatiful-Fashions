@@ -1,6 +1,6 @@
 import { FaSearch, FaUser, FaShoppingCart } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
-import { getCategories } from "../../services/homeService";
+import { getCategories, searchProducts } from "../../services/homeService";
 import { Category } from '../../interfaces/Categories';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,6 +8,7 @@ const Header = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
   const navigate = useNavigate();
 
   const token = localStorage.getItem('accessToken');
@@ -31,6 +32,14 @@ const Header = () => {
       navigate('/account');
     }
   };
+
+  const handleSearch = async () => {
+    if (!searchQuery) return;
+    navigate(`/searchs?query=${encodeURIComponent(searchQuery)}`);
+  };
+  
+  
+  
 
   return (
     <header className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -99,25 +108,36 @@ const Header = () => {
               <span>×</span>
             </button>
             <div className="search-form">
-              <input
-                type="text"
-                className="search-input"
-                placeholder="Tìm kiếm sản phẩm..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-              />
-              <button
-                className="search-btn"
-                onClick={() => navigate(`/search?query=${searchQuery}`)}
-              >
+            <input
+  type="text"
+  className="search-input"
+  placeholder="Tìm kiếm sản phẩm..."
+  value={searchQuery}
+  onChange={(e) => setSearchQuery(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  }}
+  autoFocus
+/>
+
+              <button className="search-btn" onClick={handleSearch}>
                 <FaSearch /> Tìm kiếm
               </button>
             </div>
+            {searchResults.length > 0 && (
+              <ul className="search-results">
+                {searchResults.map((product: any) => (
+                  <li key={product._id} onClick={() => navigate(`/product/${product._id}`)}>
+                    {product._source.name}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       )}
-
     </header>
   );
 };

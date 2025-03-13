@@ -13,7 +13,7 @@ class SyncProductsToElasticsearch extends Command
     public function handle()
     {
         $elasticUrl = "http://localhost:9200/products/_bulk";
-        $laravelApi = "http://127.0.0.1:8000/api/products";
+        $laravelApi = "http://127.0.0.1:8000/api/products/web";
 
         // Lấy danh sách sản phẩm từ Laravel API
         $response = Http::get($laravelApi);
