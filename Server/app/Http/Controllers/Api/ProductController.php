@@ -12,6 +12,7 @@ use App\Models\Attribute;
 use App\Models\AttributeOption;
 use App\Models\AttributeOptionSku;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class ProductController extends Controller
 {
@@ -19,7 +20,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $relations = ['brand', 'category', 'skus.attributeOptions', 'galleries'];
-        $filterableFields = ['name', 'category_id', 'brand_id'];
+        $filterableFields = ['name', 'category_id', 'brand_id','active'];
 
         $dates = ['create_at'];
 
@@ -115,6 +116,7 @@ class ProductController extends Controller
             }
 
             DB::commit();
+           // Http::post("http://localhost:9200/products/_doc/{$product->id}", $product->toArray());
             return response()->json([
                 'message' => 'Sản phẩm đã được tạo thành công!',
                 'product' => $product->load('skus')
@@ -262,7 +264,13 @@ class ProductController extends Controller
     }
     public function destroy($id)
     {
-        return $this->deleteDataById(new Product, $id, "Xoa thanh cong");
+        try{
+            $product = Product::findOrFail($id);
+            $product->delete();
+            return ApiResponse::responseSuccess('Xoa thanh cong');
+        }catch(\Exception $e){
+            return ApiResponse::errorResponse(500, $e->getMessage());
+        }
     }
 
     public function restore($id)
@@ -290,21 +298,27 @@ class ProductController extends Controller
     }
     public function productDelete()
     {
-
         try {
-            $product = Product::withTrashed()->get();
-
-            return ApiResponse::responseObject(ProductResource::collection($product));
-
+            $product = Product::onlyTrashed()->get();
+    
+            if ($product->isEmpty()) {
+                return ApiResponse::errorResponse(404, 'Không tìm thấy sản phẩm đã xóa.');
+            }
+    
+           return ApiResponse::responseObject(ProductResource::collection($product));
+    
         } catch (\Exception $e) {
             \Log::error("Lỗi: " . $e->getMessage());
-
+    
             return ApiResponse::errorResponse(500, $e->getMessage());
         }
     }
+    
+    
     public function search(Request $request)
     {
-        $query = $request->input('q');
-        return response()->json(Product::searchElasticsearch($query));
+        $query = $request->get('query');
+        $products = Product::searchElasticsearch($query);
+        return response()->json($products);
     }
 }

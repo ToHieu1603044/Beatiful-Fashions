@@ -20,7 +20,7 @@ import DetailProducts from "./pages/client/DetailProducts";
 import CheckOut from "./pages/client/CheckOut";
 import Login from "./pages/client/Login";
 import Register from "./pages/client/Register";
-import Account from "./pages/client/Account";
+
 
 import Cart from "./pages/client/Cart";
 import Authorization from "./pages/403";
@@ -28,7 +28,6 @@ import Roles from "./pages/admin/roles/Roles";
 import RolesAdd from "./pages/admin/roles/Rolesadd";
 import EditRole from "./pages/admin/roles/Rolesedit";
 
-import { Children } from "react";
 import AddUser from "./pages/admin/users/AddUser";
 import EditUser from "./pages/admin/users/EditUser";
 
@@ -42,12 +41,24 @@ import PermissionsAdd from "./pages/admin/permissions/PermissionsAdd";
 import PermissionsEdit from "./pages/admin/permissions/PermissionsEdit";
 import Staff from "./pages/admin/users/Staff";
 
+import Profile from "./pages/client/Profile";
+
+import ProductTrash from "./pages/admin/products/ProductTrash";
+import ResetPassword from "./pages/client/ResetPassword";
+
 
 
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const role = localStorage.getItem("role");
-  return role === "admin" ? element : <Navigate to="/403" />;
+  const token = localStorage.getItem("access_token"); // Kiểm tra token đăng nhập
+
+  if (!token) {
+    return <Navigate to="/403" />;
+  }
+
+  return role === "admin" || role === "manager" ? element : <Navigate to="/403" />;
 };
+
 function App() {
   const routes = useRoutes([
     {
@@ -62,6 +73,12 @@ function App() {
             { path: ":id/edit", element: <CategoriesEdit /> },
           ],
         },
+
+        { path: "users", element: <Users />,
+        },
+        { path: "users/add", element: <AddUser/> },
+        { path: "users/:id/edit", element: <EditUser /> },
+
         {
           path: "attributes",
           element: <Attributes />,
@@ -85,6 +102,7 @@ function App() {
           children: [
             { path: "create", element: <ProductsAdd /> },
             { path: ":id/edit", element: <ProductsEdit /> },
+            { path: "trash", element: <ProductTrash /> },
           ],
         },
         {
@@ -111,9 +129,11 @@ function App() {
         { path: "products/:id/detail", element: <DetailProducts /> },
         { path: "login", element: <Login /> },
         { path: "register", element: <Register /> },
-        { path: "account", element: <Account /> },
         { path: "cart", element: <Cart /> },
+        { path: "auth/reset-password", element: <ResetPassword /> },
 
+        { path: "account", element: <Profile /> },
+       
       ],
     },
     {
@@ -127,7 +147,7 @@ function App() {
     { path: "order/failed", element: <OrderFail /> },
 
     { path: "order/pending", element: <OrderPending /> },
-
+    
   ]);
 
   return routes;

@@ -31,6 +31,9 @@ class ProductResource extends JsonResource
             'galleries' => $this->galleries,
             'price' => $this->skus->min('price'),
             'old_price' => $this->skus->min('old_price'),
+            'total_sold' => $this->total_sold,
+            'total_rating' => $this->total_rating,
+            'description' => $this->description,
             'variants' => ProductVariantResource::collection($this->skus),
         ];
     }

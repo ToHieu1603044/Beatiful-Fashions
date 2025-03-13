@@ -4,6 +4,8 @@ import { getCart } from "../../services/homeService";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify"; // Make sure toastify is imported for alerts
 import axiosInstance from "../../services/axiosInstance";
+import Swal from 'sweetalert2'
+import { set } from "react-hook-form";
 
 const CheckOut = () => {
     const userJson = localStorage.getItem("user");
@@ -33,6 +35,10 @@ const CheckOut = () => {
         ward: ""
     });
     const [products, setProducts] = useState([]);
+    const [priceDiscount, setPriceDiscount] = useState(0);
+    const [priceShipping, setPriceShipping] = useState(45000);
+
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -44,7 +50,7 @@ const CheckOut = () => {
             total_amount: discountedTotal
         }));
     }, [discountedTotal]);
-    
+
     const fetchCarts = async () => {
         try {
             const response = await getCart();
@@ -100,15 +106,21 @@ const CheckOut = () => {
     const calculateTotal = (items: any[]) => {
         const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
         console.log("Total amount:", total);
-        
+
         setTotalAmount(total);
-        setDiscountedTotal(total); 
+        setDiscountedTotal(total);
     };
 
     const applyDiscount = async (e: React.FormEvent) => {
         e.preventDefault();
+
         if (!formData.discount) {
-            toast.error("Vui lòng nhập mã giảm giá.");
+            Swal.fire({
+                title: "Lỗi!",
+                text: "Vui lòng nhập mã giảm giá.",
+                icon: "error",
+                confirmButtonText: "OK",
+            });
             return;
         }
 
@@ -118,41 +130,74 @@ const CheckOut = () => {
                 totalAmount: totalAmount
             });
 
-            const discount = response.data.discountAmount || 0; 
+            const discount = response.data.discountAmount || 0;
             console.log("Discount amount:", discount);
             const newTotal = Math.max(totalAmount - discount, 0);
+
             setDiscountedTotal(newTotal);
-            toast.success("Giảm giá áp dụng thành công!");
-        } catch (error) {
-            toast.error("Lỗi khi áp dụng mã giảm giá. Vui lòng thử lại!");
+            setPriceDiscount(discount);
+            Swal.fire({
+                title: "Thành công!",
+                text: response.data.message || "Giảm giá áp dụng thành công!",
+                icon: "success",
+                confirmButtonText: "OK",
+            });
+
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || "Lỗi khi áp dụng mã giảm giá. Vui lòng thử lại!";
+
+            Swal.fire({
+                title: "Lỗi!",
+                text: errorMessage,
+                icon: "error",
+                confirmButtonText: "OK",
+            });
+
             console.error("Error applying discount:", error);
         }
     };
 
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Dữ liệu đã gửi:", formData); 
         console.log("Dữ liệu đã gửi:", JSON.stringify(formData, null, 2));
 
-
         try {
-            const response = await axiosInstance.post('/orders', formData,{
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+
+
+            const response = await axiosInstance.post('/orders', formData, {
+                headers: { 'Content-Type': 'application/json' },
             });
-            console.log("Response từ backend:", response.data); 
+
+            console.log("Response từ backend:", response.data);
+
             if (response.data.payUrl) {
                 console.log("🔗 Chuyển hướng đến MoMo:", response.data.payUrl);
-                
-                // Thử mở URL trong cửa sổ mới
-                window.open(response.data.payUrl, "_self");  // Hoặc _blank để mở tab mới
+                window.open(response.data.payUrl, "_self");
+                return;
             }
-            
-        } catch (error) {
-            console.error("Error sending data:", error);
+
+            if (response.status === 200) {
+                Swal.fire({
+                    title: "Đặt hàng thành công",
+                    icon: "success",
+                    confirmButtonText: "OK",
+                }).then(() => {
+                    window.location.href = "/orders";
+                });
+            }
+
+        } catch (error: any) {
+            console.error("Lỗi khi gửi dữ liệu:", error);
+            Swal.fire({
+                title: "Lỗi!",
+                text: error.response?.data?.message || "Đã xảy ra lỗi, vui lòng thử lại!",
+                icon: "error",
+                confirmButtonText: "OK",
+            });
         }
     };
+
     return (
         <>
             <div
@@ -261,7 +306,7 @@ const CheckOut = () => {
                                                     ...prev,
                                                     province: provinceCode,
                                                     city: provinceName,
-                                                   
+
                                                 }));
                                             }}
                                             className="form-select"
@@ -335,7 +380,7 @@ const CheckOut = () => {
                                         ></textarea>
                                     </div>
                                     {/* Nút submit */}
-                                    <button type="submit" className="btn btn-primary">Gửi</button>
+                                    <button type="submit" className="btn btn-primary">Thanh toán</button>
                                 </form>
                             </div>
                         </div>
@@ -563,13 +608,18 @@ const CheckOut = () => {
                         </div>
                         <div className="d-flex justify-content-between">
                             <p>Phí Vận Chuyển</p>
-                            <p>40.000₫</p>
+                            <p>{priceShipping.toLocaleString()}₫</p>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                            <p>Giảm Giá</p>
+                            <p>{priceDiscount.toLocaleString()}₫</p>
                         </div>
                     </div>
                     <div className="py-3 pl-5" style={{ borderBottom: "1px solid #C0C0C0" }}>
                         <div className="d-flex justify-content-between mb-2">
                             <p>Tổng cộng</p>
-                            <p>{discountedTotal.toLocaleString()}₫</p>
+                            <p>{(discountedTotal + priceShipping).toLocaleString()}₫</p>
+
                         </div>
                         <div className="d-flex justify-content-between align-items-center">
                             <p className="text-danger"></p>

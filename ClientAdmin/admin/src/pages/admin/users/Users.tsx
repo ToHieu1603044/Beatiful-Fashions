@@ -1,6 +1,5 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-
 import { Link, useNavigate } from "react-router-dom";
 import { IUsers } from "../../../interfaces/User";
 
@@ -17,7 +16,8 @@ const Users = () => {
 
   const getAll = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/users", {
+
+      const response = await axios.get("http://127.0.0.1:8000/api/users", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
@@ -35,9 +35,13 @@ const Users = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure??")) {
+    if (confirm("Are you sure?")) {
       try {
-        await axios.delete(`http://127.0.0.1:8000/api/users/${id}`);
+        await axios.delete(`http://127.0.0.1:8000/api/users/${id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        });
         getAll();
       } catch (error) {
         console.log(error);
@@ -95,8 +99,10 @@ const Users = () => {
               <th>District</th>
               <th>Ward</th>
               <th>Zip Code</th>
+
               {/* <th>Role</th> */}
               {/* <th>Actions</th> */}
+
             </tr>
           </thead>
           <tbody>
@@ -105,6 +111,7 @@ const Users = () => {
                 <td>{indexOfFirstUser + index + 1}</td>
                 <td>{item.name}</td>
                 <td>{item.email}</td>
+
                 <td>{item.emailVerifiedAt}</td>
                 <td>{item.phone}</td>
                 <td>{item.address}</td>
@@ -115,13 +122,13 @@ const Users = () => {
                 {/* <td>{item.role}</td> */}
                 {/* <td className="text-center flex">
                   <button className="btn btn-warning " >
+
                     <i className="fa-solid fa-eye"></i>
                   </button>
                   <button className="btn btn-primary mx-2" onClick={() => navigate(`/admin/users/${item.id}/edit`)}>
                     <i className="fa-solid fa-pen-to-square"></i>
                   </button>
-                  <button className="btn btn-danger  " onClick={() => handleDelete(item.id)}>
-
+                  <button className="btn btn-danger" onClick={() => handleDelete(item.id)}>
                     <i className="fa-solid fa-trash"></i>
                   </button>
                 </td> */}

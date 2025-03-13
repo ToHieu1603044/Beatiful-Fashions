@@ -32,6 +32,7 @@ export default function EditProductForm() {
     old_price: "",
     stock: "",
   });
+  const [attributesList, setAttributesList] = useState<{ id: number; name: string }[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,9 +40,9 @@ export default function EditProductForm() {
         const brandRes = await axiosInstance.get("/brands");
         const categoryRes = await axiosInstance.get("/categories");
         const productRes = await getProductById(id);
+        const response = await axiosInstance.get("/attributes");
 
-        console.log("Dữ liệu sản phẩm: ", productRes.data.data); // Debug API response
-
+        setAttributesList(response.data || []);
         setBrands(brandRes.data.data || []);
         setCategories(categoryRes.data || []);
         const productData = productRes.data.data;
@@ -80,8 +81,11 @@ export default function EditProductForm() {
           })) ?? [],
         });
       } catch (err) {
-        console.error("Lỗi khi lấy dữ liệu:", err);
-        setError("Không thể lấy dữ liệu từ API. Kiểm tra lại server.");
+        if (err.response?.status === 403) {
+          window.location.href = "/403";
+        } else {
+          console.error("Lỗi khi tải dữ liệu:", err);
+        }
       } finally {
         setLoading(false);
       }
@@ -295,12 +299,23 @@ export default function EditProductForm() {
         </label>
       </div>
       <h4>Thuộc tính</h4>
-      <input
-        className="form-control mb-2"
-        placeholder="Tên thuộc tính"
-        value={attributeName}
-        onChange={(e) => setAttributeName(e.target.value)}
-      />
+      <div className="mb-3">
+        <label className="form-label" htmlFor="attributeSelect">Chọn thuộc tính</label>
+        <select
+          id="attributeSelect"
+          className="form-control"
+          value={attributeName}
+          onChange={(e) => setAttributeName(e.target.value)}
+        >
+          <option value="">-- Chọn thuộc tính --</option>
+          {attributesList.map((attr) => (
+            <option key={attr.id} value={attr.name}>
+              {attr.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <TagsInput value={attributeValues} onChange={setAttributeValues} placeHolder="Nhập giá trị và nhấn Enter" />
       <button className="btn btn-primary mt-2" onClick={addAttribute}>
         Thêm thuộc tính

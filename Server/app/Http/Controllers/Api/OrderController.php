@@ -25,7 +25,7 @@ class OrderController
     public function index(Request $request)
     {
         try {
-            $orders = Order::with('orderDetails.sku')->paginate(10);
+            $orders = Order::with('orderDetails.sku')->orderBy('created_at', 'desc')->paginate(10);
 
             return ApiResponse::responsePage(OrderResource::collection($orders));
 
@@ -111,14 +111,22 @@ class OrderController
 
                 OrderDetail::create([
                     'order_id' => $order->id,
+                  //  'sku' => $sku->sku,
                     'product_name' => $sku->product->name,
                     'variant_details' => json_encode($variantDetails),
                     'quantity' => $cart->quantity,
                     'price' => $sku->price,
                     'subtotal' => $subtotal,
-                ]);
+                ]); 
 
+                if ($sku->product) {
+                    $sku->product->increment('total_sold', $cart->quantity);
+                } else {
+                    \Log::error("Không tìm thấy sản phẩm cho SKU ID: " . $sku->id);
+                }
+                
                 $sku->decrement('stock', $cart->quantity);
+
                 $totalAmount += $subtotal;
             }
 
@@ -190,19 +198,20 @@ class OrderController
                 return response()->json(['message' => 'Không tìm thấy đơn hàng!'], 400);
             }
 
+           
+
             \Log::info('Gửi mail với order:', ['order' => $order->toArray()]);
 
             // Mail::to("tthieu160304@gmail.com")->send(new OrderPaidMail($order));
 
             OrderCreated::dispatch($order);
 
-            return ApiResponse::responseSuccess($order, 201, 'Đặt hàng thành công');
+            return ApiResponse::responseSuccess($order, 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return ApiResponse::errorResponse(500, 'Lỗi khi đặt hàng: ' . $e->getMessage());
         }
     }
-
 
     public function show(Order $order)
     {
@@ -242,16 +251,19 @@ class OrderController
 
         return ApiResponse::responseSuccess('Xóa đơn hàng',204);
     }
-    public function updateStatus(Request $request, Order $order)
-    {
-        $validate = $request->validate([
-            'shipping_status' => 'required|string'
-        ]);
+    public function updateStatus(Request $request, $id)
+{   
+    $order = Order::findOrFail($id);
 
-        $order->update($validate);
+    $request->validate([
+        'shipping_status' => 'required|string|in:pending,processing,shipped,delivered,cancelled'
+    ]);
 
-        return ApiResponse::responseSuccess();
-    }
+    $order->update(['tracking_status' => $request->shipping_status]);
+
+    return ApiResponse::responseSuccess($order, 200, "Cập nhật trạng thái thành công.");
+}
+
     public function restore($id)
     {
         $order = Order::onlyTrashed()->findOrFail($id);

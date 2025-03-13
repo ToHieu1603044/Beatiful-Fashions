@@ -32,7 +32,12 @@ const AddRole = () => {
       setSuccessMessage(true);
       setTimeout(() => navigate("/admin/roles"), 1500);
     } catch (error) {
-      console.error("Error adding role:", error);
+      if (error.response?.status === 403) {
+        window.location.href = "/403"; 
+      } else {
+        console.error("Lỗi khi tải dữ liệu:", error);
+      }
+    
       setErrorMessage(true);
     }
   };

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
 import { useForm } from "react-hook-form";
 import { IUsers } from "../../../interfaces/User";
 
@@ -13,20 +14,92 @@ const EditUser = () => {
     reset,
     formState: { errors },
   } = useForm<IUsers>();
+import { getRoles } from "../../../services/roleService";
+
+const EditUser = () => {
+  const { id } = useParams();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    district: "",
+    ward: "",
+    zip_code: "",
+    password: "",
+    password_confirmation: "",
+    active: true,
+  });
+
+  const [roles, setRoles] = useState<{ id: number; name: string }[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const getUser = async () => {
+    const userRole = localStorage.getItem("role");
+    if (!userRole || userRole !== "admin") {
+      alert("Bạn không có quyền truy cập!");
+      navigate("/");
+      return;
+    }
+    setIsAdmin(true);
+    const fetchRoles = async () => {
       try {
+
         const response = await axios.get(`http://localhost:3000/users/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("access_token")}`,
           },
         });
         reset(response.data);
+        const response = await getRoles();
+        setRoles(response.data);
       } catch (error) {
-        console.error("Error fetching user", error);
+        console.error("Lỗi khi lấy danh sách roles:", error);
       }
     };
+
+    fetchRoles();
+
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          alert("Bạn chưa đăng nhập!");
+          return;
+        }
+
+        const response = await axios.get(`http://127.0.0.1:8000/api/users/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const userData = response.data.data;
+        setFormData({
+          name: userData.name || "",
+          email: userData.email || "",
+          phone: userData.phone || "",
+          address: userData.address || "",
+          city: userData.city || "",
+          district: userData.district || "",
+          ward: userData.ward || "",
+          zip_code: userData.zip_code || "",
+          password: "",
+          password_confirmation: "",
+          active: userData.active ?? true,
+        });
+
+        // ✅ Load danh sách role chính xác
+        setSelectedRoles(
+          Array.isArray(userData.roles) ? userData.roles.map((r: any) => String(r.name).trim()) : []
+        );
+      } catch (error) {
+        console.error("Lỗi khi lấy thông tin người dùng:", error);
+      }
+    };
+
     getUser();
   }, [id, reset]);
 
@@ -39,10 +112,68 @@ const EditUser = () => {
         },
       });
       navigate("/admin/users/staff");
+
+
+    fetchRoles();
+    fetchUser();
+  }, [id, navigate]);
+
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+
+    setFormData({
+      ...formData,
+      [name]: name === "active" ? value === "true" : value, // Chuyển đổi thành boolean
+    });
+  };
+
+
+  const handleRoleChange = (roleName: string) => {
+    setSelectedRoles((prevRoles) =>
+      prevRoles.includes(roleName)
+        ? prevRoles.filter((r) => r !== roleName) // Bỏ role nếu đã chọn
+        : [...prevRoles, roleName] // Thêm role nếu chưa có
+    );
+  };
+
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (selectedRoles.length === 0) {
+      alert("Vui lòng chọn ít nhất một vai trò!");
+      return;
+    }
+
+    try {
+      const userData = {
+        ...formData,
+        roles: selectedRoles.map((role) => String(role).trim()), // Chắc chắn là chuỗi
+      };
+
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert("Bạn chưa đăng nhập!");
+        return;
+      }
+
+      await axios.put(`http://127.0.0.1:8000/api/users/${id}`, userData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      alert("Cập nhật người dùng thành công!");
+      navigate("/admin/users");
+
     } catch (error) {
-      console.error("Error updating user", error);
+      alert("Cập nhật người dùng thất bại!");
+      console.error("Lỗi khi cập nhật user:", error);
     }
   };
+
+
+  if (!isAdmin) return null;
 
   return (
     <div className="container mt-4">
@@ -52,27 +183,98 @@ const EditUser = () => {
           <label className="form-label">Name</label>
           <input type="text" className="form-control" {...register("name")}/>
           {errors.name && <p className="text-danger">Name is required</p>}
+      <h2 className="mb-3">Cập nhật người d</h2>
+      <form onSubmit={handleSubmit} className="w-50">
+        <div className="mb-3">
+          <label className="form-label">Tên</label>
+          <input type="text" className="form-control" name="name" value={formData.name} onChange={handleChange} required />
         </div>
+
         <div className="mb-3">
           <label className="form-label">Email</label>
+
           <input type="email" className="form-control" {...register("email")} disabled />
+          <input type="email" className="form-control" name="email" value={formData.email} onChange={handleChange} required />
         </div>
+
         <div className="mb-3">
           <label className="form-label">Phone</label>
           <input type="text" className="form-control" {...register("phone")} />
+          <label className="form-label">Số Điện Thoại</label>
+          <input type="text" className="form-control" name="phone" value={formData.phone} onChange={handleChange} />
         </div>
+
         <div className="mb-3">
           <label className="form-label">Address</label>
           <input type="text" className="form-control" {...register("address")} />
+
+          <label className="form-label">Địa Chỉ</label>
+          <input type="text" className="form-control" name="address" value={formData.address} onChange={handleChange} />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Tỉnh/Thành Phố</label>
+          <input type="text" className="form-control" name="city" value={formData.city} onChange={handleChange} />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Quận/Huyện</label>
+          <input type="text" className="form-control" name="district" value={formData.district} onChange={handleChange} />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Phường/Xã</label>
+          <input type="text" className="form-control" name="ward" value={formData.ward} onChange={handleChange} />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Mã Bưu Điện</label>
+          <input type="text" className="form-control" name="zip_code" value={formData.zip_code} onChange={handleChange} />
         </div>
         <div className="mb-3">
+          <label className="form-label">Vai trò</label>
+          <div>
+            {roles.map((role) => (
+              <label key={role.id} className="me-3">
+                <input
+                  type="checkbox"
+                  value={role.name}
+                  checked={selectedRoles.includes(role.name)} // Kiểm tra role có trong danh sách không
+                  onChange={() => handleRoleChange(role.name)}
+                />
+                {role.name}
+              </label>
+            ))}
+          </div>
+        </div>
+
+
+
+        <div className="mb-3">
+
           <label className="form-label">Role</label>
           <select className="form-control" {...register("role")}>
             <option value="member">Member</option>
             <option value="admin">Admin</option>
+          <label className="form-label">Mật khẩu</label>
+          <input type="password" className="form-control" name="password" value={formData.password} onChange={handleChange} required />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Xác Nhận Mật khẩu</label>
+          <input type="password" className="form-control" name="password_confirmation" value={formData.password_confirmation} onChange={handleChange} required />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Trạng thái</label>
+          <select className="form-select" name="active" value={formData.active ? "true" : "false"} onChange={handleChange}>
+            <option value="true">Hoạt động</option>
+            <option value="false">Bị khóa</option>
+
           </select>
         </div>
-        <button type="submit" className="btn btn-success">Update User</button>
+
+        <button type="submit" className="btn btn-success">Cập nhật Người Dùng</button>
       </form>
     </div>
   );

@@ -27,8 +27,11 @@ const EditRole = () => {
       
       // setValue("name", response.data.name);
     } catch (error) {
-      console.error("Error fetching role:", error);
-      setErrorMessage("Không thể tải thông tin vai trò");
+      if (error.response?.status === 403) {
+        window.location.href = "/403"; 
+      } else {
+        console.error("Lỗi khi tải dữ liệu:", error);
+      }
     } finally {
       setLoading(false);
     }

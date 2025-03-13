@@ -2,7 +2,7 @@
   import { Outlet, useLocation, useNavigate } from "react-router-dom";
   import { getCategories, deleteCategory } from "../../../services/categoryService";
   import { AxiosError } from "axios";
-
+import { BsEye, BsPencilSquare, BsTrash } from "react-icons/bs";
   type CategoryType = {
     id: number;
     name: string;
@@ -88,17 +88,19 @@
           <td>{getParentName(category.parent_id ?? null)}</td>
           <td>{category.created_at || "----"}</td>
           <td>{category.updated_at || "----"}</td>
-          <td>
-            <button className="btn btn-warning btn-sm me-1" onClick={() => handleShowModal(category)}>
-              Xem
+          <td className="d-flex justify-content-start gap-2">
+            <button  className="btn btn-outline-primary btn-sm d-flex align-items-center" onClick={() => handleShowModal(category)}>
+            <BsEye />
             </button>
-            <button className="btn btn-danger btn-sm me-1" onClick={() => handleDelete(category.id)}>
-              Xóa
+            <button  className="btn btn-outline-danger btn-sm d-flex align-items-center" onClick={() => handleDelete(category.id)}>
+            <BsTrash />
             </button>
-            <button className="btn btn-primary btn-sm" onClick={() => navigate(`/admin/categories/${category.id}/edit`)}>
-              Sửa
+            <button    className="btn btn-outline-success btn-sm d-flex align-items-center" onClick={() => navigate(`/admin/categories/${category.id}/edit`)}>
+            <BsPencilSquare />
             </button>
           </td>
+
+
         </tr>,
         ...renderCategories(category.children, level + 1),
       ]);

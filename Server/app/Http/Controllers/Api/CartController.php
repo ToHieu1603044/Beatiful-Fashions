@@ -7,13 +7,16 @@ use App\Http\Resources\CartResource;
 use App\Models\Cart;
 use App\Models\ProductSku;
 use Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 
 class CartController
 {
+    use AuthorizesRequests;
 
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Cart::class);
         try {
             $user = Auth::user();
             $session_id = session()->getId(); // Sử dụng session ID cho khách
@@ -57,22 +60,16 @@ class CartController
             'sku_id' => 'required|exists:product_skus,id',
             'quantity' => 'required|integer|min:1'
         ]);
-
+    
         try {
             $user = Auth::user();
             $session_id = session()->getId();
-
             $sku = ProductSku::with('attributeOptions.attribute')->findOrFail($request->sku_id);
-
-            if ($sku->attributeOptions->isEmpty()) {
-                \Log::error("SKU {$sku->id} không có attributeOptions");
-            }
-
-
+    
             if ($sku->stock < $request->quantity) {
                 return ApiResponse::errorResponse(422, "Số lượng không hợp lệ, tồn kho còn {$sku->stock}");
             }
-
+    
             $variant_detail = [
                 'sku_id' => $sku->id,
                 'price' => $sku->price,
@@ -82,37 +79,46 @@ class CartController
                 })->toArray(),
                 'product' => $sku->product
             ];
+    
+            $cartItem = Cart::where('sku_id', $request->sku_id)
+                ->where(function ($query) use ($user, $session_id) {
+                    if ($user) {
+                        $query->where('user_id', $user->id);
+                    } else {
+                        $query->where('session_id', $session_id);
+                    }
+                })->first();
+    
+            if ($cartItem) {
 
-
-            if ($request->quantity > $sku->stock) {
-                return response()->json([
-                    'message' => "Số lượng không hợp lệ, chỉ còn {$sku->stock} sản phẩm trong kho.",
-                    'data' => []
-                ], 400);
+                $newQuantity = $cartItem->quantity + $request->quantity;
+    
+                if ($newQuantity > $sku->stock) {
+                    return ApiResponse::errorResponse(422, "Số lượng không hợp lệ, chỉ còn {$sku->stock} sản phẩm trong kho.");
+                }
+    
+                $cartItem->update([
+                    'quantity' => $newQuantity,
+                    'variant_detail' => json_encode($variant_detail, JSON_UNESCAPED_UNICODE)
+                ]);
+            } else {
+              
+                Cart::create([
+                    'sku_id' => $request->sku_id,
+                    'user_id' => $user ? $user->id : null,
+                    'session_id' => $user ? null : $session_id,
+                    'quantity' => $request->quantity,
+                    'variant_detail' => json_encode($variant_detail, JSON_UNESCAPED_UNICODE)
+                ]);
             }
-
-            $cart = Cart::updateOrCreate([
-                'sku_id' => $request->sku_id,
-                'user_id' => $user ? $user->id : null,
-                'session_id' => $user ? null : $session_id,
-
-            ], [
-                'quantity' => $request->quantity,
-                'variant_detail' => json_encode($variant_detail, JSON_UNESCAPED_UNICODE)
-            ]);
-
-            return ApiResponse::responseSuccess($cart, 200, 'Thêm giỏ hàng thành công');
+    
+            return ApiResponse::responseSuccess([], 200, 'Thêm giỏ hàng thành công');
         } catch (\Throwable $th) {
-            \Log::error("Lỗi giỏ hàng: " . $th->getMessage());
-
-            \Log::error("Lỗi giỏ hàng: " . $th->getMessage());
-
             \Log::error("Lỗi giỏ hàng:", [$th->getMessage()]);
-
-            return ApiResponse::errorResponse(500, $th->getMessage());
-
+            return ApiResponse::errorResponse(500, "Có lỗi xảy ra, vui lòng thử lại.");
         }
     }
+    
 
     public function update(Request $request, string $id)
     {

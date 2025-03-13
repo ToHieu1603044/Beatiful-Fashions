@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getCart, updateCart, deleteCartItem } from "../../services/homeService";
 import { useNavigate } from "react-router-dom";
-
+import Swal from 'sweetalert2'
 const Cart = () => {
     const [products, setProducts] = useState([]);
     const navigate = useNavigate();
@@ -29,7 +29,7 @@ const Cart = () => {
         }
     };
 
-    // ✅ Cập nhật số lượng sản phẩm
+
     const handleQuantityChange = async (id: number, newQuantity: number) => {
         const product = products.find(item => item.id === id);
         if (!product) return;
@@ -53,18 +53,39 @@ const Cart = () => {
         }
     };
 
-    // ✅ Xóa sản phẩm khỏi giỏ hàng
     const handleRemoveItem = async (id: number) => {
-        const isConfirmed = window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng không?");
-        if (!isConfirmed) return;
-    
-        try {
-            await deleteCartItem(id);
-            setProducts((prevProducts) => prevProducts.filter((item) => item.id !== id));
-        } catch (error) {
-            console.error("Lỗi khi xóa sản phẩm:", error);
-        }
+        Swal.fire({
+            title: "Bạn có chắc chắn?",
+            text: "Sản phẩm này sẽ bị xóa khỏi giỏ hàng!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Xóa!",
+            cancelButtonText: "Hủy",
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    await deleteCartItem(id);
+                    setProducts((prevProducts) => prevProducts.filter((item) => item.id !== id));
+
+                    Swal.fire({
+                        title: "Đã xóa!",
+                        text: "Sản phẩm đã được xóa khỏi giỏ hàng.",
+                        icon: "success",
+                    });
+                } catch (error) {
+                    console.error("Lỗi khi xóa sản phẩm:", error);
+                    Swal.fire({
+                        title: "Lỗi!",
+                        text: "Không thể xóa sản phẩm. Vui lòng thử lại!",
+                        icon: "error",
+                    });
+                }
+            }
+        });
     };
+
 
     return (
         <div className="w-100" style={{ marginBottom: "50px" }}>
@@ -150,8 +171,8 @@ const Cart = () => {
                                             <p>{item.price * item.quantity} VNĐ</p>
                                         </div>
 
-                                        <div 
-                                            style={{ margin: "110px 0px 0px 10px", cursor: "pointer" }} 
+                                        <div
+                                            style={{ margin: "110px 0px 0px 10px", cursor: "pointer" }}
                                             onClick={() => handleRemoveItem(item.id)}
                                         >
                                             <i className="fa-solid fa-trash-can"></i>
@@ -184,7 +205,7 @@ const Cart = () => {
                 </div>
 
                 <div>
-                    <button className="text-uppercase btn btn-dark py-3" style={{ borderRadius: "30px", width: "240px", marginLeft: "200px" }}>Tiếp tục mua sắm</button>
+                   <Link to={"/"} className="text-uppercase btn btn-dark py-3 mt-5" style={{ borderRadius: "30px", width: "240px", marginLeft: "200px" }} >Tiếp tục mua sắm</Link>
                 </div>
             </div>
         </div>

@@ -49,9 +49,12 @@ trait ApiDataTrait
                         ->whereColumn('product_skus.product_id', 'products.id')
                 ])->orderBy('min_price', $flagPrice);
             }
-            
-            
-
+            if(isset($filters['active'])){
+                $query->where('active', $filters['active']);
+            }
+            if(isset($filters['category_id'])){
+                $query->where('category_id', $filters['category_id']);
+            }
             foreach ($dates as $date) {
                 if (isset($filters['start_date']) && isset($filters['end_date'])) {
                     $query->whereBetween($date, [$filters['start_date'], $filters['end_date']]);
@@ -67,7 +70,9 @@ trait ApiDataTrait
             }            
 
             $perPage = request()->query('per_page', 10);
-            $data = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            $data = $query->orderBy('created_at', 'desc')
+            ->where('active', 1)
+            ->paginate($perPage);
 
             if ($data->isEmpty()) {
                 return response()->json([
@@ -104,27 +109,23 @@ trait ApiDataTrait
             return ApiResponse::responseError(500, $e->getMessage(), $message);
         }
     }
-    public function deleteDataById(Model $model, $id, $message = "Xoa thanh cong")
+    public function deleteDataById(Model $model, $id, $message = "Xóa thành công")
     {
         try {
+            // Tìm bản ghi theo ID, nếu không tìm thấy sẽ tự động ném lỗi
             $data = $model::findOrFail($id);
-
-            if (!$data) {
-                return response()->json([
-                    'message' => 'Không tìm th/ay dữ liệu',
-                    'data' => []
-                ], Response::HTTP_NOT_FOUND);
-            }
+    
+            // Xóa bản ghi (soft delete nếu có SoftDeletes)
             $data->delete();
-
+    
             return ApiResponse::responseSuccess($message);
-
-
         } catch (\Throwable $th) {
-
-            return ApiResponse::responseError(500, $th->getMessage());
+            // Xử lý ngoại lệ khi gặp lỗi
+            return ApiResponse::errorResponse(500, $th->getMessage());
         }
     }
+    
+
     public function processUpdateStatus($model, $id, $status)
     {
         try {
