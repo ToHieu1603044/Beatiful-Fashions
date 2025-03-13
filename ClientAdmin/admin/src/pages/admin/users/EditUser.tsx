@@ -1,6 +1,19 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
+import { useForm } from "react-hook-form";
+import { IUsers } from "../../../interfaces/User";
+
+const EditUser = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<IUsers>();
 import { getRoles } from "../../../services/roleService";
 
 const EditUser = () => {
@@ -35,6 +48,13 @@ const EditUser = () => {
     setIsAdmin(true);
     const fetchRoles = async () => {
       try {
+
+        const response = await axios.get(`http://localhost:3000/users/${id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        });
+        reset(response.data);
         const response = await getRoles();
         setRoles(response.data);
       } catch (error) {
@@ -79,6 +99,19 @@ const EditUser = () => {
         console.error("Lỗi khi lấy thông tin người dùng:", error);
       }
     };
+
+    getUser();
+  }, [id, reset]);
+
+  const onSubmit = async (data:IUsers) => {
+    // console.log(data);
+    try {
+      await axios.put(`http://localhost:3000/users/${id}`, data, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+      });
+      navigate("/admin/users/staff");
 
 
     fetchRoles();
@@ -132,6 +165,7 @@ const EditUser = () => {
 
       alert("Cập nhật người dùng thành công!");
       navigate("/admin/users");
+
     } catch (error) {
       alert("Cập nhật người dùng thất bại!");
       console.error("Lỗi khi cập nhật user:", error);
@@ -143,6 +177,12 @@ const EditUser = () => {
 
   return (
     <div className="container mt-4">
+      <h2 className="mb-3">Edit User</h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="w-50">
+        <div className="mb-3">
+          <label className="form-label">Name</label>
+          <input type="text" className="form-control" {...register("name")}/>
+          {errors.name && <p className="text-danger">Name is required</p>}
       <h2 className="mb-3">Cập nhật người d</h2>
       <form onSubmit={handleSubmit} className="w-50">
         <div className="mb-3">
@@ -152,15 +192,22 @@ const EditUser = () => {
 
         <div className="mb-3">
           <label className="form-label">Email</label>
+
+          <input type="email" className="form-control" {...register("email")} disabled />
           <input type="email" className="form-control" name="email" value={formData.email} onChange={handleChange} required />
         </div>
 
         <div className="mb-3">
+          <label className="form-label">Phone</label>
+          <input type="text" className="form-control" {...register("phone")} />
           <label className="form-label">Số Điện Thoại</label>
           <input type="text" className="form-control" name="phone" value={formData.phone} onChange={handleChange} />
         </div>
 
         <div className="mb-3">
+          <label className="form-label">Address</label>
+          <input type="text" className="form-control" {...register("address")} />
+
           <label className="form-label">Địa Chỉ</label>
           <input type="text" className="form-control" name="address" value={formData.address} onChange={handleChange} />
         </div>
@@ -204,6 +251,11 @@ const EditUser = () => {
 
 
         <div className="mb-3">
+
+          <label className="form-label">Role</label>
+          <select className="form-control" {...register("role")}>
+            <option value="member">Member</option>
+            <option value="admin">Admin</option>
           <label className="form-label">Mật khẩu</label>
           <input type="password" className="form-control" name="password" value={formData.password} onChange={handleChange} required />
         </div>
@@ -218,6 +270,7 @@ const EditUser = () => {
           <select className="form-select" name="active" value={formData.active ? "true" : "false"} onChange={handleChange}>
             <option value="true">Hoạt động</option>
             <option value="false">Bị khóa</option>
+
           </select>
         </div>
 

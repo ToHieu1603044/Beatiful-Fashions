@@ -1,22 +1,156 @@
 {
-  "posts": [
+  "users": [
     {
-      "id": 1,
-      "title": "json-server",
-      "author": "typicode"
+      "id": "2",
+      "name": "Trần Thị B",
+      "email": "tranthib@example.com",
+      "password": "123456",
+      "emailVerifiedAt": "2025-02-17T08:30:00Z",
+      "phone": 84903456789,
+      "address": "456 Đường Trần Hưng Đạo",
+      "city": "Hà Nội",
+      "district": "Hoàn Kiếm",
+      "ward": "Hàng Bạc",
+      "zipCode": 100000,
+      "role": "member"
+    },
+    {
+      "id": "3",
+      "name": "Lê Văn C",
+      "email": "levanc@example.com",
+      "password": "123456",
+      "emailVerifiedAt": "2025-02-18T09:45:00Z",
+      "phone": 84905678901,
+      "address": "789 Đường Phạm Ngũ Lão",
+      "city": "TP. Hồ Chí Minh",
+      "district": "Quận 1",
+      "ward": "Bến Nghé",
+      "zipCode": 700000,
+      "role": "member"
+    },
+    {
+      "id": "4",
+      "name": "Nguyễn Thị D",
+      "email": "nguyenthid@example.com",
+      "password": "123456",
+      "emailVerifiedAt": "2025-02-19T10:15:00Z",
+      "phone": 84907890123,
+      "address": "321 Đường Nguyễn Huệ",
+      "city": "Đà Nẵng",
+      "district": "Hải Châu",
+      "ward": "Thạch Thang",
+      "zipCode": 550000,
+      "role": "member"
+    },
+    {
+      "id": "5",
+      "name": "Phạm Văn E",
+      "email": "phamvane@example.com",
+      "emailVerifiedAt": "2025-02-20T11:00:00Z",
+      "phone": 84909012345,
+      "address": "654 Đường Lý Tự Trọng",
+      "city": "Cần Thơ",
+      "district": "Ninh Kiều",
+      "ward": "Tân An",
+      "zipCode": 900000,
+      "role": "member"
+    },
+    {
+      "id": "6",
+      "name": "Đỗ Thị F",
+      "email": "dothif@example.com",
+      "emailVerifiedAt": "2025-02-21T14:25:00Z",
+      "phone": 84901112233,
+      "address": "987 Đường Võ Văn Kiệt",
+      "city": "Hải Phòng",
+      "district": "Lê Chân",
+      "ward": "An Biên",
+      "zipCode": 180000,
+      "role": "member"
+    },
+    {
+      "id": "7",
+      "name": "Hoàng Văn G",
+      "email": "hoangvang@example.com",
+      "emailVerifiedAt": "2025-02-22T15:10:00Z",
+      "phone": 84902223344,
+      "address": "147 Đường Nguyễn Trãi",
+      "city": "Huế",
+      "district": "Thừa Thiên Huế",
+      "ward": "Phú Hội",
+      "zipCode": 530000,
+      "role": "member"
+    },
+    {
+      "id": "8",
+      "name": "Bùi Văn H",
+      "email": "buivanh@example.com",
+      "emailVerifiedAt": "2025-02-16T16:20:00Z",
+      "phone": 84903334455,
+      "address": "258 Đường Cách Mạng Tháng 8",
+      "city": "Hà Nội",
+      "district": "Hai Bà Trưng",
+      "ward": "Bách Khoa",
+      "zipCode": 100000,
+      "role": "admin"
+    },
+    {
+      "id": "9",
+      "name": "Nguyenx Vawn Giang",
+      "email": "dangthii@example.com",
+      "password": "$2a$10$2U7v8Uc0Q7572oTj5Y7uJevkR80vdWm6loGiTExXc24tno558eK6q",
+      "emailVerifiedAt": "2025-02-17T17:30:00Z",
+      "phone": 84904445566,
+      "address": "369 Đường Nguyễn Văn Cừ",
+      "city": "TP. Hồ Chí Minh",
+      "district": "Quận 5",
+      "ward": "Phường 4",
+      "zipCode": 700000,
+      "role": "admin"
+    },
+    {
+      "email": "Giang11@gmail.com",
+      "password": "$2a$10$vPeSXvbIoHsu5NeYeJN8NO4vZq9heTT0xNt/Ma2aQMMiUSGVzPSii",
+      "role": "admin",
+      "createDate": "2025-03-08T21:42:06+07:00",
+      "name": "adasdsad",
+      "phone": "12313123",
+      "address": "skadsjahkdsad",
+      "city": "132213ads",
+      "district": "qưeqeqwe",
+      "ward": "qưeqwewqe",
+      "zipCode": "13213",
+      "id": "8KTNNOo"
     }
   ],
-  "comments": [
+  "permissions": [
     {
       "id": 1,
-      "body": "some comment",
-      "postId": 1
+      "name": "view_users",
+      "guard_name": "web",
+      "created_at": "2024-03-08T12:00:00Z",
+      "updated_at": "2024-03-08T12:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "edit_users1",
+      "guard_name": "web",
+      "created_at": "2025-03-08T14:05:03Z",
+      "updated_at": "2025-03-08T14:05:03Z"
+    },
+    {
+      "id": 3,
+      "name": "delete_users",
+      "guard_name": "web",
+      "created_at": "2024-03-08T12:10:00Z",
+      "updated_at": "2024-03-08T12:10:00Z"
+    },
+    {
+      "id": 4,
+      "name": "create_posts",
+      "guard_name": "api",
+      "created_at": "2024-03-08T12:15:00Z",
+      "updated_at": "2024-03-08T12:15:00Z"
     }
-  ],
-  "profile": {
-    "name": "typicode"
-  },
-  "user": {
-    
-  }
+  ]
 }

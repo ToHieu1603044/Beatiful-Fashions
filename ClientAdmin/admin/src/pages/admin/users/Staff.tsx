@@ -1,10 +1,11 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
+
 import { Link, useNavigate } from "react-router-dom";
 import { IUsers } from "../../../interfaces/User";
 
 
-const Users = () => {
+const Staff = () => {
   const [users, setUsers] = useState<IUsers[]>([]);
   console.log("users",users);
   
@@ -16,15 +17,14 @@ const Users = () => {
 
   const getAll = async () => {
     try {
-
-      const response = await axios.get("http://127.0.0.1:8000/api/users", {
+      const response = await axios.get("http://localhost:3000/users", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
       });
       console.log(response.data);
       
-      setUsers(response.data.filter((user: IUsers) => user.role === "member"));
+      setUsers(response.data.filter((user: IUsers) => user.role === "admin"));
     } catch (error) {
       console.log(error);
     }
@@ -35,13 +35,9 @@ const Users = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure?")) {
+    if (confirm("Are you sure??")) {
       try {
-        await axios.delete(`http://127.0.0.1:8000/api/users/${id}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
-        });
+        await axios.delete(`http://localhost:3000/users/${id}`);
         getAll();
       } catch (error) {
         console.log(error);
@@ -63,7 +59,7 @@ const Users = () => {
 
   return (
     <div className="container mt-4">
-      <h2 className="mb-3">Danh sách Users</h2>
+      <h2 className="mb-3">Danh sách Staff</h2>
       <div className="mb-3 d-flex gap-2 w-75">
         <input
           type="text"
@@ -79,12 +75,9 @@ const Users = () => {
         </select> */}
       </div>
 
-      {/* <Link to="/admin/users/add" className="btn btn-primary mb-3" >
-      <i className="fa-solid fa-user-plus"></i> Add User
-      </Link> */}
-        
-     
-
+      <Link to="/admin/users/add" className="btn btn-primary mb-3" >
+      <i className="fa-solid fa-user-plus"></i> Add Staff
+      </Link>
       <div className="table-responsive">
         <table className="table table-bordered table-striped table-sm text-center">
           <thead className="table-dark">
@@ -92,17 +85,15 @@ const Users = () => {
               <th>ID</th>
               <th>Name</th>
               <th>Email</th>
-              <th>Email Verified At</th>
+              {/* <th>Email Verified At</th> */}
               <th>Phone</th>
               <th>Address</th>
               <th>City</th>
               <th>District</th>
               <th>Ward</th>
               <th>Zip Code</th>
-
-              {/* <th>Role</th> */}
-              {/* <th>Actions</th> */}
-
+              <th>Role</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -110,28 +101,28 @@ const Users = () => {
               <tr key={item.id}>
                 <td>{indexOfFirstUser + index + 1}</td>
                 <td>{item.name}</td>
+                {/* <td>{item.createDate}</td> */}
                 <td>{item.email}</td>
-
-                <td>{item.emailVerifiedAt}</td>
+                {/* <td>{item.emailVerifiedAt}</td> */}
                 <td>{item.phone}</td>
                 <td>{item.address}</td>
                 <td>{item.city}</td>
                 <td>{item.district}</td>
                 <td>{item.ward}</td>
                 <td>{item.zipCode}</td>
-                {/* <td>{item.role}</td> */}
-                {/* <td className="text-center flex">
+                <td>{item.role}</td>
+                <td className="text-center flex">
                   <button className="btn btn-warning " >
-
                     <i className="fa-solid fa-eye"></i>
                   </button>
                   <button className="btn btn-primary mx-2" onClick={() => navigate(`/admin/users/${item.id}/edit`)}>
                     <i className="fa-solid fa-pen-to-square"></i>
                   </button>
-                  <button className="btn btn-danger" onClick={() => handleDelete(item.id)}>
+                  <button className="btn btn-danger  " onClick={() => handleDelete(item.id)}>
+
                     <i className="fa-solid fa-trash"></i>
                   </button>
-                </td> */}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -156,4 +147,4 @@ const Users = () => {
   );
 };
 
-export default Users;
+export default Staff;
