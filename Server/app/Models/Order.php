@@ -27,6 +27,10 @@ class Order extends Model
          'discount_amount',
         'discount_code'
     ];
+    protected $casts = [
+        'variant_details' => 'array',
+        'return_details' => 'array',
+    ];
 
     public function user()
     {
@@ -38,4 +42,13 @@ class Order extends Model
     public function orderDetails(){
         return $this->hasMany(OrderDetail::class);
     }
+    public function discount()
+    {
+        return $this->belongsTo(Discount::class);
+    }
+    public function returnDetails()
+{
+    return $this->hasOne(OrderReturn::class, 'order_id');
+}
+
 }

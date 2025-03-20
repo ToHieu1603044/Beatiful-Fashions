@@ -167,6 +167,60 @@ export const searchProducts = async (query: string) => {
   }
 };
 
+export const fetchOrders = async (params: { is_paid?: boolean; tracking_status?: string }) => {
+  const token = getAuthToken();
+
+  console.log("Gửi request với params:", params); // Log để kiểm tra params
+
+  const { data } = await axios.get(`${API_BASE_URL}/orders/list`, { 
+    params,  
+    headers: token ? { Authorization: `Bearer ${token}` } : {} 
+  });
+
+  console.log("Dữ liệu trả về từ API:", data); // Log dữ liệu nhận về
+
+  return data;
+};
+
+export const fetchDashboardData = async () => {
+  const token = getAuthToken();
+  const { data } = await axios.get(`${API_BASE_URL}/dashboard/stats`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  return data;
+};
+
+export const fetchRevenueData = async (type = "daily") => {
+  try {
+    const token = getAuthToken(); // Lấy token nếu có
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+    const response = await axios.get(`${API_BASE_URL}/dashboard/revenue`, {
+      params: { type },
+      headers, 
+    });
+    console.log(response.data)
+
+    return response.data;
+  } catch (error) {
+    console.error("Lỗi fetchRevenueData:", error);
+    return {
+      error: true,
+      message: error.response?.data?.message || "Lỗi khi lấy dữ liệu doanh thu",
+      data: [],
+    };
+  }
+};
+
+export const returnOrderAPI = async (orderId: number, items: any[]) => {
+  const token = getAuthToken();
+  return await axios.post(
+    `${API_BASE_URL}/orders/${orderId}/return`, 
+    { items }, 
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }
+  );
+};
+
 
 
 

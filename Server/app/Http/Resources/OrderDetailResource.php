@@ -23,6 +23,7 @@ class OrderDetailResource extends JsonResource
             'price' => $this->price,
             'subtotal' => $this->subtotal,
             'variant_details' => json_decode($this->variant_details,true) ?? [],
+            'return_status' => $this->return_status,
         ];
     }
 }
