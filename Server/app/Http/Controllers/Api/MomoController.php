@@ -21,8 +21,6 @@ class MomoController
         $parts = explode("-", $uniqueOrderId);
         $orderId = end($parts);
 
-        
-
         $order = Order::find($orderId);
         if (!$order) {
             return response()->json(['message' => 'Không tìm thấy đơn hàng!'], 400);

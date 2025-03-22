@@ -63,15 +63,13 @@ export const login = async (email: string, password: string) => {
     throw error.response?.data || "Lỗi đăng nhập!";
   }
 };
-export const registerUser = async (name: string, email: string, password: string, password_confirmation: string, phone?: string, address?: string, city?: string, district?: string, ward?: string, zip_code?: string) => {
+export const registerUser = async (data: any) => {
   const token = localStorage.getItem("access_token"); // Lấy token từ localStorage
-  return await axios.post("http://127.0.0.1:8000/api/users",
-    { name, email, password, password_confirmation, phone, address, city, district, ward, zip_code },
-    {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }
-  );
+  return await axios.post("http://127.0.0.1:8000/api/register", data, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
 };
+
 
 // API lấy thông tin người dùng
 export const getUserProfile = async () => {

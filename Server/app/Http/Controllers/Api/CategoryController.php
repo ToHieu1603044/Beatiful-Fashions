@@ -60,8 +60,6 @@ class CategoryController extends Controller
         return response()->json($tree);
     }
     
-
-    // Hàm tạo cây danh mục
     private function buildCategoryTree($categories, $parentId = null)
     {
         return $categories->where('parent_id', $parentId)->map(function ($category) use ($categories) {

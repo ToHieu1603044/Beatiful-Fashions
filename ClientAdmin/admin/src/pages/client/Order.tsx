@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Tabs, Table, Select, Checkbox, Tag, Spin, Button, Modal } from "antd";
 import { fetchOrders, returnOrderAPI } from "../../services/homeService";
 import { updateOrderStatus, fetchReturnDetails } from "../../services/orderService";
+import { useNavigate } from "react-router-dom";
 
 const Orders: React.FC = () => {
     const [orders, setOrders] = useState([]);
@@ -13,37 +14,22 @@ const Orders: React.FC = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [returnModalVisible, setReturnModalVisible] = useState(false);
     const [selectedReturnItems, setSelectedReturnItems] = useState<Record<number, number>>({});
+    const [selectedProducts , setselectedProducts ] = useState<Record<number, number>>({});
     const [returnDetailsVisible, setReturnDetailsVisible] = useState(false);
     const [returnDetails, setReturnDetails] = useState<Record<number, number>>({});
     const [loadingReturnDetails, setLoadingReturnDetails] = useState(false);
+    const navigate = useNavigate();
+    const [reasonModalVisible, setReasonModalVisible] = useState(false);
+    const handleTabChange = (key: string) => {
+        setActiveTab(key);
+        if (key === "refunded") {
+            navigate("/orders/return");
+        }
+    };
     const showReturnModal = (order: any) => {
         setSelectedOrder(order);
         setSelectedReturnItems([]);
         setReturnModalVisible(true);
-    };
-
-    const showReturnDetailsModal = async (orderId: number) => {
-        setLoadingReturnDetails(true);
-        setReturnDetailsVisible(true);
-
-        try {
-            const response = await fetchReturnDetails(orderId);
-            console.log("Chi tiết hoàn trả:", response.data);
-            const formattedData = response.data.return_details.map((detail: any) => ({
-                id: detail.id,
-                product_name: response.data.product_name,
-                variant: JSON.parse(response.data.variant_details)?.Size || '-',
-                quantity: detail.quantity,
-                refund_amount: detail.refund_amount,
-                return_date: new Date(detail.created_at).toLocaleDateString('vi-VN'),
-                return_status: response.data.return_status
-            }));
-
-            setReturnDetails(formattedData);
-        } catch (error) {
-            console.error("Lỗi khi lấy chi tiết hoàn trả:", error);
-        }
-        setLoadingReturnDetails(false);
     };
 
     const handleSelectReturnItem = (detail: any, quantity: number) => {
@@ -105,7 +91,7 @@ const Orders: React.FC = () => {
         setSelectedOrder(null);
     };
     const handleCheckboxChange = (detail: any, checked: boolean) => {
-        if (detail.return_status) return; // Nếu sản phẩm đã yêu cầu hoàn trả, không cho chọn
+        if (detail.return_status) return;
 
         setSelectedReturnItems(prevItems => {
             const updatedItems = { ...prevItems };
@@ -155,8 +141,6 @@ const Orders: React.FC = () => {
                     order.id === orderId ? { ...order, shipping_status: "cancelled" } : order
                 )
             );
-
-
         } catch (error) {
             console.error("Lỗi khi hủy đơn hàng:", error);
         }
@@ -235,10 +219,9 @@ const Orders: React.FC = () => {
 
     ];
 
-
     return (
         <div>
-            <Tabs activeKey={activeTab} onChange={setActiveTab}>
+            <Tabs activeKey={activeTab} onChange={handleTabChange}>
                 <Tabs.TabPane tab="Tất cả" key="all" />
                 <Tabs.TabPane tab="Chờ xác nhận" key="pending" />
                 <Tabs.TabPane tab="Đang xử lý" key="processing" />
@@ -298,6 +281,21 @@ const Orders: React.FC = () => {
                                     render: (item: any) =>
                                         (item.quantity * item.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
                                 },
+                                {
+                                    title: "Lý do hoàn hàng",
+                                    key: "reason",
+                                    render: (item: any) =>
+                                        selectedProducts.hasOwnProperty(item.id) ? (
+                                            <Input
+                                                placeholder="Nhập lý do hoàn hàng..."
+                                                value={selectedProducts[item.id]}
+                                                onChange={e => handleReasonChange(item.id, e.target.value)}
+                                            />
+                                        ) : (
+                                            "—"
+                                        ),
+                                },
+
                             ]}
                         />
                     </div>
@@ -375,9 +373,6 @@ const Orders: React.FC = () => {
                                                     Hoàn trả
                                                 </Button>
                                             )}
-                                            <Button type="default" onClick={() => showReturnDetailsModal(record.id)}>
-                                                Xem chi tiết hoàn trả
-                                            </Button>
                                         </div>
                                     )
                                 }
@@ -386,66 +381,6 @@ const Orders: React.FC = () => {
                             rowKey="id"
                         />
                     </div>
-                )}
-            </Modal>
-
-            {/* Modal chi tiết đơn hoàn */}
-            <Modal
-                title="Chi tiết hoàn trả"
-                open={returnDetailsVisible}
-                onCancel={() => setReturnDetailsVisible(false)}
-                footer={null}
-                width={800}
-            >
-                {loadingReturnDetails ? (
-                    <Spin size="large" />
-                ) : (
-                    <Table
-                        columns={[
-                            {
-                                title: "Sản phẩm",
-                                dataIndex: "product_name",
-                                key: "product_name"
-                            },
-                            {
-                                title: "Biến thể",
-                                dataIndex: "variant",
-                                key: "variant"
-                            },
-                            {
-                                title: "Số lượng hoàn",
-                                dataIndex: "quantity",
-                                key: "quantity"
-                            },
-                            {
-                                title: "Hoàn tiền",
-                                dataIndex: "refund_amount",
-                                key: "refund_amount",
-                                render: (amount: string) => parseFloat(amount).toLocaleString("vi-VN", {
-                                    style: "currency",
-                                    currency: "VND"
-                                })
-                            },
-                            {
-                                title: "Ngày hoàn trả",
-                                dataIndex: "return_date",
-                                key: "return_date"
-                            },
-                            {
-                                title: "Trạng thái",
-                                dataIndex: "return_status",
-                                key: "return_status",
-                                render: (status: string) => (
-                                    <Tag color={status === 'pending' ? 'gold' : 'green'}>
-                                        {status === 'pending' ? 'Đang xử lý' : 'Đã hoàn trả'}
-                                    </Tag>
-                                )
-                            }
-                        ]}
-                        dataSource={returnDetails}
-                        rowKey="id"
-                        pagination={{ pageSize: 5 }}
-                    />
                 )}
             </Modal>
         </div>

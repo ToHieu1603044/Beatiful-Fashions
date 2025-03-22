@@ -54,7 +54,7 @@ class DashboardController
 
     $data = match ($type) {
         'daily' => $query->selectRaw("DATE(created_at) as label, SUM(total_amount) as revenue")
-                         ->where('created_at', '<=', $startDate)
+                         ->where('created_at', '>=', $startDate)
                          ->groupBy('label')
                          ->orderBy('label', 'asc')
                          ->get(),

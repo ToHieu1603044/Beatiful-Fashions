@@ -47,9 +47,11 @@ import ProductTrash from "./pages/admin/products/ProductTrash";
 import ResetPassword from "./pages/client/ResetPassword";
 import SearchProducts from "./pages/client/SearchProducts";
 import Order from "./pages/client/Order";
+
 import Dashboard from "./pages/admin/Dashboard";
 import Discount from "./pages/admin/discounts/Discount";
 import OrderReturn from "./pages/admin/orders/OrderReturn";
+import OrderReturns from "./pages/client/OrderReturns";
 
 
 
@@ -144,6 +146,7 @@ function App() {
         { path: "orders", element: <Order /> },
         { path: "account", element: <Profile /> },
         { path: "searchs", element: <SearchProducts /> },
+        { path: "orders/return", element: <OrderReturns /> },
       ],
     },
     {

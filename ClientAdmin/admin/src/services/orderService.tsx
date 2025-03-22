@@ -64,4 +64,11 @@ export const getOrderReturns = async ()=>{
       });
 }
 
+export const getOrderReturnUser = async ()=>{
+
+  return await axios.get(`${API_URL}/orders/returns/user`, {
+      headers: getAuthHeader(),
+    });
+}
+
   

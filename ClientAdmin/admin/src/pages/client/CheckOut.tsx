@@ -2,7 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { getCart } from "../../services/homeService";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify"; // Make sure toastify is imported for alerts
+import { toast } from "react-toastify"; 
 import axiosInstance from "../../services/axiosInstance";
 import Swal from 'sweetalert2'
 import { set } from "react-hook-form";
@@ -19,6 +19,7 @@ const CheckOut = () => {
     const [selectedWard, setSelectedWard] = useState("");
     const [totalAmount, setTotalAmount] = useState(0);
     const [discountedTotal, setDiscountedTotal] = useState(0);
+        
     const [formData, setFormData] = useState({
         email: "",
         name: "",
@@ -157,15 +158,11 @@ const CheckOut = () => {
         }
     };
     
-    
-
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log("Dữ liệu đã gửi:", JSON.stringify(formData, null, 2));
 
         try {
-
 
             const response = await axiosInstance.post('/orders', formData, {
                 headers: { 'Content-Type': 'application/json' },

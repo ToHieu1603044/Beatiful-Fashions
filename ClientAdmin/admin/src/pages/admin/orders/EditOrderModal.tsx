@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { Modal, Button, Select, Input, Table } from "antd";
 import { updateOrder } from "../../../services/orderService";
 import Swal from "sweetalert2";
+import axios from "axios";
 
+const getAuthToken = () => localStorage.getItem("access_token");
 const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
   const [formData, setFormData] = useState({
-    
+
     status: "",
     is_paid: false,
     payment_method: "",
@@ -36,7 +38,24 @@ const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
       });
     }
   }, [order]);
+  const [attributes, setAttributes] = useState([]);
 
+  useEffect(() => {
+    const fetchAttributes = async () => {
+      const token = getAuthToken();
+      try {
+        const response = await axios.get("http://127.0.0.1:8000/api/attributes", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        console.log("Dữ liệu attributes từ API0--:", response.data);
+        setAttributes(response.data);
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu attributes:", error);
+      }
+    };
+
+    fetchAttributes();
+  }, []);
   const handleInputChange = (key, value) => {
     setFormData({ ...formData, [key]: value });
   };
@@ -148,18 +167,68 @@ const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
           dataSource={formData.order_details}
           rowKey="id"
           columns={[
-            { title: "Tên sản phẩm", dataIndex: "product_name", key: "product_name" },
+            {
+              title: "Tên sản phẩm",
+              dataIndex: "product_name",
+              key: "product_name",
+            },
             {
               title: "Biến thể",
               key: "variants",
-              render: (item) =>
-                item.variant_details
-                  ? Object.entries(item.variant_details)
-                      .map(([key, value]) => `${key}: ${value}`)
-                      .join(", ")
-                  : "Không có biến thể",
+              render: (item, record) => (
+                <Select
+                mode="multiple"
+                value={Object.keys(record.variant_details || {}).map(
+                  (key) => `${key}: ${record.variant_details[key]}`
+                )}
+                onChange={(values) => {
+                  const updatedVariants = values.reduce((acc, curr) => {
+                    const [key, value] = curr.split(": ");
+                    acc[key] = value;
+                    return acc;
+                  }, {});
+              
+                  const updatedOrderDetails = formData.order_details.map((od) =>
+                    od.id === record.id ? { ...od, variant_details: updatedVariants } : od
+                  );
+              
+                  setFormData({ ...formData, order_details: updatedOrderDetails });
+                }}
+                className="w-100"
+              >
+                {attributes.flatMap((attribute) =>
+                  attribute.values?.map((value) => (
+                    <Select.Option
+                      key={`${attribute.name}: ${value.value}`}
+                      value={`${attribute.name}: ${value.value}`}
+                    >
+                      {attribute.name}: {value.value}
+                    </Select.Option>
+                  ))
+                )}
+              </Select>
+              
+              ),
             },
-            { title: "Số lượng", dataIndex: "quantity", key: "quantity" },
+            {
+              title: "Số lượng",
+              dataIndex: "quantity",
+              key: "quantity",
+              render: (quantity, record) => (
+                <Input
+                  type="number"
+                  min={1}
+                  value={quantity}
+                  onChange={(e) => {
+                    const updatedOrderDetails = formData.order_details.map((od) =>
+                      od.id === record.id ? { ...od, quantity: Number(e.target.value) } : od
+                    );
+
+                    setFormData({ ...formData, order_details: updatedOrderDetails });
+                  }}
+                />
+              ),
+            },
             {
               title: "Giá",
               dataIndex: "price",

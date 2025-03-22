@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('order_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->enum('status', ['pending', 'approved', 'rejected', 'shipping', 'received','refunded'])->default('pending');
+            $table->enum('status', ['pending', 'approved', 'rejected', 'shipping', 'received','refunded','cancelled','completed'])->default('pending');
             $table->text('reason')->nullable();
             $table->timestamps();
         });

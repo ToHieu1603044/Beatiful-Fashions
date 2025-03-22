@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('order_details', function (Blueprint $table) {
             Schema::table('order_details', function (Blueprint $table) {
-                $table->enum('return_status', ['pending', 'approved', 'rejected', 'refunded'])->nullable()->default(null);
+                $table->longText('return_status')->nullable()->default(null);
             });
         });
     }

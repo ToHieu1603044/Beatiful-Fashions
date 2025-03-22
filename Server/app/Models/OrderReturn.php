@@ -42,5 +42,10 @@ class OrderReturn extends Model
     {
         return $this->hasMany(OrderReturnItem::class, 'order_return_id');
     }
+    public function orderReturn()
+    {
+        return $this->belongsTo(OrderReturn::class, 'order_return_id');
+    }
+    
 
 }

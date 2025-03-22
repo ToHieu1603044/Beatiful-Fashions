@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Table,Select , Button, Modal } from "antd";
-import { getOrderReturns } from "../../../services/orderService";
-import axios from "axios";
+import { Table, Select, Button, Modal } from "antd";
 
-const OrderReturn: React.FC = () => {
+import axios from "axios";
+import { getOrderReturns, getOrderReturnUser } from "../../services/orderService";
+
+const OrderReturns: React.FC = () => {
     const [orders, setOrders] = useState<any[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -13,33 +14,38 @@ const OrderReturn: React.FC = () => {
     }, []);
 
     const statusOptions = [
-      { value: "pending", label: "Chờ xử lý" },
-      { value: "approved", label: "Chấp nhận" },
-      { value: "rejected", label: "Từ chối" },
-      { value: "received", label: "Đã nhận" },
-      { value: "refunded", label: "Đã hoàn tiền" },
-      { value: "completed", label: "Hoàn tất" },
-  ];
-  const updateStatus = async (id: number, newStatus: string) => {
-    try {
-      const response =  await axios.patch(`http://127.0.0.1:8000/api/order-returns/${id}/status`, { status: newStatus });
-        setOrders(prevOrders =>
-            prevOrders.map(order =>
-                order.id === id ? { ...order, status: newStatus } : order
-            )
-        );
-
-        if(response.status === 200){
-            console.log("Cập nhật trạng thái thanh cong");
+        { value: "shipping", label: "Đã gửi hàng" },
+    ];
+    const cancelOrder = async (id: number) => {
+        try {
+            const response = await axios.delete(`http://127.0.0.1:8000/api/orders/${id}/cancel`);
+            if (response.status === 200) {
+                fetchOrders();
+            }
+        } catch (error) {
+            console.error("Lỗi khi hủy đơn hàng:", error);
         }
-    } catch (error) {
-        console.error("Lỗi cập nhật trạng thái:", error);
     }
-};
-  
+    const updateStatus = async (id: number, newStatus: string) => {
+        try {
+            const response = await axios.patch(`http://127.0.0.1:8000/api/order-returns/${id}/status/user`, { status: newStatus });
+            setOrders(prevOrders =>
+                prevOrders.map(order =>
+                    order.id === id ? { ...order, status: newStatus } : order
+                )
+            );
+
+            if (response.status === 200) {
+                console.log("Cập nhật trạng thái thanh cong");
+            }
+        } catch (error) {
+            console.error("Lỗi cập nhật trạng thái:", error);
+        }
+    };
+
     const fetchOrders = async () => {
         try {
-            const response = await getOrderReturns();
+            const response = await getOrderReturnUser();
             console.log("Danh sách đơn hàng hoàn:", response.data.data);
             setOrders(response.data.data);
         } catch (error) {
@@ -61,28 +67,58 @@ const OrderReturn: React.FC = () => {
         { title: "ID", dataIndex: "id", key: "id" },
         { title: "Tên khách hàng", dataIndex: ["order", "name"], key: "name" },
         { title: "Số điện thoại", dataIndex: ["order", "phone"], key: "phone" },
+
         {
-          title: "Trạng thái",
-          dataIndex: "status",
-          key: "status",
-          render: (status: string, record: any) => (
-              <Select
-                  value={status}
-                  onChange={(newStatus) => updateStatus(record.id, newStatus)}
-                  style={{ width: 150 }}
-                  options={statusOptions}
-              />
-          ),
-      },
+            title: "Trạng thái",
+            dataIndex: "status",
+            key: "status",
+        },
+        {
+            title: "Tiến trình",
+            key: "progress",
+            render: (_: any, record: any) => {
+                if (record.status === "approved") {
+                    return (
+                        <Select
+                            value={record.status}
+                            onChange={(newStatus) => updateStatus(record.id, newStatus)}
+                            style={{ width: 150 }}
+                            options={statusOptions}
+                        />
+                    );
+                }
+
+                if (record.status === "refunded") {
+                
+                    return (
+                        <Button
+                            type="primary"
+                            onClick={() => updateStatus(record.id, "completed")}
+                        >
+                            Đã nhận tiền
+                        </Button>
+                    );
+                  }
+                return <span>{record.status}</span>;
+            },
+        },
+
         {
             title: "Hành động",
             key: "action",
             render: (record: any) => (
-                <Button type="primary" onClick={() => showOrderDetails(record)}>
-                    Xem chi tiết
-                </Button>
+                <>
+                    <Button type="primary" onClick={() => showOrderDetails(record)}>
+                        Xem chi tiết
+                    </Button>
+
+                    <Button type="default" onClick={() => cancelOrder(record.id)}>
+                        Hủy
+                    </Button>
+                </>
             ),
         },
+        
     ];
 
     return (
@@ -174,4 +210,4 @@ const OrderReturn: React.FC = () => {
     );
 };
 
-export default OrderReturn;
+export default OrderReturns;

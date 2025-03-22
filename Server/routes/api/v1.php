@@ -38,16 +38,37 @@ Route::get('/categories/web{id}/', [CategoryController::class, 'categoryDetail']
 
 //Discount
 
+Route::get('/provinces', function () {
+    $response = Http::get("https://provinces.open-api.vn/api/p/");
+    return response()->json($response->json());
+});
 
+Route::get('/provinces/{province}', function (Request $request, $province) {
+    $depth = $request->query('depth', 1);
+    $response = Http::get("https://provinces.open-api.vn/api/p/{$province}", [
+        'depth' => $depth
+    ]);
+    return response()->json($response->json());
+});
+
+Route::get('/districts/{district}', function (Request $request, $district) {
+    $depth = $request->query('depth', 1);
+    $response = Http::get("https://provinces.open-api.vn/api/d/{$district}", [
+        'depth' => $depth
+    ]);
+    return response()->json($response->json());
+});
 
 //Auth
-Route::post('/register', [AuthController::class, 'register']);
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name('password.reset');
 
 Route::middleware(['auth:sanctum'])->group(function () {
+
+    
     Route::apiResource('carts', CartController::class);
     Route::delete('carts', [CartController::class, 'clearCart']);
     Route::post('discounts/apply', [DiscountController::class, 'applyDiscount']);
@@ -61,27 +82,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('products/trash', [ProductController::class, 'productDelete'])->middleware('role:admin');
     Route::post('/momo/payment', [MoMoController::class, 'createPayment']);
 
+    //order
+    Route::patch('/order-returns/{id}/status/user', [OrderReturnController::class, 'updateStatusUser']);
+    Route::get('/orders/returns/user', [OrderReturnController::class, 'returnItemUser']);
+    Route::delete('/orders/{id}/cancel', [OrderReturnController::class, 'cancelOrderReturn']);
     Route::get('/orders/list', [OrderController::class, 'orderUser']);
-    Route::get('/provinces', function () {
-        $response = Http::get("https://provinces.open-api.vn/api/p/");
-        return response()->json($response->json());
-    });
-    
-    Route::get('/provinces/{province}', function (Request $request, $province) {
-        $depth = $request->query('depth', 1);
-        $response = Http::get("https://provinces.open-api.vn/api/p/{$province}", [
-            'depth' => $depth
-        ]);
-        return response()->json($response->json());
-    });
-    
-    Route::get('/districts/{district}', function (Request $request, $district) {
-        $depth = $request->query('depth', 1);
-        $response = Http::get("https://provinces.open-api.vn/api/d/{$district}", [
-            'depth' => $depth
-        ]);
-        return response()->json($response->json());
-    });
+
+   
     //Notification
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'deleteNotification']);
@@ -90,7 +97,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
-   
+
     Route::post('discounts', [DiscountController::class, 'store']);
     Route::get('orders/returns', [OrderReturnController::class, 'index']);
     Route::patch('/order-returns/{id}/status', [OrderReturnController::class, 'updateStatus']);
@@ -141,9 +148,8 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::delete('/orders/force-delete/{id}', [OrderController::class, 'forceDelete']);
     Route::put('/orders/{id}/update-status', [OrderController::class, 'updateStatus']);
     Route::put('/orders/{id}/canceled', [OrderController::class, 'destroys']);
-    //  Route::put('/orders/{id}/success', [OrderController::class, 'orderSuccess']);
     Route::put('/orders/{id}/confirm-order', [OrderController::class, 'confirmOrder']);
-    Route::post('/orders/{orderId}/return', [OrderReturnController::class, 'returnItem']); // Khách yêu cầu hoàn hàng
+    Route::post('/orders/{orderId}/return', [OrderReturnController::class, 'returnItem']);
 
     Route::get('/roles', [RolePermissionController::class, 'indexRoles']);
     Route::get('/permissions', [RolePermissionController::class, 'indexPermissions']);

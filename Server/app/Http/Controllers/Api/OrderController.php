@@ -120,7 +120,7 @@ class OrderController
                 'phone' => $request->phone,
                 'city' => $request->city,
                 'address' => $request->address,
-                'district' => $request->district,
+                'district' => $request->district_name,
                 'ward' => $request->ward,
                 'note' => $request->note,
             ]);
@@ -388,7 +388,6 @@ class OrderController
         $order = Order::findOrFail($id);
         $user = User::find($order->user_id);
 
-
         DB::beginTransaction();
 
         try {
@@ -447,21 +446,30 @@ class OrderController
     {
 
     }
-    public function fetchReturnDetails($orderId)
+    public function fetchReturnDetails($orderDetailId)
     {
-        $orderReturn = OrderDetail::where('id', $orderId)
-            ->with('returnDetails','order.returnDetails') 
+        $orderDetail = OrderDetail::where('id', $orderDetailId)
+            ->with([
+                'returnDetails' => function ($query) {
+                    $query->with('orderReturn'); // Sửa lỗi gọi sai quan hệ
+                },
+                'order' => function ($query) {
+                    $query->select('id', 'name', 'phone', 'email', 'address', 'district', 'city')
+                          ->with('returnDetails');
+                }
+            ])
             ->first();
     
-        if (!$orderReturn) {
+        if (!$orderDetail) {
             return response()->json([
                 'message' => 'Không tìm thấy dữ liệu trả hàng',
                 'data' => null
-            ], 200);
+            ], 404);
         }
     
-        return response()->json($orderReturn);
+        return response()->json([
+            'message' => 'Lấy dữ liệu trả hàng thành công',
+            'data' => $orderDetail
+        ], 200);
     }
-    
-    
 }    
