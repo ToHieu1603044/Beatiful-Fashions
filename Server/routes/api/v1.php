@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\BannerController;
+use App\Http\Controllers\Api\SlideController;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use App\Models\Product;
@@ -105,6 +106,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/revenue', [DashboardController::class, 'revenueStats']);
 
+    Route::apiResource('slides', SlideController::class); //Slide
     // User
     Route::get('/users', [UserController::class, 'index']);
 
@@ -194,6 +196,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
 });
 Route::apiResource('banners', BannerController::class);
-
 
 ?>
