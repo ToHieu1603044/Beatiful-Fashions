@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use App\Helpers\ApiResponse;
 use App\Traits\ApiDataTrait;
@@ -38,27 +39,27 @@ class CategoryController extends Controller
     }
     public function indexWeb(Request $request)
     {
-        $query = Category::query();
-
-        // Lọc theo tên
-        if ($request->has('search') && $request->search) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
-        // Lọc theo danh mục cha (nếu parent_id là số, lọc theo danh mục cha, nếu 'all' thì lấy tất cả)
-        if ($request->has('parent_id') && $request->parent_id !== 'all') {
-            $query->where('parent_id', $request->parent_id);
-        }
-
-        $categories = $query->get();
-
-        // Xây dựng cây danh mục
+        $cacheKey = 'categories_' . md5(json_encode($request->all()));
+    
+        $categories = Cache::remember($cacheKey, 600, function () use ($request) {
+            $query = Category::query();
+    
+            if ($request->has('search') && $request->search) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+            }
+    
+            if ($request->has('parent_id') && $request->parent_id !== 'all') {
+                $query->where('parent_id', $request->parent_id);
+            }
+    
+            return $query->get();
+        });
+    
         $tree = $this->buildCategoryTree($categories);
-
+    
         return response()->json($tree);
     }
-
-    // Hàm tạo cây danh mục
+    
     private function buildCategoryTree($categories, $parentId = null)
     {
         return $categories->where('parent_id', $parentId)->map(function ($category) use ($categories) {

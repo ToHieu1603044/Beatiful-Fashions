@@ -11,7 +11,10 @@ use App\Models\Cart;
 use App\Models\Discount;
 use App\Models\Order;
 use App\Models\OrderDetail;
+use App\Models\OrderReturn;
+use App\Models\OrderReturnItem;
 use App\Models\ProductSku;
+use App\Models\User;
 use App\Services\MoMoService;
 use Exception;
 use Illuminate\Http\Request;
@@ -25,7 +28,23 @@ class OrderController
     public function index(Request $request)
     {
         try {
-            $orders = Order::with('orderDetails.sku')->orderBy('created_at', 'desc')->paginate(10);
+            $query = Order::with('orderDetails.sku')->orderBy('created_at', 'desc');
+
+            if ($request->has('is_paid')) {
+                $query->where('is_paid', fillter_var($request->is_paid, FILTER_VALIDATE_BOOLEAN));
+            }
+            if ($request->has('tracking_status')) {
+                $validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'completed', 'refunded'];
+
+                if (in_array($request->tracking_status, $validStatuses)) {
+                    $query->where('tracking_status', $request->tracking_status);
+                }
+            }
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+
+            $orders = $query->paginate(20);
 
             return ApiResponse::responsePage(OrderResource::collection($orders));
 
@@ -39,12 +58,21 @@ class OrderController
         $user = Auth::user();
 
         try {
-            $orders = Order::with('orderDetails.sku')->where('user_id', $user->id)->paginate(10);
+            $query = Order::with('orderDetails.sku')->where('user_id', $user->id);
+            if ($request->has('tracking_status')) {
+                $validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'completed', 'refunded'];
+
+                if (in_array($request->tracking_status, $validStatuses)) {
+                    $query->where('tracking_status', $request->tracking_status);
+                }
+            }
+            
+            $orders = $query->paginate(10);
 
             return ApiResponse::responsePage(OrderResource::collection($orders));
 
         } catch (\Throwable $th) {
-             return ApiResponse::errorResponse(500, $th->getMessage());
+            return ApiResponse::errorResponse(500, $th->getMessage());
         }
     }
     public function store(Request $request)
@@ -92,7 +120,7 @@ class OrderController
                 'phone' => $request->phone,
                 'city' => $request->city,
                 'address' => $request->address,
-                'district' => $request->district,
+                'district' => $request->district_name,
                 'ward' => $request->ward,
                 'note' => $request->note,
             ]);
@@ -106,25 +134,25 @@ class OrderController
                     return ApiResponse::errorResponse(400, "Sản phẩm '{$cart->sku_id}' không đủ hàng.");
                 }
 
-                $variantDetails = $sku->attributeOptions->pluck('value','attribute.name')->toArray();
+                $variantDetails = $sku->attributeOptions->pluck('value', 'attribute.name')->toArray();
                 $subtotal = $sku->price * $cart->quantity;
 
                 OrderDetail::create([
                     'order_id' => $order->id,
-                  //  'sku' => $sku->sku,
+                      'sku' => $sku->sku,
                     'product_name' => $sku->product->name,
                     'variant_details' => json_encode($variantDetails),
                     'quantity' => $cart->quantity,
                     'price' => $sku->price,
                     'subtotal' => $subtotal,
-                ]); 
+                ]);
 
                 if ($sku->product) {
                     $sku->product->increment('total_sold', $cart->quantity);
                 } else {
                     \Log::error("Không tìm thấy sản phẩm cho SKU ID: " . $sku->id);
                 }
-                
+
                 $sku->decrement('stock', $cart->quantity);
 
                 $totalAmount += $subtotal;
@@ -198,7 +226,7 @@ class OrderController
                 return response()->json(['message' => 'Không tìm thấy đơn hàng!'], 400);
             }
 
-           
+
 
             \Log::info('Gửi mail với order:', ['order' => $order->toArray()]);
 
@@ -215,71 +243,171 @@ class OrderController
 
     public function show(Order $order)
     {
-       try{
-            if($order){
+        try {
+            if ($order) {
                 return new OrderResource($order->load('orderDetails.sku'));
-            }else{
+            } else {
                 return ApiResponse::errorResponse(400, 'Không tìm thấy đơn hàng!');
             }
-       }catch(\Exception $e){
+        } catch (\Exception $e) {
 
             return ApiResponse::errorResponse(500, 'Lỗi khi tìm kiếm đơn hàng: ' . $e->getMessage());
-       }
+        }
     }
     public function update(StoreOrderRequest $request, Order $order)
     {
-        $validate = $request->validated();
-
-        $order->update($validate);
-
-        foreach ($order->orderDetails as $orderDetail) {
-            $orderDetail->update([
-                'price' => $orderDetail->sku->price,
-                'subtotal' => $orderDetail->sku->price * $orderDetail->quantity,
+        $validated = $request->validated();
+    
+        DB::beginTransaction();
+        try {
+       
+            $order->update([
+                'status'         => $validated['status'] ?? $order->status,
+                'is_paid'        => $validated['is_paid'] ?? $order->is_paid,
+                'payment_method' => $validated['payment_method'] ?? $order->payment_method,
+                'name'           => $validated['name'] ?? $order->name,
+                'phone'          => $validated['phone'] ?? $order->phone,
+                'email'          => $validated['email'] ?? $order->email,
+                'ward'           => $validated['ward'] ?? $order->ward,
+                'district'       => $validated['district'] ?? $order->district,
+                'city'           => $validated['city'] ?? $order->city,
+                'note'           => $validated['note'] ?? $order->note,
             ]);
+    
+          
+            if (!empty($validated['order_details'])) {
+            
+                $order->orderDetails()->delete();
+    
+               
+                foreach ($validated['order_details'] as $detail) {
+                    $sku = ProductSku::find($detail['sku_id']); 
+    
+                    if ($sku) {
+                        $order->orderDetails()->create([
+                            'product_name'   => $sku->product->name, 
+                            'variant_details' => json_encode($detail['variant_details']),
+                            'quantity'       => $detail['quantity'],
+                            'price'          => $sku->price,
+                            'subtotal'       => $sku->price * $detail['quantity'],
+                        ]);
+                    }
+                }
+            }
+    
+            $order->update([
+                'total_amount' => $order->orderDetails->sum('subtotal'),
+            ]);
+    
+            DB::commit();
+    
+            return ApiResponse::responseSuccess(new OrderResource($order));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return ApiResponse::responseError('Cập nhật đơn hàng thất bại', 500, $e->getMessage());
+        }
+    }
+    public function completeOrder($id)
+    {
+        $order = Order::findOrFail($id);
+
+        if ($order->tracking_status === 'completed' && $order->is_paid == 0) {
+            $order->update([
+                'is_paid' => 1,
+                'status' => 'completed',
+            ]);
+
+            return response()->json(['message' => 'Đơn hàng đã được hoàn thành!']);
         }
 
-        return ApiResponse::responseSuccess($order);
-      
+        return response()->json(['message' => 'Không thể hoàn thành đơn hàng!'], 400);
     }
+
     public function destroy($id)
     {
         $order = Order::findOrFail($id);
-    
+
         if ($order->shipping_status !== 'pending') {
             return ApiResponse::errorResponse(400, 'Không thể hủy đơn hàng khi đã được xử lý');
         }
-    
+
         $order->delete();
-    
+
         return ApiResponse::responseSuccess('Đơn hàng đã được hủy', 204);
     }
     public function destroys($id)
     {
         $order = Order::findOrFail($id);
-    
+
         if ($order->shipping_status !== 'pending') {
             return ApiResponse::errorResponse(400, 'Không thể hủy đơn hàng khi đã được xử lý');
         }
-    
+
         $order->update(['status' => 'canceled']);
-    
+
         return ApiResponse::responseSuccess('Đơn hàng đã được hủy', 204);
     }
-    
     public function updateStatus(Request $request, $id)
-{   
-    $order = Order::findOrFail($id);
+    {
+        $order = Order::findOrFail($id);
+        $user = User::find($order->user_id);
 
-    $request->validate([
-        'shipping_status' => 'required|string|in:pending,processing,shipped,delivered,cancelled'
-    ]);
+        $request->validate([
+            'tracking_status' => 'nullable|string|in:pending,processing,shipped,delivered,cancelled,completed',
+            'status' => 'nullable|string|in:pending,completed',
+            'is_paid' => 'nullable|boolean'
+        ]);
 
-    $order->update(['tracking_status' => $request->shipping_status]);
+        DB::beginTransaction();
 
-    return ApiResponse::responseSuccess($order, 200, "Cập nhật trạng thái thành công.");
-}
+        try {
 
+            $order->update([
+                'tracking_status' => $request->tracking_status,
+            ]);
+
+            $order->save();
+
+            if ($user && $order->status === 'completed') {
+                $pointsEarned = floor($order->total_amount / 100000) * 10;
+                $user->increment('points', $pointsEarned);
+                $user->updateRanking();
+            }
+
+            DB::commit();
+            return ApiResponse::responseSuccess($order, 200, "Cập nhật trạng thái thành công.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Lỗi cập nhật đơn hàng: ' . $e->getMessage());
+
+            return ApiResponse::responseError(500, "Có lỗi xảy ra khi cập nhật đơn hàng.");
+        }
+    }
+    public function confirmOrder(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        $user = User::find($order->user_id);
+
+        DB::beginTransaction();
+
+        try {
+
+            $order->update([
+                'status' => 'completed',
+                'is_paid' => 1
+            ]);
+
+            $order->save();
+
+            DB::commit();
+            return ApiResponse::responseSuccess($order, 200, "Cập nhật trạng thái thành công.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Lỗi cập nhật đơn hàng: ' . $e->getMessage());
+
+            return ApiResponse::responseError(500, "Có lỗi xảy ra khi cập nhật đơn hàng.");
+        }
+    }
     public function restore($id)
     {
         $order = Order::onlyTrashed()->findOrFail($id);
@@ -296,13 +424,14 @@ class OrderController
     }
     public function listDeleted()
     {
-       
-      $orders = Order::onlyTrashed()->with('orderDetails.sku')->orderBy('created_at', 'desc')->paginate(10);
+
+        $orders = Order::onlyTrashed()->with('orderDetails.sku')->orderBy('created_at', 'desc')->paginate(10);
         return ApiResponse::responsePage(OrderResource::collection($orders));
     }
-    public function cancelOrder(Request $request, Order $order){
-       
-        if($order->shipping_status != 'Đã gửi hàng'){
+    public function cancelOrder(Request $request, Order $order)
+    {
+
+        if ($order->shipping_status != 'Đã gửi hàng') {
             return ApiResponse::errorResponse(400, 'Không thể huy đơn hàng!');
         }
 
@@ -313,7 +442,34 @@ class OrderController
 
         return ApiResponse::responseSuccess();
     }
-    public function refundOrder(Request $request, Order $order){
-        
+    public function refundOrder(Request $request, Order $order)
+    {
+
     }
-}
+    public function fetchReturnDetails($orderDetailId)
+    {
+        $orderDetail = OrderDetail::where('id', $orderDetailId)
+            ->with([
+                'returnDetails' => function ($query) {
+                    $query->with('orderReturn'); // Sửa lỗi gọi sai quan hệ
+                },
+                'order' => function ($query) {
+                    $query->select('id', 'name', 'phone', 'email', 'address', 'district', 'city')
+                          ->with('returnDetails');
+                }
+            ])
+            ->first();
+    
+        if (!$orderDetail) {
+            return response()->json([
+                'message' => 'Không tìm thấy dữ liệu trả hàng',
+                'data' => null
+            ], 404);
+        }
+    
+        return response()->json([
+            'message' => 'Lấy dữ liệu trả hàng thành công',
+            'data' => $orderDetail
+        ], 200);
+    }
+}    

@@ -35,29 +35,23 @@ const MainContent = () => {
   };
 
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [productsRes, categoriesRes] = await Promise.all([
+          getProducts(),
+          getCategories(),
+        ]);
+        setProducts(productsRes.data.data || []);
+        setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+       // setLoading(false);
+      }
+    };
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const [productsRes, categoriesRes] = await Promise.all([
-        getProducts(),
-        getCategories(),
-      ]);
-
-      console.log("Products API response:", productsRes.data);
-      console.log("Categories API response:", categoriesRes.data);
-
-      setProducts(productsRes.data.data || []);
-      setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
-    } catch (error) {
-      console.error("Lỗi khi tải dữ liệu:", error);
-      setProducts([]);
-      setCategories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
   const handleSubmit = () => {
     if (!selectedVariant) {
       alert("Vui lòng chọn biến thể.");
@@ -149,10 +143,11 @@ const MainContent = () => {
         < ImageCollection />
       <h2 className="mb-4 text-center text-uppercase mt-5">--Tất cả sản phẩm--</h2>
       <div className="row g-4 mb-5">
-        {loading ? (
-          <p>Đang tải...</p>
-        ) : (
-          products.map((product) => (
+      {products.length === 0 ? (
+  <p className="text-center">Không có sản phẩm nào.</p>
+) : (
+  products.map((product) => (
+
             <div key={product.id} className="col-lg-3 col-md-4 col-sm-6">
               <div className="card h-100 shadow-sm hover-card">
                 <div

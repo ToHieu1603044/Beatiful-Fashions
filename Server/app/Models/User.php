@@ -36,6 +36,8 @@ class User extends Authenticatable
         'zip_code',
         'active',
         'role',
+        'points',
+        'ranking',
         'last_password_changed_at'
     ];
 
@@ -89,6 +91,32 @@ class User extends Authenticatable
         return $this->belongsToMany(Notification::class, 'notification_user')
             ->withPivot('status', 'deleted')
             ->withTimestamps();
+    }
+    public function pointRedemptions(){
+        return $this->hasMany(PointRedemption::class);
+    }
+    public function discounts(){
+        return $this->hasMany(Discount::class);
+    }
+
+    public function updateRanking()
+    {
+        $totalSpent = Order::where('user_id', $this->id)
+                           ->where('status', 'completed')
+                           ->where('is_paid', 1)
+                           ->sum('total_amount');
+
+        if ($totalSpent >= 5000000) {
+            $this->ranking = 4;
+        } elseif ($totalSpent >= 3000000) {
+            $this->ranking = 3;
+        } elseif ($totalSpent >= 2000000) {
+            $this->ranking = 2;
+        } elseif ($totalSpent >= 1000000) {
+            $this->ranking = 1;
+        }
+
+        $this->save();
     }
 
 }

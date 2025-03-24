@@ -61,7 +61,7 @@ class MoMoService
     ])->post($endpoint, $data)->json();
 
     if (isset($response['payUrl'])) {
-        return $response['payUrl']; // 🔥 Đây là link thanh toán ATM
+        return $response['payUrl']; 
     }
 
     Log::info('MoMo API Response: ', $response);

@@ -1,241 +1,252 @@
+import React, { useEffect, useState } from "react";
+import { Table, Modal, Button, Select, Pagination, Input } from "antd";
+import { confirmOrder, getOrderReturns, getOrders, updateOrderStatus } from "../../../services/orderService";
+import Swal from 'sweetalert2'
+import EditOrderModal from "./EditOrderModal";
 
-import { useEffect, useState } from "react";
-import { getOrders, updateOrderStatus } from "../../../services/orderService";
-
-
-const Orders = () => {
-
+const Orders: React.FC = () => {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-
-  const [showModal, setShowModal] = useState(false);
-
-  const [status, setStatus] = useState('pending');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [status, setStatus] = useState("pending");
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
-
-  const handleStatusChange = (event) => {
-    setStatus(event.target.value);
-  };
-
+  const [loading, setLoading] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string | null>(null); // Bộ lọc trạng thái
+  const [editOrder, setEditOrder] = useState(null);
 
   useEffect(() => {
-    fetchOrders(currentPage);
+    fetchOrders(currentPage, filterStatus);
+  }, [currentPage, filterStatus]); const handleEditOrder = (order) => {
+    console.log("Nhấn Edit, Order:", order);
+    setEditOrder(order);
+  };
 
-  }, [currentPage]);
-
-  const fetchOrders = async (page = 1) => {
+  const fetchOrders = async (page = 1, trackingStatus?: string | null, userSearch?: string) => {
     try {
-      const response = await getOrders({ page });
+      setLoading(true);
+      const response = await getOrders({ page, tracking_status: trackingStatus, user: userSearch });
+      const res = await getOrderReturns();
+      console.log("response", response);
+      
+      console.log("Danh sách đơn hàng:---", res.data.data);
       setOrders(response.data.data);
       setCurrentPage(response.data.page.currentPage);
       setLastPage(response.data.page.lastPage);
     } catch (error) {
       console.error("Lỗi lấy danh sách đơn hàng:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const allVariantKeys = [
-    ...new Set(
-      selectedOrder?.orderdetails?.flatMap(item =>
-        Object.keys(item.variant_details || {})
-      ) || []
-    )
-  ];
+  const handleConfirmOrder = async () => {
+    const result = await Swal.fire({
+      title: "Xác nhận đơn hàng?",
+      text: "Bạn có chắc chắn muốn xác nhận đơn hàng này không?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Xác nhận",
+      cancelButtonText: "Hủy",
+    });
 
-  const handleShowModal = (order: []) => {
+    if (result.isConfirmed) {
+      try {
+        await confirmOrder(selectedOrder.id);
+        Swal.fire("Thành công!", "Đơn hàng đã được xác nhận.", "success");
+        fetchOrders(currentPage);
+      } catch (error) {
+        console.error("Lỗi xác nhận đơn hàng:", error);
+        Swal.fire("Lỗi!", "Không thể xác nhận đơn hàng.", "error");
+      }
+    }
+  };
+  const handleShowModal = (order: Order) => {
     setSelectedOrder(order);
     setStatus(order.shipping_status);
-    setShowModal(true);
+    setModalVisible(true);
   };
 
   const handleCloseModal = () => {
-    setShowModal(false);
+    setModalVisible(false);
     setSelectedOrder(null);
   };
 
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= lastPage) {
-      fetchOrders(newPage);
-    }
-  };
   const handleUpdateStatus = async () => {
     if (!selectedOrder) return;
-  
-    try {
-      const updatedOrder = await updateOrderStatus(selectedOrder.id, status);
-      if (updatedOrder) {
 
-        setOrders((prevOrders) =>
-          prevOrders.map((order) =>
-            order.id === selectedOrder.id
-              ? { ...order, shipping_status: updatedOrder.shipping_status }
-              : order
-          )
-        );
-  
-        
-        setSelectedOrder((prevOrder) =>
-          prevOrder ? { ...prevOrder, shipping_status: updatedOrder.shipping_status } : null
-        );
-  
-        alert("Cập nhật thành công!");
-        handleCloseModal();
-       {
-        fetchOrders();}
-      }
+    try {
+      console.log("Du lieu gui di", selectedOrder.id, status);
+
+      await updateOrderStatus(selectedOrder.id, status);
+      Swal.fire("Thành công!", "Cập nhật trạng thái đơn hàng thành công.", "success");
+
+      handleCloseModal();
+      fetchOrders(currentPage, filterStatus); // Giữ nguyên bộ lọc khi reload danh sách
     } catch (error) {
-      alert("Lỗi cập nhật trạng thái!");
+      console.log(error);
+      Swal.fire("Lỗi!", "Không thể cập nhật trạng thái đơn hàng.", "error");
     }
   };
-  
 
+
+  const columns = [
+    { title: "ID", dataIndex: "id", key: "id" },
+    { title: "User", dataIndex: "name", key: "name" },
+    {
+      title: "Total Amount",
+      dataIndex: "total_amount",
+      key: "total_amount",
+      render: (amount: number) =>
+        amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
+    },
+    { title: "Shipping Status", dataIndex: "shipping_status", key: "shipping_status" },
+    {
+      title: "Payment Status",
+      dataIndex: "is_paid",
+      key: "is_paid",
+      render: (isPaid: boolean) =>
+        isPaid ? <span style={{ color: "green" }}>✅ Đã thanh toán</span> : <span style={{ color: "red" }}>❌ Chưa thanh toán</span>,
+    },
+    {
+      title: "Address",
+      key: "address",
+      render: (record: any) =>
+        `${record.city}-${record.district}-${record.ward}-${record.address}`.slice(0, 30) + "...",
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (record: any) => (
+        <Button.Group>
+          <Button type="primary" onClick={() => handleShowModal(record)}>View</Button>
+          <Button type="primary" onClick={() => handleEditOrder(record)}>Edit</Button>
+          <Button danger>Delete</Button>
+        </Button.Group>
+      ),
+    },
+  ];
   return (
     <div className="container mt-4">
-      <h2 className="mb-3">Danh sách Orders</h2>
-      <div className="table-responsive">
-        <button className="btn btn-danger mb-4">📄 Xuất PDF</button>
-        <table className="table table-bordered table-striped table-sm">
-          <thead className="table-dark">
-            <tr>
-              <th style={{ width: "40px" }}>ID</th>
-              <th style={{ width: "70px" }}>User Id</th>
-              <th style={{ width: "120px" }}>Total Amount</th>
-              <th style={{ width: "130px" }}>Shipping Status</th>
-              <th>Address</th>
-              <th style={{ width: "130px" }}>Payment Method</th>
-              <th style={{ width: "200px" }} className="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <h2>Orders List</h2>
+      <div className="mb-4 flex gap-3">
+        <Select
+          placeholder="Lọc theo trạng thái"
+          allowClear
+          className="w-40"
+          value={filterStatus}
+          onChange={(value) => {
+            setStatus(value);
+            setFilterStatus(value || null);
+            fetchOrders(1, value || null);
+          }}
+        >
 
-            {orders.map((order) => (
-              <tr>
-                <td>{order.id}</td>
-                <td>{order.user}</td>
-                <td>{order.total_amount}</td>
-
-                <td>{order.shipping_status}</td>
-
-                <td>{`${order.city}-${order.district}-${order.ward}-${order.address}`}</td>
-                <td>{order.payment_method}</td>
-
-                <td className="text-center">
-                  <button className="btn btn-warning btn-sm me-1" style={{ width: "80px" }} onClick={() => handleShowModal(order)}>View</button>
-                  <button className="btn btn-primary btn-sm" style={{ width: "80px" }}>Edit</button>
-                  <button className="btn btn-danger btn-sm me-1" style={{ width: "80px" }}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <nav>
-          <ul className="pagination justify-content-center">
-            <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-              <button className="page-link" onClick={() => handlePageChange(currentPage - 1)}>← Trước</button>
-            </li>
-
-            {[...Array(lastPage)].map((_, i) => (
-              <li key={i} className={`page-item ${currentPage === i + 1 ? "active" : ""}`}>
-                <button className="page-link" onClick={() => handlePageChange(i + 1)}>{i + 1}</button>
-              </li>
-            ))}
-
-            <li className={`page-item ${currentPage === lastPage ? "disabled" : ""}`}>
-              <button className="page-link" onClick={() => handlePageChange(currentPage + 1)}>Sau →</button>
-            </li>
-          </ul>
-        </nav>
+         <Select.Option value="pending">Chờ xử lý</Select.Option>
+          <Select.Option value="processing">Đang xử lý</Select.Option>
+          <Select.Option value="shipped">Đã gửi</Select.Option>
+          <Select.Option value="delivered">Đã giao</Select.Option>
+          <Select.Option value="cancelled">Đã hủy</Select.Option>
+          <Select.Option value="completed">Giao hàng thành công</Select.Option>
+        </Select>
+        <Button danger>📄 Export PDF</Button>
       </div>
 
-      {selectedOrder && (
-        <div className={`modal fade ${showModal ? "show d-block" : ""}`} tabIndex={-1} style={{ background: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content border-0 shadow-lg rounded-lg overflow-hidden">
-
-              {/* HEADER */}
-              <div className="modal-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 className="modal-title">Chi tiết đơn hàng #{selectedOrder.id}</h5>
-                <button type="button" className="btn-close text-white" onClick={handleCloseModal}></button>
-              </div>
-
-              {/* BODY */}
-              <div className="modal-body p-4">
-                <div className="row">
-                  {/* Thông tin đơn hàng */}
-                  <div className="col-md-6">
-                    <p><strong>Người đặt:</strong> {selectedOrder.user}</p>
-                    <p><strong>Số điện thoại:</strong> {selectedOrder.phone}</p>
-                    <p><strong>Địa chỉ giao hàng:</strong> {`${selectedOrder.address}, ${selectedOrder.ward}, ${selectedOrder.city}`}</p>
-                  </div>
-
-                  {/* Thanh toán & trạng thái */}
-                  <div className="col-md-6">
-                    <p><strong>Tổng tiền:</strong> {selectedOrder.total_amount.toLocaleString()} VND</p>
-                    <p><strong>Giảm giá:</strong> {selectedOrder.discount_amount ? `${selectedOrder.discount_amount.toLocaleString()} VND` : "Không có"}</p>
-                    <p><strong>Mã giảm giá:</strong> {selectedOrder.discount_code || "Không có"}</p>
-                    <p><strong>Phương thức thanh toán:</strong> <span className="badge bg-info">{selectedOrder.payment_method.toUpperCase()}</span></p>
-                  </div>
-                </div>
-
-                {/* Cập nhật trạng thái đơn hàng */}
-                <div>
-                  <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                    <option value="pending">Chờ xử lý</option>
-                    <option value="processing">Đang xử lý</option>
-                    <option value="shipped">Đã gửi</option>
-                    <option value="delivered">Đã giao</option>
-                    <option value="cancelled">Đã hủy</option>
-                  </select>
-                </div>
-
-                {/* Bảng sản phẩm */}
-                <h6 className="mt-4">Sản phẩm đã đặt:</h6>
-                <div className="table-responsive">
-                  <table className="table table-bordered text-center">
-                    <thead className="table-light">
-                      <tr>
-                        <th>#</th>
-                        <th>Mã phẩm</th>
-                        <th>Tên sản phẩm</th>
-                        {allVariantKeys.map((attr, i) => <th key={i}>{attr}</th>)}
-                        <th>Số lượng</th>
-                        <th>Đơn giá</th>
-                        <th>Thành tiền</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedOrder.orderdetails.map((item, index) => (
-                        <tr key={index}>
-                          <td>{index + 1}</td>
-                          <td><strong>Mã SKU:</strong> {item.sku}</td>
-                          <td>{item.product_name}</td>
-                          {allVariantKeys.map((attr, i) => (
-                            <td key={i}>{item.variant_details?.[attr] || "-"}</td>
-                          ))}
-                          <td>{item.quantity}</td>
-                          <td>{item.price.toLocaleString()} VND</td>
-                          <td><strong>{item.subtotal.toLocaleString()} VND</strong></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* FOOTER */}
-              <div className="modal-footer d-flex justify-content-between">
-                <button className="btn btn-secondary" onClick={handleCloseModal}>❌ Đóng</button>
-                <button className="btn btn-success"  onClick={handleUpdateStatus}>💾 Cập nhật đơn hàng</button>
-              </div>
-
-            </div>
-          </div>
-        </div>
+      <Table columns={columns} dataSource={orders} loading={loading} pagination={false} rowKey="id" />
+      {editOrder && (
+        <EditOrderModal
+          order={editOrder}
+          visible={true}
+          onClose={() => setEditOrder(null)}
+        />
       )}
-    </div>
+      <Pagination
+        current={currentPage}
+        total={lastPage * 10}
+        onChange={(page) => page >= 1 && page <= lastPage && fetchOrders(page)}
+        className="mt-4 text-center"
+      />
 
+      <Modal
+        title={`Order Details #${selectedOrder?.id}`}
+        open={modalVisible}
+        onCancel={handleCloseModal}
+        footer={[
+          <Button key="close" onClick={handleCloseModal}>Close</Button>,
+          selectedOrder?.shipping_status === "completed" && (
+            <Button key="confirm" type="primary" onClick={handleConfirmOrder}>
+              ✅ Xác nhận đơn hàng
+            </Button>
+          ),
+          <Button key="update" type="primary" onClick={handleUpdateStatus}>
+            Update Order
+          </Button>,
+        ]}
+      >
+
+        {selectedOrder && (
+          <div>
+            <h6>Chi tiết đơn hàng:</h6>
+            <p><strong>Người đặt:</strong> {selectedOrder.name}</p>
+            <p><strong>Số điện thoại:</strong> {selectedOrder.phone}</p>
+            <p><strong>Email:</strong> {selectedOrder.email}</p>
+            <p><strong>Địa chỉ:</strong> {`${selectedOrder.address}, ${selectedOrder.ward}, ${selectedOrder.city}`}</p>
+            <p><strong>Tổng tiền:</strong> {selectedOrder.total_amount.toLocaleString()} VND</p>
+            <p><strong>Phương thức thanh toán:</strong> {selectedOrder.payment_method.toUpperCase()}</p>
+          
+            <h6>Danh sách sản phẩm:</h6>
+            <Table
+              dataSource={selectedOrder.orderdetails}
+              rowKey="id"
+              pagination={false}
+              columns={[
+                { title: "Tên sản phẩm", dataIndex: ["product", "name"], key: "product_name" },
+                {
+                  title: "Biến thể",
+                  key: "variants",
+                  render: (item: any) =>
+                    item.variant_details
+                      ? Object.entries(item.variant_details)
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join(", ")
+                      : "Không có biến thể",
+                },
+                { title: "Số lượng", dataIndex: "quantity", key: "quantity" },
+                {
+                  title: "Giá",
+                  dataIndex: "price",
+                  key: "price",
+                  render: (price: number) =>
+                    price.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
+                },
+                {
+                  title: "Tổng cộng",
+                  key: "total",
+                  render: (item: any) =>
+                    (item.quantity * item.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
+                },
+              ]}
+            />
+
+            <h6>Cập nhật trạng thái đơn hàng:</h6>
+            <Select
+              value={status}
+              onChange={(value) => setStatus(value)}
+              className="w-100"
+            >
+              <Select.Option value="pending">Chờ xử lý</Select.Option>
+              <Select.Option value="processing">Đang xử lý</Select.Option>
+              <Select.Option value="shipped">Đã gửi</Select.Option>
+              <Select.Option value="delivered">Đã giao</Select.Option>
+              <Select.Option value="cancelled">Đã hủy</Select.Option>
+              <Select.Option value="completed">Giao hàng thành công</Select.Option>
+            </Select>
+          </div>
+        )}
+      </Modal>
+    </div>
   );
 };
 

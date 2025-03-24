@@ -3,18 +3,21 @@ import { NavLink } from "react-router-dom";
 import {
   RiHome2Line, RiInstanceLine, RiFlashlightLine, RiSettings2Line,
   RiListSettingsLine, RiShoppingCart2Line, RiUser3Line,
+  RiCoupon3Line,
 } from "react-icons/ri";
 import { TbBrandDiscord, TbShieldLock } from "react-icons/tb";
 
 const menuItems = [
-  { to: "/", icon: <RiHome2Line />, label: "Dashboard" },
+  { to: "/admin", icon: <RiHome2Line />, label: "Dashboard" },
   { to: "/admin/categories", icon: <RiInstanceLine />, label: "Danh Mục" },
   { to: "/admin/products", icon: <RiFlashlightLine />, label: "Sản Phẩm" },
   { to: "/admin/attributes", icon: <RiListSettingsLine />, label: "Thuộc Tính" },
   { to: "/admin/orders", icon: <RiShoppingCart2Line />, label: "Đơn Hàng" },
+  { to: "/admin/orders/returns", icon: <RiShoppingCart2Line />, label: "Đơn Hàng Hoàn trả" },
   { to: "/admin/brands", icon: <TbBrandDiscord />, label: "Brands" },
   { to: "/admin/roles", icon: <TbShieldLock />, label: "Roles" },
   { to: "/admin/permissions", icon: <TbShieldLock />, label: "Permission" },
+  {to: "/admin/discounts", icon: <RiCoupon3Line />, label: "Giảm Giá"},
   { to: "#", icon: <RiUser3Line />, label: "User", subMenu: [
     { to: "/admin/users/staff", label: "Staff" },
     { to: "/admin/users/customers", label: "Customers" }

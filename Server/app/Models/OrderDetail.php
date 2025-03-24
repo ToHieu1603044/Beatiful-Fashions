@@ -18,6 +18,18 @@ class OrderDetail extends Model
     {
         return $this->belongsTo(ProductSku::class);
     }
+    public function returnRequest()
+    {
+        return $this->hasOne(OrderReturnItem::class, 'order_detail_id');
+    }
     
-    
+    public function returnDetails()
+    {
+        return $this->hasMany(OrderReturnItem::class, 'order_detail_id', 'id');
+    }
+    public function orderReturn()
+    {
+        return $this->hasOne(OrderReturn::class, 'order_id');
+    }
+
 }

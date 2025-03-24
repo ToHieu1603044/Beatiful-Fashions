@@ -19,7 +19,7 @@ class OrderPaidMail extends Mailable implements ShouldQueue
 
     public function __construct(Order $order)
     {
-        // Đảm bảo load orderDetails để tránh lỗi undefined
+       
         $this->order = $order->load('orderDetails');
         $this->orderDetails = $this->order->orderDetails;
     }
