@@ -2,7 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { getCart } from "../../services/homeService";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify"; // Make sure toastify is imported for alerts
+import { toast } from "react-toastify"; 
 import axiosInstance from "../../services/axiosInstance";
 import Swal from 'sweetalert2'
 import { set } from "react-hook-form";
@@ -19,6 +19,7 @@ const CheckOut = () => {
     const [selectedWard, setSelectedWard] = useState("");
     const [totalAmount, setTotalAmount] = useState(0);
     const [discountedTotal, setDiscountedTotal] = useState(0);
+        
     const [formData, setFormData] = useState({
         email: "",
         name: "",
@@ -73,36 +74,29 @@ const CheckOut = () => {
     // call api đia chỉ
     useEffect(() => {
         axios
-            .get("https://provinces.open-api.vn/api/p/")
+            .get("http://127.0.0.1:8000/api/provinces")
             .then((response) => setProvinces(response.data))
-            .catch((error) =>
-                console.error("Error fetching provinces:", error)
-            );
+            .catch((error) => console.error("Error fetching provinces:", error));
     }, []);
+    
     useEffect(() => {
         if (selectedProvince) {
             axios
-                .get(
-                    `https://provinces.open-api.vn/api/p/${selectedProvince}?depth=2`
-                )
+                .get(`http://127.0.0.1:8000/api/provinces/${selectedProvince}?depth=2`)
                 .then((response) => setDistricts(response.data.districts))
-                .catch((error) =>
-                    console.error("Error fetching districts:", error)
-                );
+                .catch((error) => console.error("Error fetching districts:", error));
         }
     }, [selectedProvince]);
+    
     useEffect(() => {
         if (selectedDistrict) {
             axios
-                .get(
-                    `https://provinces.open-api.vn/api/d/${selectedDistrict}?depth=2`
-                )
+                .get(`http://127.0.0.1:8000/api/districts/${selectedDistrict}?depth=2`)
                 .then((response) => setWards(response.data.wards))
-                .catch((error) =>
-                    console.error("Error fetching wards:", error)
-                );
+                .catch((error) => console.error("Error fetching wards:", error));
         }
     }, [selectedDistrict]);
+    
     const calculateTotal = (items: any[]) => {
         const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
         console.log("Total amount:", total);
@@ -113,7 +107,9 @@ const CheckOut = () => {
 
     const applyDiscount = async (e: React.FormEvent) => {
         e.preventDefault();
-
+    
+        console.log("Mã giảm giá gửi đi:", formData.discount);
+    
         if (!formData.discount) {
             Swal.fire({
                 title: "Lỗi!",
@@ -123,47 +119,50 @@ const CheckOut = () => {
             });
             return;
         }
-
+    
         try {
-            const response = await axios.post("http://127.0.0.1:8000/api/discounts", {
-                discountCode: formData.discount,
-                totalAmount: totalAmount
+            const response = await axios.post("http://127.0.0.1:8000/api/discounts/apply", {
+                discountCode: formData.discount,  // Đúng key API Laravel mong đợi
+                totalAmount: totalAmount,
+            }, {
+                headers: { "Content-Type": "application/json" },
             });
-
+    
+            console.log("Response data:", response.data);
+    
             const discount = response.data.discountAmount || 0;
             console.log("Discount amount:", discount);
             const newTotal = Math.max(totalAmount - discount, 0);
-
+    
             setDiscountedTotal(newTotal);
             setPriceDiscount(discount);
+    
             Swal.fire({
                 title: "Thành công!",
                 text: response.data.message || "Giảm giá áp dụng thành công!",
                 icon: "success",
                 confirmButtonText: "OK",
             });
-
+    
         } catch (error: any) {
             const errorMessage = error.response?.data?.message || "Lỗi khi áp dụng mã giảm giá. Vui lòng thử lại!";
-
+    
             Swal.fire({
                 title: "Lỗi!",
                 text: errorMessage,
                 icon: "error",
                 confirmButtonText: "OK",
             });
-
+    
             console.error("Error applying discount:", error);
         }
     };
-
-
+    
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log("Dữ liệu đã gửi:", JSON.stringify(formData, null, 2));
 
         try {
-
 
             const response = await axiosInstance.post('/orders', formData, {
                 headers: { 'Content-Type': 'application/json' },

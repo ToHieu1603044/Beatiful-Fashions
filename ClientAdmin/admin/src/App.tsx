@@ -46,12 +46,18 @@ import Profile from "./pages/client/Profile";
 import ProductTrash from "./pages/admin/products/ProductTrash";
 import ResetPassword from "./pages/client/ResetPassword";
 import SearchProducts from "./pages/client/SearchProducts";
+import Order from "./pages/client/Order";
+
+import Dashboard from "./pages/admin/Dashboard";
+import Discount from "./pages/admin/discounts/Discount";
+import OrderReturn from "./pages/admin/orders/OrderReturn";
+import OrderReturns from "./pages/client/OrderReturns";
 
 
 
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const role = localStorage.getItem("role");
-  const token = localStorage.getItem("access_token"); // Kiểm tra token đăng nhập
+  const token = localStorage.getItem("access_token"); 
 
   if (!token) {
     return <Navigate to="/403" />;
@@ -66,6 +72,7 @@ function App() {
       path: "/admin",
       element: <ProtectedRoute element={<Admin />} />,
       children: [
+        { index: true, element: <Dashboard /> },
         {
           path: "categories",
           element: <Categories />,
@@ -83,6 +90,7 @@ function App() {
         {
           path: "attributes",
           element: <Attributes />,
+          
           children: [
             { path: "create", element: <AttributesAdd /> },
             { path: "edit/:id", element: <AttributesEdit /> },
@@ -97,6 +105,7 @@ function App() {
           ],
         },
         { path: "orders", element: <Orders /> },
+        { path: "orders/returns", element: <OrderReturn /> },
         {
           path: "products",
           element: <Products />,
@@ -120,6 +129,8 @@ function App() {
         { path: "permissions", element: <Permission /> },
         { path: "permissions/create", element: <PermissionsAdd /> },
         { path: "permissions/:id/edit", element: <PermissionsEdit /> },
+
+        { path: "discounts", element: <Discount />, },
       ],
     },
     {
@@ -132,9 +143,10 @@ function App() {
         { path: "register", element: <Register /> },
         { path: "cart", element: <Cart /> },
         { path: "auth/reset-password", element: <ResetPassword /> },
-
+        { path: "orders", element: <Order /> },
         { path: "account", element: <Profile /> },
         { path: "searchs", element: <SearchProducts /> },
+        { path: "orders/return", element: <OrderReturns /> },
       ],
     },
     {

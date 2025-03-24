@@ -25,15 +25,15 @@ const Notifications = () => {
         fetchNotifi();
     }, []);
     const handleNotificationClick = async (id: number) => {
-    
+
         setExpandedNotification(expandedNotification === id ? null : id);
-    
+
         const notification = notificationList.find(n => n.id === id);
         if (notification?.status === "unread") {
             setNotificationList(prev =>
                 prev.map(n => (n.id === id ? { ...n, status: "read" } : n))
             );
-    
+
             try {
                 const response = await updateNotificationStatus(id, "read");
                 console.log("Log", response);
@@ -48,14 +48,14 @@ const Notifications = () => {
     const handleDelete = async (id: number) => {
         try {
             console.log(id);
-          await deleteNotification(id); 
-          await fetchNotifi();
-        
+            await deleteNotification(id);
+            await fetchNotifi();
+
         } catch (error) {
-          console.error("Lỗi khi xóa thông báo:", error);
+            console.error("Lỗi khi xóa thông báo:", error);
         }
-      };
-      
+    };
+
     const fetchNotifi = async () => {
         try {
             const response = await fetchNotifications();
@@ -77,7 +77,7 @@ const Notifications = () => {
 
             setNotificationList((prev) => {
                 const newList = [...prev, data];
-                setUnreadCount(newList.length); 
+                setUnreadCount(newList.length);
                 return newList;
             });
         });
@@ -108,7 +108,8 @@ const Notifications = () => {
 
 
             <div className={`offcanvas offcanvas-end ${isOpen ? "show" : ""}`}
-                style={{ width: "350px", visibility: isOpen ? "visible" : "hidden" }}>
+                style={{ width: "260px", visibility: isOpen ? "visible" : "hidden", position: "fixed"  }}>
+
                 <div className="offcanvas-header border-bottom">
                     <h5 className="offcanvas-title">Thông báo</h5>
                     {/* ... header content remains the same ... */}
@@ -155,8 +156,8 @@ const Notifications = () => {
                                         <button
                                             className="btn btn-link text-danger p-0 ms-2"
                                             onClick={(e) => {
-                                    
-                                               {handleDelete(notif.id)}
+
+                                                { handleDelete(notif.id) }
                                             }}
                                         >
                                             <FaTrash size={14} />
@@ -171,7 +172,17 @@ const Notifications = () => {
 
             {isOpen && <div className="offcanvas-backdrop fade show" onClick={() => setIsOpen(false)}></div>}
 
+
             <style jsx>{`
+
+            .offcanvas-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+}
                 .notification-item {
                     transition: all 0.2s ease;
                     border-left: 3px solid transparent;

@@ -23,6 +23,7 @@ class Discount extends Model
         'active',
         'used_count',
         'max_uses',
+        
        
     ];
 
@@ -31,6 +32,11 @@ class Discount extends Model
         'end_date' => 'datetime',
         'active' => 'boolean',
     ];
+
+    public function user(){
+        return $this->belongsTo(User::class);
+    }
+    
 
     /**
      * Kiểm tra xem mã giảm giá có hợp lệ hay không.

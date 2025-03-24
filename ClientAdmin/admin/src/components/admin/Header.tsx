@@ -11,7 +11,7 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
 
       <ul className="d-flex align-items-center ms-3 mb-0 list-unstyled small">
         <li className="me-2">
-          <NavLink to="/" className="text-muted text-decoration-none">Dashboard</NavLink>
+          <NavLink to="/admin" className="text-muted text-decoration-none">Dashboard</NavLink>
         </li>
         <li className="me-2 text-muted">/</li>
         <li className="text-dark fw-medium d-flex">Analytics</li>

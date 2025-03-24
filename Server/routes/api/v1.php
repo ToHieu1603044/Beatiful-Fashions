@@ -5,19 +5,24 @@ use App\Http\Controllers\Api\AttributeOptionController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DiscountController;
 use App\Http\Controllers\Api\MoMoController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\OrderReturnController;
 use App\Http\Controllers\Api\ProductController;
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
-
+use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Request;
 use App\Models\Product;
+
 use Illuminate\Support\Facades\Route;
+use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 
 Route::get('/', function () {
     return 'Hello World';
@@ -32,20 +37,43 @@ Route::get('/categories/web', [CategoryController::class, 'indexWeb']);
 Route::get('/categories/web{id}/', [CategoryController::class, 'categoryDetail']);
 
 //Discount
-Route::apiResource('discounts', DiscountController::class);
-Route::post('discounts', [DiscountController::class, 'applyDiscount']);
+
+Route::get('/provinces', function () {
+    $response = Http::get("https://provinces.open-api.vn/api/p/");
+    return response()->json($response->json());
+});
+
+Route::get('/provinces/{province}', function (Request $request, $province) {
+    $depth = $request->query('depth', 1);
+    $response = Http::get("https://provinces.open-api.vn/api/p/{$province}", [
+        'depth' => $depth
+    ]);
+    return response()->json($response->json());
+});
+
+Route::get('/districts/{district}', function (Request $request, $district) {
+    $depth = $request->query('depth', 1);
+    $response = Http::get("https://provinces.open-api.vn/api/d/{$district}", [
+        'depth' => $depth
+    ]);
+    return response()->json($response->json());
+});
 
 //Auth
-Route::post('/register', [AuthController::class, 'register']);
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name('password.reset');
 
 Route::middleware(['auth:sanctum'])->group(function () {
+
+    
     Route::apiResource('carts', CartController::class);
     Route::delete('carts', [CartController::class, 'clearCart']);
-
+    Route::post('discounts/apply', [DiscountController::class, 'applyDiscount']);
+    Route::get('/orders/{id}/return-details', [OrderController::class, 'fetchReturnDetails']);
+    Route::post('redeem-points', [DiscountController::class, 'redeemPointsForVoucher']);
     Route::post('resetPassword', [AuthController::class, 'resetPassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refreshToken']);
@@ -54,6 +82,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('products/trash', [ProductController::class, 'productDelete'])->middleware('role:admin');
     Route::post('/momo/payment', [MoMoController::class, 'createPayment']);
 
+    //order
+    Route::patch('/order-returns/{id}/status/user', [OrderReturnController::class, 'updateStatusUser']);
+    Route::get('/orders/returns/user', [OrderReturnController::class, 'returnItemUser']);
+    Route::delete('/orders/{id}/cancel', [OrderReturnController::class, 'cancelOrderReturn']);
+    Route::get('/orders/list', [OrderController::class, 'orderUser']);
+
+   
     //Notification
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'deleteNotification']);
@@ -62,6 +97,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
+
+    Route::post('discounts', [DiscountController::class, 'store']);
+    Route::get('orders/returns', [OrderReturnController::class, 'index']);
+    Route::patch('/order-returns/{id}/status', [OrderReturnController::class, 'updateStatus']);
+
+    Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('/dashboard/revenue', [DashboardController::class, 'revenueStats']);
 
     // User
     Route::get('/users', [UserController::class, 'index']);
@@ -106,7 +148,8 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::delete('/orders/force-delete/{id}', [OrderController::class, 'forceDelete']);
     Route::put('/orders/{id}/update-status', [OrderController::class, 'updateStatus']);
     Route::put('/orders/{id}/canceled', [OrderController::class, 'destroys']);
-
+    Route::put('/orders/{id}/confirm-order', [OrderController::class, 'confirmOrder']);
+    Route::post('/orders/{orderId}/return', [OrderReturnController::class, 'returnItem']);
 
     Route::get('/roles', [RolePermissionController::class, 'indexRoles']);
     Route::get('/permissions', [RolePermissionController::class, 'indexPermissions']);
