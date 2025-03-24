@@ -12,11 +12,11 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrderReturnController;
 use App\Http\Controllers\Api\ProductController;
-
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\BannerController;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use App\Models\Product;
@@ -193,7 +193,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/ratings/{rating}', [RatingController::class, 'update']);
     Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
 });
-
+Route::apiResource('banners', BannerController::class);
 
 
 ?>
