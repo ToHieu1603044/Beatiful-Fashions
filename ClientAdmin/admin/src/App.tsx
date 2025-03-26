@@ -52,6 +52,9 @@ import Dashboard from "./pages/admin/Dashboard";
 import Discount from "./pages/admin/discounts/Discount";
 import OrderReturn from "./pages/admin/orders/OrderReturn";
 import OrderReturns from "./pages/client/OrderReturns";
+import ForgotPassword from "./pages/client/FogotPassword";
+import Whislish from "./pages/client/Whishlish";
+import Whishlish from "./pages/client/Whishlish";
 
 
 
@@ -143,10 +146,12 @@ function App() {
         { path: "register", element: <Register /> },
         { path: "cart", element: <Cart /> },
         { path: "auth/reset-password", element: <ResetPassword /> },
+        { path: "auth/forgot-password", element: <ForgotPassword /> },
         { path: "orders", element: <Order /> },
         { path: "account", element: <Profile /> },
         { path: "searchs", element: <SearchProducts /> },
         { path: "orders/return", element: <OrderReturns /> },
+        { path: "whishlish", element: <Whishlish /> },
       ],
     },
     {

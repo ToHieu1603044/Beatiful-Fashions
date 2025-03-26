@@ -17,18 +17,18 @@ class RatingController extends Controller
     {
         // Khởi tạo truy vấn với quan hệ user và product (nếu cần)
         $query = Rating::with(['user', 'product']);
-    
+
         // Lọc theo rating (nếu có truyền, ví dụ ?rating=4)
         if ($request->has('rating')) {
             $query->where('rating', $request->rating);
         }
-    
+
         // Tìm kiếm trong trường review nếu có tham số q (ví dụ: ?q=good)
         if ($request->has('q')) {
             $q = $request->q;
             $query->where('review', 'like', '%' . $q . '%');
         }
-    
+
         // Sắp xếp theo thời gian
         // Nếu có truyền tham số sort = newest hoặc oldest, nếu không mặc định là newest
         if ($request->has('sort')) {
@@ -42,13 +42,13 @@ class RatingController extends Controller
         } else {
             $query->orderBy('created_at', 'desc');
         }
-    
+
         // Nếu cần phân trang:
         // $ratings = $query->paginate(10);
         // return response()->json($ratings);
-    
+
         $ratings = $query->get();
-    
+
         return response()->json([
             'code' => 200,
             'message' => 'success',
@@ -57,32 +57,30 @@ class RatingController extends Controller
     }
 
     public function store(Request $request)
-{
-    dd($request->all()); // Kiểm tra dữ liệu gửi lên
-    $request->validate([
-        'product_id' => 'required|exists:products,id',
-        'rating' => 'required|integer|min:1|max:5',
-        'review' => 'nullable|string',
-    ]);
+    {
 
-    // Thêm đánh giá mới
-    $rating = Rating::create([
-        'user_id' => Auth::id(),
-        'product_id' => $request->product_id,
-        'rating' => $request->rating,
-        'review' => $request->review,
-    ]);
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'rating' => 'required|integer|min:1|max:5',
+            'review' => 'nullable|string',
+        ]);
 
-    // Gửi Event để cập nhật total_rating
-    event(new RatingCreated($rating));
+        // Thêm đánh giá mới
+        $rating = Rating::create([
+            'user_id' => Auth::id(),
+            'product_id' => $request->product_id,
+            'rating' => $request->rating,
+            'review' => $request->review,
+        ]);
 
-    return response()->json([
-        'message' => 'Đánh giá thành công!',
-        'data' => $rating
-    ], 201);
-}
+        // Gửi Event để cập nhật total_rating
+        event(new RatingCreated($rating));
 
-    
+        return response()->json([
+            'message' => 'Đánh giá thành công!',
+            'data' => $rating
+        ], 201);
+    }
 
     public function show($id)
     {
@@ -110,5 +108,16 @@ class RatingController extends Controller
         $rating->delete();
 
         return response()->json(null, 204);
+    }
+    public function ratingByProduct($id)
+    {
+        $product = Product::findOrFail($id);
+
+        $ratings = $product->ratings()->get();
+        return response()->json([
+            'code' => 200,
+            'message' => 'success',
+            'data' => $ratings
+        ]);
     }
 }
