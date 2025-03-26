@@ -200,6 +200,7 @@ Route::apiResource('banners', BannerController::class);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/wishlist', [WishlistController::class, 'index']); // Hiển thị sản phẩm yêu thích
+    Route::post('/wishlist/{product_id}', [WishlistController::class, 'store']); // Thêm sản phẩm vào danh sách yêu thích
     Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']); // Xóa sản phẩm yêu thích
 });
 ?>

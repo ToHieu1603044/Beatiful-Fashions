@@ -3,8 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use App\Models\Wishlist;
+use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
+
+
+namespace App\Http\Controllers\Api;
+
 
 class WishlistController extends Controller
 {
@@ -17,6 +23,25 @@ class WishlistController extends Controller
             'status' => 'success',
             'wishlists' => $wishlists
         ]);
+    }
+
+    // Thêm sản phẩm vào danh sách yêu thích
+    public function store(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id'
+        ]);
+
+        $wishlist = Wishlist::firstOrCreate([
+            'user_id' => Auth::id(),
+            'product_id' => $request->product_id
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'wishlist' => $wishlist,
+            'message' => 'Sản phẩm đã được thêm vào danh sách yêu thích'
+        ], 201);
     }
 
     // Xóa sản phẩm khỏi danh sách yêu thích
