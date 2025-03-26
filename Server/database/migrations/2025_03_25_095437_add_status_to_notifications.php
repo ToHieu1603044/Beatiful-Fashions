@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('discounts', function (Blueprint $table) {
-            $table->integer('can_be_redeemed_with_points')->nullable()->after('is_redeemable');
+        Schema::table('notifications', function (Blueprint $table) {
+            $table->string('status')->default('unread')->after('type'); // unread, read
         });
-        
     }
 
     /**
@@ -22,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('discounts', function (Blueprint $table) {
-            $table->dropColumn('can_be_redeemed_with_points');
+        Schema::table('notifications', function (Blueprint $table) {
+            //
         });
     }
 };

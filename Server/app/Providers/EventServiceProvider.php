@@ -16,7 +16,7 @@ class EventServiceProvider extends ServiceProvider
         Login::class => [
             \App\Events\UserLoggedIn::class => [],
         ],
-        NewNotificationEvent::class => [],
+            // NewNotificationEvent::class => [],
         Logout::class => [
             UserLoggedOut::class,
         ],
@@ -25,5 +25,6 @@ class EventServiceProvider extends ServiceProvider
     public function boot()
     {
         parent::boot();
+        \Log::info('📢 EventServiceProvider đã boot!');
     }
 }
