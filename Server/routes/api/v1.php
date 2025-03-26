@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\SlideController;
+use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use App\Models\Product;
@@ -197,4 +198,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 Route::apiResource('banners', BannerController::class);
 
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/wishlist', [WishlistController::class, 'index']); // Hiển thị sản phẩm yêu thích
+    Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']); // Xóa sản phẩm yêu thích
+});
 ?>

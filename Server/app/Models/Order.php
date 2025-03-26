@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\User;
+
 
 class Order extends Model
 {
@@ -33,9 +36,10 @@ class Order extends Model
     ];
 
     public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+{
+    return $this->belongsTo(User::class);
+}
+
     public function products()
     {
         return $this->belongsToMany(Product::class);
