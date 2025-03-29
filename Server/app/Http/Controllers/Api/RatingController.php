@@ -101,10 +101,16 @@ class RatingController extends Controller
         return response()->json($rating);
     }
 
-    public function destroy(Rating $rating)
+    public function destroy($id)
     {
-        $this->authorize('delete', $rating);
+        $user = Auth::user();
 
+        $rating = Rating::findOrFail($id);
+
+        if ($rating->user_id !== $user->id) {
+            return response()->json(['message' => 'Bạn không có quyền xóa đánh giá này.'], 403);
+        }
+        
         $rating->delete();
 
         return response()->json(null, 204);
@@ -113,7 +119,7 @@ class RatingController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        $ratings = $product->ratings()->get();
+        $ratings = $product->ratings()->with(['user'])->get();
         return response()->json([
             'code' => 200,
             'message' => 'success',

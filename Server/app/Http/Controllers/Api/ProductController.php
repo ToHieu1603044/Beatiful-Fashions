@@ -162,9 +162,9 @@ class ProductController extends Controller
     }
 
     public function update(ProductRequest $request, $id)
-    {
+    {     \Log::info($request->all());
         $validated = $request->validated();
-
+   
         DB::beginTransaction();
 
         try {
