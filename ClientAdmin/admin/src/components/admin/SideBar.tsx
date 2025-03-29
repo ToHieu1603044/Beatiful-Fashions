@@ -14,14 +14,16 @@ const menuItems = [
   { to: "/admin/attributes", icon: <RiListSettingsLine />, label: "Thuộc Tính" },
   { to: "/admin/orders", icon: <RiShoppingCart2Line />, label: "Đơn Hàng" },
   { to: "/admin/orders/returns", icon: <RiShoppingCart2Line />, label: "Đơn Hàng Hoàn trả" },
-  { to: "/admin/brands", icon: <TbBrandDiscord />, label: "Brands" },
-  { to: "/admin/roles", icon: <TbShieldLock />, label: "Roles" },
-  { to: "/admin/permissions", icon: <TbShieldLock />, label: "Permission" },
+  { to: "/admin/brands", icon: <TbBrandDiscord />, label: "Thương Hiệu" },
+  { to: "/admin/roles", icon: <TbShieldLock />, label: "Vai Trò" },
+  { to: "/admin/permissions", icon: <TbShieldLock />, label: "Quyền" },
   {to: "/admin/discounts", icon: <RiCoupon3Line />, label: "Giảm Giá"},
   { to: "#", icon: <RiUser3Line />, label: "User", subMenu: [
     { to: "/admin/users/staff", label: "Staff" },
-    { to: "/admin/users/customers", label: "Customers" }
+    { to: "/admin/users/customers", label: "Thành Viên" }
   ] },
+  {to: "/admin/comments", icon: <RiCoupon3Line />, label: "Bình Luận"},
+
   { to: "/admin/settings", icon: <RiSettings2Line />, label: "Cài Đặt" },
 ];
 
