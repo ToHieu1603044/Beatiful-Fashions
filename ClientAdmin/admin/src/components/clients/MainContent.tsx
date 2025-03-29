@@ -49,7 +49,9 @@ const MainContent = () => {
       console.log("Categories API response:", categoriesRes.data);
 
       setProducts(productsRes.data.data || []);
-      setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
+      setCategories(
+        Array.isArray(categoriesRes.data) ? categoriesRes.data : []
+      );
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu:", error);
       setProducts([]);
@@ -72,10 +74,18 @@ const MainContent = () => {
     setSelectedProduct(product);
     setSelectedVariant(null);
 
-    const allAttributes = [...new Set(product.variants.flatMap((variant) => variant.attributes.map((attr) => attr.name)))];
+    const allAttributes = [
+      ...new Set(
+        product.variants.flatMap((variant) =>
+          variant.attributes.map((attr) => attr.name)
+        )
+      ),
+    ];
     // Loc tat ca variants va lay ra ten cac thuoc tinh -> dung Set de ne cac truong giong nhau-> chuyen thnanh mang
 
-    const initialSelectedAttributes = Object.fromEntries(allAttributes.map((attr) => [attr, null]));
+    const initialSelectedAttributes = Object.fromEntries(
+      allAttributes.map((attr) => [attr, null])
+    );
 
     const initialAvailableOptions = {};
     allAttributes.forEach((attrName) => {
@@ -102,11 +112,16 @@ const MainContent = () => {
 
   const handleSelectAttribute = (attributeName, attributeValue) => {
     setSelectedAttributes((prev) => {
-      const newSelectedAttributes = { ...prev, [attributeName]: attributeValue }
+      const newSelectedAttributes = {
+        ...prev,
+        [attributeName]: attributeValue,
+      };
 
       const matchedVariant = selectedProduct.variants.find((variant) =>
         variant.attributes.every(
-          (attr) => newSelectedAttributes[attr.name] === attr.value || newSelectedAttributes[attr.name] === null
+          (attr) =>
+            newSelectedAttributes[attr.name] === attr.value ||
+            newSelectedAttributes[attr.name] === null
         )
       );
 
@@ -135,7 +150,19 @@ const MainContent = () => {
           {/* Slide Video */}
           <SwiperSlide>
             <div className="position-relative">
-              <video src={videoSrc} autoPlay muted playsInline loop className="w-100" style={{ height: "500px", objectFit: "cover", borderRadius: "10px" }}></video>
+              <video
+                src={videoSrc}
+                autoPlay
+                muted
+                playsInline
+                loop
+                className="w-100"
+                style={{
+                  height: "500px",
+                  objectFit: "cover",
+                  borderRadius: "10px",
+                }}
+              ></video>
               {/* <div className="position-absolute top-50 start-50 translate-middle text-white text-center"
                 style={{ backgroundColor: "rgba(0,0,0,0.5)", padding: "20px", borderRadius: "10px" }}>
                 <h2>Khám phá sản phẩm mới</h2>
@@ -143,11 +170,12 @@ const MainContent = () => {
               </div> */}
             </div>
           </SwiperSlide>
-
         </Swiper>
       </div>
-        < ImageCollection />
-      <h2 className="mb-4 text-center text-uppercase mt-5">--Tất cả sản phẩm--</h2>
+      <ImageCollection />
+      <h2 className="mb-4 text-center text-uppercase mt-5">
+        --Tất cả sản phẩm--
+      </h2>
       <div className="row g-4 mb-5">
         {loading ? (
           <p>Đang tải...</p>
@@ -161,23 +189,31 @@ const MainContent = () => {
                 >
                   <div className="image-container">
                     <img
-                      src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://placehold.co/50x50"}
+                      src={
+                        product.images
+                          ? `http://127.0.0.1:8000/storage/${product.images}`
+                          : "https://placehold.co/50x50"
+                      }
                       className="card-img-top"
                       alt={product.name}
                       style={{
                         height: "300px",
                         width: "100%",
-                        objectFit: "cover"
+                        objectFit: "cover",
                       }}
                     />
                   </div>
                   <div className="card-body text-center">
                     <h5 className="card-title text-truncate">{product.name}</h5>
                     <div className="price-container">
-                      <h6 className="text-danger fw-bold mb-1">{product.price.toLocaleString()} VND</h6>
+                      <h6 className="text-danger fw-bold mb-1">
+                        {product.price
+                          ? product.price.toLocaleString() + " VND"
+                          : "N/A"}
+                      </h6>
                       {product.old_price && (
                         <small className="text-muted text-decoration-line-through">
-                          {product.old_price.toLocaleString()} VND
+                          {product.old_price?.toLocaleString() + " VND"}
                         </small>
                       )}
                     </div>
@@ -209,14 +245,20 @@ const MainContent = () => {
           className="product-modal"
         >
           <Modal.Header closeButton className="border-0 pb-0">
-            <Modal.Title className="fs-4 fw-bold">{selectedProduct.name}</Modal.Title>
+            <Modal.Title className="fs-4 fw-bold">
+              {selectedProduct.name}
+            </Modal.Title>
           </Modal.Header>
           <Modal.Body className="px-4">
             <div className="row">
               <div className="col-md-6">
                 <div className="product-image-container">
                   <img
-                    src={selectedProduct.images ? `http://127.0.0.1:8000/storage/${selectedProduct.images}` : "https://placehold.co/50x50"}
+                    src={
+                      selectedProduct.images
+                        ? `http://127.0.0.1:8000/storage/${selectedProduct.images}`
+                        : "https://placehold.co/50x50"
+                    }
                     className="img-fluid rounded shadow-sm"
                     alt={selectedProduct.name}
                   />
@@ -235,23 +277,39 @@ const MainContent = () => {
                     </span>
                   </div>
 
-                  {Object.keys(selectedAttributes).map((attributeName, index) => (
-                    <Form.Group key={index} className="mb-3">
-                      <Form.Label className="fw-semibold">{attributeName}</Form.Label>
-                      <div className="d-flex flex-wrap gap-2">
-                        {availableOptions[attributeName]?.map((attributeValue, idx) => (
-                          <Button
-                            key={idx}
-                            variant={selectedAttributes[attributeName] === attributeValue ? "primary" : "outline-primary"}
-                            className="rounded-pill px-3 py-1"
-                            onClick={() => handleSelectAttribute(attributeName, attributeValue)}
-                          >
-                            {attributeValue}
-                          </Button>
-                        ))}
-                      </div>
-                    </Form.Group>
-                  ))}
+                  {Object.keys(selectedAttributes).map(
+                    (attributeName, index) => (
+                      <Form.Group key={index} className="mb-3">
+                        <Form.Label className="fw-semibold">
+                          {attributeName}
+                        </Form.Label>
+                        <div className="d-flex flex-wrap gap-2">
+                          {availableOptions[attributeName]?.map(
+                            (attributeValue, idx) => (
+                              <Button
+                                key={idx}
+                                variant={
+                                  selectedAttributes[attributeName] ===
+                                  attributeValue
+                                    ? "primary"
+                                    : "outline-primary"
+                                }
+                                className="rounded-pill px-3 py-1"
+                                onClick={() =>
+                                  handleSelectAttribute(
+                                    attributeName,
+                                    attributeValue
+                                  )
+                                }
+                              >
+                                {attributeValue}
+                              </Button>
+                            )
+                          )}
+                        </div>
+                      </Form.Group>
+                    )
+                  )}
 
                   {selectedVariant && (
                     <div className="variant-details mt-4">
@@ -271,7 +329,9 @@ const MainContent = () => {
 
                       <div className="stock-info mb-3">
                         <h5 className="mb-2">Số lượng còn lại:</h5>
-                        <span className="badge bg-success">{selectedVariant.stock} sản phẩm</span>
+                        <span className="badge bg-success">
+                          {selectedVariant.stock} sản phẩm
+                        </span>
                       </div>
 
                       <div className="quantity-selector">
@@ -290,7 +350,11 @@ const MainContent = () => {
                             value={quantity}
                             onChange={(e) => {
                               const value = parseInt(e.target.value, 10);
-                              if (!isNaN(value) && value > 0 && value <= selectedVariant.stock) {
+                              if (
+                                !isNaN(value) &&
+                                value > 0 &&
+                                value <= selectedVariant.stock
+                              ) {
                                 setQuantity(value);
                               }
                             }}
