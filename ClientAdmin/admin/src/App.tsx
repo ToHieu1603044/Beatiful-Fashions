@@ -55,6 +55,7 @@ import OrderReturns from "./pages/client/OrderReturns";
 import ForgotPassword from "./pages/client/FogotPassword";
 import Whislish from "./pages/client/Whishlish";
 import Whishlish from "./pages/client/Whishlish";
+import Comments from "./pages/admin/comments/Comments";
 
 
 
@@ -132,6 +133,7 @@ function App() {
         { path: "permissions", element: <Permission /> },
         { path: "permissions/create", element: <PermissionsAdd /> },
         { path: "permissions/:id/edit", element: <PermissionsEdit /> },
+        { path: "comments", element: <Comments /> },
 
         { path: "discounts", element: <Discount />, },
       ],
