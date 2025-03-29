@@ -29,14 +29,11 @@ use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use App\Models\Product;
-
 use Illuminate\Support\Facades\Route;
 use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
-
 Route::get('/', function () {
     return 'Hello World';
 });
-
 //Web
 Route::get('/momo/callback', [MoMoController::class, 'callback']);
 Route::get('/search', [ProductController::class, 'search']);
@@ -45,9 +42,7 @@ Route::get('/products/web/{id}/', [ProductController::class, 'productDetail']);
 Route::get('/products/categories/{id}', [CategoryController::class, 'getProductsByCategory']);
 Route::get('/categories/web', [CategoryController::class, 'indexWeb']);
 Route::get('/categories/web{id}/', [CategoryController::class, 'categoryDetail']);
-
-//Discount
-
+//Dis
 Route::get('/provinces', function () {
     $response = Http::get("https://provinces.open-api.vn/api/p/");
     return response()->json($response->json());
@@ -70,15 +65,12 @@ Route::get('/districts/{district}', function (Request $request, $district) {
 });
 
 //Auth
-
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name('password.reset');
 
 Route::middleware(['auth:sanctum'])->group(function () {
-
-
 
     Route::get('/orders/invoice', [PdfController::class, 'index']);
     Route::get('carts/count', [CartController::class, 'countCart']);
@@ -96,6 +88,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('products/trash', [ProductController::class, 'productDelete'])->middleware('role:admin');
     Route::post('/momo/payment', [MoMoController::class, 'createPayment']);
 
+    Route::get('list-discount-for-user', [DiscountController::class, 'listDiscountForUser']);
+    Route::post('redeem-points-for-voucher', [DiscountController::class, 'redeemPointsForVoucher']);
+    Route::get('redeem-points', [DiscountController::class, 'redeemPoints']);
     //order
     Route::patch('/order-returns/{id}/status/user', [OrderReturnController::class, 'updateStatusUser']);
     Route::get('/orders/returns/user', [OrderReturnController::class, 'returnItemUser']);
@@ -151,7 +146,6 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::apiResource('attribute-options', AttributeOptionController::class);
     Route::apiResource('attributes', AttributeController::class);
     Route::apiResource('attribute-options', AttributeOptionController::class);
-
 
     //Cart
     Route::apiResource('carts', CartController::class);
@@ -210,6 +204,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/ratings/{rating}', [RatingController::class, 'update']);
     Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
 });
+
 Route::apiResource('banners', BannerController::class);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/wishlist', [WishlistController::class, 'index']); // Hiển thị sản phẩm yêu thích

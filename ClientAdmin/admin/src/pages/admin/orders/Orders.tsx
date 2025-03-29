@@ -19,9 +19,9 @@ const Orders: React.FC = () => {
 
   useEffect(() => {
     fetchOrders(currentPage, filterStatus);
-  }, [currentPage, filterStatus]); 
-  
-  const handleEditOrder = async (order) => { 
+  }, [currentPage, filterStatus]);
+
+  const handleEditOrder = async (order) => {
     try {
       const response = await getOrder(order.id);
 
@@ -31,7 +31,7 @@ const Orders: React.FC = () => {
       console.error("Lỗi khi lấy chi tiết đơn hàng:", error);
     }
   };
-  
+
 
   const fetchOrders = async (page = 1, trackingStatus?: string | null, userSearch?: string) => {
     try {
@@ -39,7 +39,7 @@ const Orders: React.FC = () => {
       const response = await getOrders({ page, tracking_status: trackingStatus, user: userSearch });
       const res = await getOrderReturns();
       console.log("response", response);
-      
+
       console.log("Danh sách đơn hàng:---", res.data.data);
       setOrders(response.data.data);
       setCurrentPage(response.data.page.currentPage);
@@ -101,23 +101,31 @@ const Orders: React.FC = () => {
       Swal.fire("Lỗi!", "Không thể cập nhật trạng thái đơn hàng.", "error");
     }
   };
+  const trackingStatusMap: Record<string, string> = {
+    pending: "Chờ xử lý",
+    processing: "Đang xử lý",
+    shipped: "Đã vận chuyển",
+    delivered: "Đã giao hàng",
+    cancelled: "Đã hủy",
+    completed: "Hoàn thành"
+  };
 
   const handleExportPDF = async () => {
     try {
       const response = await exportPdf({
         responseType: "blob",
       });
-  
+
       if (response.status === 200) {
         // Tạo URL từ Blob
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute("download", "all_invoices.pdf"); 
+        link.setAttribute("download", "all_invoices.pdf");
         document.body.appendChild(link);
         link.click();
         link.remove();
-  
+
         alert("Xuất PDF thành công! 📄");
       }
     } catch (error) {
@@ -125,33 +133,38 @@ const Orders: React.FC = () => {
       alert("Có lỗi xảy ra khi xuất PDF!");
     }
   };
-  
+
   const columns = [
     { title: "ID", dataIndex: "id", key: "id" },
-    { title: "User", dataIndex: "name", key: "name" },
+    { title: "Tên ", dataIndex: "name", key: "name" },
     {
-      title: "Total Amount",
+      title: "Tổng tiền ",
       dataIndex: "total_amount",
       key: "total_amount",
       render: (amount: number) =>
         amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
     },
-    { title: "Shipping Status", dataIndex: "shipping_status", key: "shipping_status" },
     {
-      title: "Payment Status",
+      title: "Trạng thái giao hàng",
+      dataIndex: "tracking_status",
+      key: "tracking_status",
+      render: (status: string) => trackingStatusMap[status] || "Không xác định",
+    },
+    {
+      title: "Phương thức thanh toán ",
       dataIndex: "is_paid",
       key: "is_paid",
       render: (isPaid: boolean) =>
         isPaid ? <span style={{ color: "green" }}>✅ Đã thanh toán</span> : <span style={{ color: "red" }}>❌ Chưa thanh toán</span>,
     },
     {
-      title: "Address",
+      title: "Địa chỉ ",
       key: "address",
       render: (record: any) =>
         `${record.city}-${record.district}-${record.ward}-${record.address}`.slice(0, 30) + "...",
     },
     {
-      title: "Actions",
+      title: "Hành động",
       key: "actions",
       render: (record: any) => (
         <Button.Group>
@@ -178,8 +191,8 @@ const Orders: React.FC = () => {
           }}
         >
 
-         <Select.Option value="pending">Chờ xử lý</Select.Option>
-          <Select.Option value="processing">Đang xử lý</Select.Option>
+          <Select.Option value="pending">Chờ xử lý</Select.Option>
+          <Select.Option value="processing">Đã xác nhận</Select.Option>
           <Select.Option value="shipped">Đã gửi</Select.Option>
           <Select.Option value="delivered">Đã giao</Select.Option>
           <Select.Option value="cancelled">Đã hủy</Select.Option>
@@ -203,7 +216,7 @@ const Orders: React.FC = () => {
         className="mt-4 text-center"
       />
 
-    <OrderDetailModal order={selectedOrder} visible={modalVisible} onClose={handleCloseModal} status={status} setStatus={setStatus} onConfirmOrder={handleUpdateStatus} confirmOrder={handleConfirmOrder}/>
+      <OrderDetailModal order={selectedOrder} visible={modalVisible} onClose={handleCloseModal} status={status} setStatus={setStatus} onConfirmOrder={handleUpdateStatus} confirmOrder={handleConfirmOrder} />
     </div>
   );
 };

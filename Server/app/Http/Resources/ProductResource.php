@@ -30,7 +30,7 @@ class ProductResource extends JsonResource
             'images' => $this->images,
             'galleries' => $this->galleries,
             'price' => $this->skus->min('price'),
-            'old_price' => $this->skus->min('old_price'),
+            'old_price' => $this->skus->max('old_price'),
             'total_sold' => $this->total_sold,
             'total_rating' => $this->total_rating,
             'description' => $this->description,
