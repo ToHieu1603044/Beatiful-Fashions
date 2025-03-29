@@ -22,7 +22,7 @@ class OrderResource extends JsonResource
             'email' => $this->email,
             'total_amount' => $this->total_amount,
             'status' => $this->status,
-            'shipping_status' => $this->tracking_status,
+            'tracking_status' => $this->tracking_status,
             'payment_method' => $this->payment_method,
             'address' => $this->address,
             'city' => $this->city,

@@ -17,6 +17,8 @@ return new class extends Migration
             $table->bigInteger('total_amount');
             $table->string('status')->default('pending'); // pending, completed, canceled
             $table->string('name');
+            $table->enum('tracking_status', ['pending', 'processing', 'shipped', 'delivered','cancelled', 'completed', 'refunded'])
+            ->default('pending');
             $table->string('email')->nullable();
             $table->string('phone');
             $table->string('ward');

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Table, Modal, Button, Select, Pagination, Input } from "antd";
-import { confirmOrder, getOrderReturns, getOrders, updateOrderStatus } from "../../../services/orderService";
+import { confirmOrder, getOrder, getOrderReturns, getOrders, updateOrderStatus } from "../../../services/orderService";
 import Swal from 'sweetalert2'
 import EditOrderModal from "./EditOrderModal";
+import OrderDetailModal from "../../../components/OrderDetailModal ";
+import { exportPdf } from "../../../services/homeService";
 
 const Orders: React.FC = () => {
   const [orders, setOrders] = useState([]);
@@ -17,10 +19,19 @@ const Orders: React.FC = () => {
 
   useEffect(() => {
     fetchOrders(currentPage, filterStatus);
-  }, [currentPage, filterStatus]); const handleEditOrder = (order) => {
-    console.log("Nhấn Edit, Order:", order);
-    setEditOrder(order);
+  }, [currentPage, filterStatus]);
+
+  const handleEditOrder = async (order) => {
+    try {
+      const response = await getOrder(order.id);
+
+      console.log("Chi tiết đơn hàng:---", response.data.data);
+      setEditOrder(response.data.data);
+    } catch (error) {
+      console.error("Lỗi khi lấy chi tiết đơn hàng:", error);
+    }
   };
+
 
   const fetchOrders = async (page = 1, trackingStatus?: string | null, userSearch?: string) => {
     try {
@@ -28,7 +39,7 @@ const Orders: React.FC = () => {
       const response = await getOrders({ page, tracking_status: trackingStatus, user: userSearch });
       const res = await getOrderReturns();
       console.log("response", response);
-      
+
       console.log("Danh sách đơn hàng:---", res.data.data);
       setOrders(response.data.data);
       setCurrentPage(response.data.page.currentPage);
@@ -90,34 +101,70 @@ const Orders: React.FC = () => {
       Swal.fire("Lỗi!", "Không thể cập nhật trạng thái đơn hàng.", "error");
     }
   };
+  const trackingStatusMap: Record<string, string> = {
+    pending: "Chờ xử lý",
+    processing: "Đang xử lý",
+    shipped: "Đã vận chuyển",
+    delivered: "Đã giao hàng",
+    cancelled: "Đã hủy",
+    completed: "Hoàn thành"
+  };
 
+  const handleExportPDF = async () => {
+    try {
+      const response = await exportPdf({
+        responseType: "blob",
+      });
+
+      if (response.status === 200) {
+        // Tạo URL từ Blob
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "all_invoices.pdf");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        alert("Xuất PDF thành công! 📄");
+      }
+    } catch (error) {
+      console.error("Lỗi khi xuất PDF:", error);
+      alert("Có lỗi xảy ra khi xuất PDF!");
+    }
+  };
 
   const columns = [
     { title: "ID", dataIndex: "id", key: "id" },
-    { title: "User", dataIndex: "name", key: "name" },
+    { title: "Tên ", dataIndex: "name", key: "name" },
     {
-      title: "Total Amount",
+      title: "Tổng tiền ",
       dataIndex: "total_amount",
       key: "total_amount",
       render: (amount: number) =>
         amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
     },
-    { title: "Shipping Status", dataIndex: "shipping_status", key: "shipping_status" },
     {
-      title: "Payment Status",
+      title: "Trạng thái giao hàng",
+      dataIndex: "tracking_status",
+      key: "tracking_status",
+      render: (status: string) => trackingStatusMap[status] || "Không xác định",
+    },
+    {
+      title: "Phương thức thanh toán ",
       dataIndex: "is_paid",
       key: "is_paid",
       render: (isPaid: boolean) =>
         isPaid ? <span style={{ color: "green" }}>✅ Đã thanh toán</span> : <span style={{ color: "red" }}>❌ Chưa thanh toán</span>,
     },
     {
-      title: "Address",
+      title: "Địa chỉ ",
       key: "address",
       render: (record: any) =>
         `${record.city}-${record.district}-${record.ward}-${record.address}`.slice(0, 30) + "...",
     },
     {
-      title: "Actions",
+      title: "Hành động",
       key: "actions",
       render: (record: any) => (
         <Button.Group>
@@ -144,14 +191,14 @@ const Orders: React.FC = () => {
           }}
         >
 
-         <Select.Option value="pending">Chờ xử lý</Select.Option>
-          <Select.Option value="processing">Đang xử lý</Select.Option>
+          <Select.Option value="pending">Chờ xử lý</Select.Option>
+          <Select.Option value="processing">Đã xác nhận</Select.Option>
           <Select.Option value="shipped">Đã gửi</Select.Option>
           <Select.Option value="delivered">Đã giao</Select.Option>
           <Select.Option value="cancelled">Đã hủy</Select.Option>
           <Select.Option value="completed">Giao hàng thành công</Select.Option>
         </Select>
-        <Button danger>📄 Export PDF</Button>
+        <Button danger onClick={handleExportPDF}>📄 Export PDF</Button>
       </div>
 
       <Table columns={columns} dataSource={orders} loading={loading} pagination={false} rowKey="id" />
@@ -169,83 +216,7 @@ const Orders: React.FC = () => {
         className="mt-4 text-center"
       />
 
-      <Modal
-        title={`Order Details #${selectedOrder?.id}`}
-        open={modalVisible}
-        onCancel={handleCloseModal}
-        footer={[
-          <Button key="close" onClick={handleCloseModal}>Close</Button>,
-          selectedOrder?.shipping_status === "completed" && (
-            <Button key="confirm" type="primary" onClick={handleConfirmOrder}>
-              ✅ Xác nhận đơn hàng
-            </Button>
-          ),
-          <Button key="update" type="primary" onClick={handleUpdateStatus}>
-            Update Order
-          </Button>,
-        ]}
-      >
-
-        {selectedOrder && (
-          <div>
-            <h6>Chi tiết đơn hàng:</h6>
-            <p><strong>Người đặt:</strong> {selectedOrder.name}</p>
-            <p><strong>Số điện thoại:</strong> {selectedOrder.phone}</p>
-            <p><strong>Email:</strong> {selectedOrder.email}</p>
-            <p><strong>Địa chỉ:</strong> {`${selectedOrder.address}, ${selectedOrder.ward}, ${selectedOrder.city}`}</p>
-            <p><strong>Tổng tiền:</strong> {selectedOrder.total_amount.toLocaleString()} VND</p>
-            <p><strong>Phương thức thanh toán:</strong> {selectedOrder.payment_method.toUpperCase()}</p>
-          
-            <h6>Danh sách sản phẩm:</h6>
-            <Table
-              dataSource={selectedOrder.orderdetails}
-              rowKey="id"
-              pagination={false}
-              columns={[
-                { title: "Tên sản phẩm", dataIndex: ["product", "name"], key: "product_name" },
-                {
-                  title: "Biến thể",
-                  key: "variants",
-                  render: (item: any) =>
-                    item.variant_details
-                      ? Object.entries(item.variant_details)
-                        .map(([key, value]) => `${key}: ${value}`)
-                        .join(", ")
-                      : "Không có biến thể",
-                },
-                { title: "Số lượng", dataIndex: "quantity", key: "quantity" },
-                {
-                  title: "Giá",
-                  dataIndex: "price",
-                  key: "price",
-                  render: (price: number) =>
-                    price.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
-                },
-                {
-                  title: "Tổng cộng",
-                  key: "total",
-                  render: (item: any) =>
-                    (item.quantity * item.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
-                },
-              ]}
-            />
-
-            <h6>Cập nhật trạng thái đơn hàng:</h6>
-            <Select
-              value={status}
-              onChange={(value) => setStatus(value)}
-              className="w-100"
-            >
-              <Select.Option value="pending">Chờ xử lý</Select.Option>
-              <Select.Option value="processing">Đang xử lý</Select.Option>
-              <Select.Option value="shipped">Đã gửi</Select.Option>
-              <Select.Option value="delivered">Đã giao</Select.Option>
-              <Select.Option value="cancelled">Đã hủy</Select.Option>
-              <Select.Option value="completed">Giao hàng thành công</Select.Option>
-            </Select>
-          </div>
-        )}
-      </Modal>
+      <OrderDetailModal order={selectedOrder} visible={modalVisible} onClose={handleCloseModal} status={status} setStatus={setStatus} onConfirmOrder={handleUpdateStatus} confirmOrder={handleConfirmOrder} />
     </div>
   );
 };

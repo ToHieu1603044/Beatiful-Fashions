@@ -4,6 +4,8 @@ import { getProductById, storeCart } from "../../services/homeService";
 import { Link, useParams } from "react-router-dom";
 import { Send, User } from "lucide-react";
 import Swal from 'sweetalert2'
+import DOMPurify from "dompurify";
+import axios from "axios";
 const DetailProducts: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     console.log(id);
@@ -14,12 +16,9 @@ const DetailProducts: React.FC = () => {
     const [errorMessage, setErrorMessage] = useState<string>("");
     const [mainImage, setMainImage] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>("description");
-
+    const [comments, setComments] = useState<string>([]);
     const [popularProducts, setPopularProducts] = useState([]);
-    const [comments, setComments] = useState([
-        { id: 1, name: "Nguyễn Văn A", text: "Sản phẩm rất tốt!", avatar: "https://i.pravatar.cc/40?img=1" },
-        { id: 2, name: "Trần Thị B", text: "Chất lượng tuyệt vời!", avatar: "https://i.pravatar.cc/40?img=2" }
-    ]);
+    
     const [newComment, setNewComment] = useState("");
 
     const handleAddComment = () => {
@@ -33,6 +32,7 @@ const DetailProducts: React.FC = () => {
     };
     useEffect(() => {
         fetchProduct();
+        fetrchcomment();
     }, [id]);
 
     const fetchProduct = async () => {
@@ -64,7 +64,12 @@ const DetailProducts: React.FC = () => {
         setLoading(false);
     };
 
-
+    const fetrchcomment = async () => {
+        const id = product.id
+        const response = await axios.get("http://127.0.0.1:8000/api/ratings/product/${id}");
+        console.log("Dữ liệu API---:", response.data);
+        setComments(response.data.data);
+    }
     const selectedVariant = useMemo(() => {
         if (!product || !product.variants) return null;
         return product.variants.find((variant: any) =>
@@ -73,7 +78,18 @@ const DetailProducts: React.FC = () => {
             )
         );
     }, [selectedAttributes, product]);
-
+    const handleDeleteComment = async (id: number) => {
+        try {
+            const response = await axios.delete(`http://127.0.0.1:8000/api/ratings/${id}`);
+            if (response.status == 200 || response.status == 204) {
+                alert("Xoa thanh cong");
+            }
+        } catch (error) {
+            alert("Xoa that bai");
+            console.log(error);
+            
+        }
+    }
     const handleSelectAttribute = (name: string, value: string) => {
         setSelectedAttributes((prev) => ({ ...prev, [name]: value }));
     };
@@ -146,31 +162,31 @@ const DetailProducts: React.FC = () => {
     const handleImageClick = (imageUrl: string) => {
         setMainImage(imageUrl);
     };
-    const handleShowModal = (product) => {
-        setSelectedProduct(product);
-        setSelectedVariant(null);
+    // const handleShowModal = (product) => {
+    //     setSelectedProduct(product);
+    //     setSelectedVariant(null);
 
-        const allAttributes = [...new Set(product.variants.flatMap((variant) => variant.attributes.map((attr) => attr.name)))];
-        // Loc tat ca variants va lay ra ten cac thuoc tinh -> dung Set de ne cac truong giong nhau-> chuyen thnanh mang
+    //     const allAttributes = [...new Set(product.variants.flatMap((variant) => variant.attributes.map((attr) => attr.name)))];
+    //     // Loc tat ca variants va lay ra ten cac thuoc tinh -> dung Set de ne cac truong giong nhau-> chuyen thnanh mang
 
-        const initialSelectedAttributes = Object.fromEntries(allAttributes.map((attr) => [attr, null]));
+    //     const initialSelectedAttributes = Object.fromEntries(allAttributes.map((attr) => [attr, null]));
 
-        const initialAvailableOptions = {};
-        allAttributes.forEach((attrName) => {
-            initialAvailableOptions[attrName] = [
-                ...new Set(
-                    product.variants.flatMap((variant) =>
-                        variant.attributes
-                            .filter((attr) => attr.name === attrName)
-                            .map((attr) => attr.value)
-                    )
-                ),
-            ];
-        });
+    //     const initialAvailableOptions = {};
+    //     allAttributes.forEach((attrName) => {
+    //         initialAvailableOptions[attrName] = [
+    //             ...new Set(
+    //                 product.variants.flatMap((variant) =>
+    //                     variant.attributes
+    //                         .filter((attr) => attr.name === attrName)
+    //                         .map((attr) => attr.value)
+    //                 )
+    //             ),
+    //         ];
+    //     });
 
-        setSelectedAttributes(initialSelectedAttributes);
-        //  setAvailableOptions(initialAvailableOptions);
-    };
+    //     setSelectedAttributes(initialSelectedAttributes);
+    //     //  setAvailableOptions(initialAvailableOptions);
+    // };
 
     return (
         <div className="container mt-5">
@@ -274,18 +290,27 @@ const DetailProducts: React.FC = () => {
                             {activeTab === "description" ? (
                                 <div className="card p-3">
                                     <h4 className="fw-bold">Thông tin sản phẩm</h4>
-                                    <p className="text-muted">{product.description || "Chưa có mô tả cho sản phẩm này."}</p>
+                                    <p className="text-muted"
+                                        dangerouslySetInnerHTML={{
+                                            __html: DOMPurify.sanitize(product.description || "Chưa có mô tả cho sản phẩm này.")
+                                        }}
+                                    />
                                 </div>
+
                             ) : (
                                 <div className="mt-3">
                                     <h3 className="fw-bold">Bình luận</h3>
                                     <div className="mt-3">
                                         {comments.map((comment) => (
                                             <div key={comment.id} className="d-flex align-items-start p-2 border rounded mb-2 bg-light">
-                                                <img src={comment.avatar} alt={comment.name} className="rounded-circle me-2" width="40" height="40" />
+                                                <img src={comment.avatar} alt={comment.user} className="rounded-circle me-2" width="40" height="40" />
                                                 <div>
-                                                    <p className="fw-bold mb-1">{comment.name}</p>
-                                                    <p className="mb-0">{comment.text}</p>
+                                                    <p className="fw-bold mb-1">{comment.rating}</p>
+                                                    <p className="mb-0">{comment.review}</p>
+                                                </div>
+                                                <div>
+                                                    <a href=""></a>
+                                                    <button onClick={() => handleDeleteComment(comment.id)}>Xóa</button>
                                                 </div>
                                             </div>
                                         ))}
@@ -310,7 +335,7 @@ const DetailProducts: React.FC = () => {
                         </div>
                     </div>
                     {/* SẢN PHẨM LIÊN QUAN */}
-                    <div className="mt-5">
+                    {/* <div className="mt-5">
                         <h3 className="fw-bold">Sản phẩm liên quan</h3>
                         {popularProducts.length > 0 ? (
                             <div className="row mt-3">
@@ -347,7 +372,7 @@ const DetailProducts: React.FC = () => {
                         ) : (
                             <p className="text-muted">Không có sản phẩm liên quan.</p>
                         )}
-                    </div>
+                    </div> */}
 
                     <br />
 

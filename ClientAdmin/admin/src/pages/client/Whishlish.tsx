@@ -1,17 +1,18 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal, Button, Form } from "react-bootstrap";
 import { getProducts, getCategories } from "../../services/homeService";
-import { Swiper, SwiperSlide } from "swiper/react";
+
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import { Product } from "../../interfaces/Products";
 import { Category } from "../../interfaces/Categories";
-import videoSrc from "../../assets/slider-video.mp4";
-import ImageCollection from "../ImageCollection";
-const MainContent = () => {
+
+const Whishlish = () => {
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,31 +53,6 @@ const MainContent = () => {
     fetchData();
   }, []);
 
-<<<<<<< HEAD
-  const fetchData = async () => {
-    try {
-      const [productsRes, categoriesRes] = await Promise.all([
-        getProducts(),
-        getCategories(),
-      ]);
-
-      console.log("Products API response:", productsRes.data);
-      console.log("Categories API response:", categoriesRes.data);
-
-      setProducts(productsRes.data.data || []);
-      setCategories(
-        Array.isArray(categoriesRes.data) ? categoriesRes.data : []
-      );
-    } catch (error) {
-      console.error("Lỗi khi tải dữ liệu:", error);
-      setProducts([]);
-      setCategories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-=======
->>>>>>> b7e29bfe086bfe61d5c12c7a9f184a05e1f438bd
   const handleSubmit = () => {
     if (!selectedVariant) {
       alert("Vui lòng chọn biến thể.");
@@ -84,25 +60,14 @@ const MainContent = () => {
     }
     console.log("Dữ liệu gửi đi:", { sku_id: selectedVariant.sku_id });
   };
-  const handleCategoryClick = (id: number, slug: string) => {
-    navigate(`/category/${id}/${slug}`);
-  };
   const handleShowModal = (product) => {
     setSelectedProduct(product);
     setSelectedVariant(null);
 
-    const allAttributes = [
-      ...new Set(
-        product.variants.flatMap((variant) =>
-          variant.attributes.map((attr) => attr.name)
-        )
-      ),
-    ];
+    const allAttributes = [...new Set(product.variants.flatMap((variant) => variant.attributes.map((attr) => attr.name)))];
     // Loc tat ca variants va lay ra ten cac thuoc tinh -> dung Set de ne cac truong giong nhau-> chuyen thnanh mang
 
-    const initialSelectedAttributes = Object.fromEntries(
-      allAttributes.map((attr) => [attr, null])
-    );
+    const initialSelectedAttributes = Object.fromEntries(allAttributes.map((attr) => [attr, null]));
 
     const initialAvailableOptions = {};
     allAttributes.forEach((attrName) => {
@@ -129,16 +94,11 @@ const MainContent = () => {
 
   const handleSelectAttribute = (attributeName, attributeValue) => {
     setSelectedAttributes((prev) => {
-      const newSelectedAttributes = {
-        ...prev,
-        [attributeName]: attributeValue,
-      };
+      const newSelectedAttributes = { ...prev, [attributeName]: attributeValue }
 
       const matchedVariant = selectedProduct.variants.find((variant) =>
         variant.attributes.every(
-          (attr) =>
-            newSelectedAttributes[attr.name] === attr.value ||
-            newSelectedAttributes[attr.name] === null
+          (attr) => newSelectedAttributes[attr.name] === attr.value || newSelectedAttributes[attr.name] === null
         )
       );
 
@@ -151,147 +111,57 @@ const MainContent = () => {
     navigate(`/products/${id}/detail`);
   };
 
+
   return (
     <div className="container mt-4">
-      <div className="row mb-5 g-4">
-        <Swiper
-          modules={[Navigation, Pagination, Autoplay]}
-          spaceBetween={10}
-          slidesPerView={1}
-          navigation
-          pagination={{ clickable: true }}
-          autoplay={{ delay: 6000, disableOnInteraction: false }}
-          className="w-100"
-          style={{ maxWidth: "100%", height: "500px" }}
-        >
-          {/* Slide Video */}
-          <SwiperSlide>
-            <div className="position-relative">
-              <video
-                src={videoSrc}
-                autoPlay
-                muted
-                playsInline
-                loop
-                className="w-100"
-                style={{
-                  height: "500px",
-                  objectFit: "cover",
-                  borderRadius: "10px",
-                }}
-              ></video>
-              {/* <div className="position-absolute top-50 start-50 translate-middle text-white text-center"
-                style={{ backgroundColor: "rgba(0,0,0,0.5)", padding: "20px", borderRadius: "10px" }}>
-                <h2>Khám phá sản phẩm mới</h2>
-                <h4 className="text-warning">Ưu đãi hấp dẫn hôm nay!</h4>
-              </div> */}
-            </div>
-          </SwiperSlide>
-        </Swiper>
-      </div>
-<<<<<<< HEAD
-      <ImageCollection />
-      <h2 className="mb-4 text-center text-uppercase mt-5">
-        --Tất cả sản phẩm--
-      </h2>
-      <div className="row g-4 mb-5">
-        {loading ? (
-          <p>Đang tải...</p>
-=======
-      < ImageCollection />
-      <h2 className="mb-4 text-center text-uppercase mt-5">--Tất cả sản phẩm--</h2>
-      <div className="row justify-content-center gap-4 mb-5">
+
+<div className="row mb-5 g-4">
+    <div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-3">
         {products.length === 0 ? (
           <p className="text-center">Không có sản phẩm nào.</p>
->>>>>>> b7e29bfe086bfe61d5c12c7a9f184a05e1f438bd
         ) : (
           products.map((product) => (
-            <div key={product.id} className="col-auto">
-              <div
-                className="card h-100 shadow-sm hover-card position-relative mx-auto mb-4"
-                style={{
-                  width: "260px", // Card rộng bằng ảnh + khoảng trống
-                  transition: "transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "scale(1.05)";
-                  e.currentTarget.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.2)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                  e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
-                }}
-              >
-                {/* Icon trái tim */}
-                <div
-                  className="position-absolute top-0 end-0 m-2 p-2 rounded-circle bg-white shadow-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddToFavorites(product);
-                  }}
-                  style={{
-                    cursor: "pointer",
-                    zIndex: 10,
-                    transition: "color 0.2s ease-in-out",
-                  }}
-                >
-                  <i
-                    className={`fas fa-heart ${product.isFavorite ? "text-danger" : "text-muted"}`}
-                    style={{ fontSize: "1.2rem" }}
-                  ></i>
-                </div>
-
+            <div key={product.id} className="col">
+              <div className="card h-100 shadow-sm hover-card border-0 rounded-3">
                 <div
                   onClick={() => handleProductClick(product.id)}
                   style={{ cursor: "pointer" }}
                 >
-                  <div className="image-container">
+                  <div className="image-container position-relative">
                     <img
-<<<<<<< HEAD
-                      src={
-                        product.images
-                          ? `http://127.0.0.1:8000/storage/${product.images}`
-                          : "https://placehold.co/50x50"
-                      }
-                      className="card-img-top"
+                      src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://placehold.co/50x50"}
+                      className="card-img-top rounded-top"
                       alt={product.name}
                       style={{
-                        height: "300px",
+                        height: "250px",
                         width: "100%",
                         objectFit: "cover",
-=======
-                      src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://placehold.co/260x320"}
-                      className="card-img-top"
-                      alt={product.name}
-                      style={{
-                        height: "320px",
-                        width: "260px",
-                        objectFit: "cover",
-                        borderTopLeftRadius: "10px",
-                        borderTopRightRadius: "10px",
->>>>>>> b7e29bfe086bfe61d5c12c7a9f184a05e1f438bd
+                        borderRadius: "12px 12px 0 0",
+                        transition: "transform 0.3s ease-in-out",
                       }}
+                      onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+                      onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
                     />
                   </div>
-                  <div className="card-body text-center">
-                    <h5 className="card-title text-truncate fw-bold">{product.name}</h5>
+                  <div className="card-body text-center p-2">
+                    <h6 className="card-title text-truncate fw-bold" style={{ fontSize: "0.95rem" }}>
+                      {product.name}
+                    </h6>
                     <div className="price-container">
-                      <h6 className="text-danger fw-bold mb-1">
-                        {product.price
-                          ? product.price.toLocaleString() + " VND"
-                          : "N/A"}
+                      <h6 className="text-danger fw-bold mb-1" style={{ fontSize: "0.9rem" }}>
+                        {product.price.toLocaleString()} VND
                       </h6>
                       {product.old_price && (
-                        <small className="text-muted text-decoration-line-through">
-                          {product.old_price?.toLocaleString() + " VND"}
+                        <small className="text-muted text-decoration-line-through" style={{ fontSize: "0.8rem" }}>
+                          {product.old_price.toLocaleString()} VND
                         </small>
                       )}
                     </div>
                   </div>
                 </div>
-                <div className="card-footer bg-transparent border-0 text-center pb-3">
+                <div className="card-footer bg-transparent border-0 text-center pb-2">
                   <button
-                    className="btn btn-primary w-100 rounded-pill"
+                    className="btn btn-primary w-75 rounded-pill btn-sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleShowModal(product);
@@ -306,6 +176,7 @@ const MainContent = () => {
         )}
       </div>
 
+
       {selectedProduct && (
         <Modal
           show={!!selectedProduct}
@@ -315,20 +186,14 @@ const MainContent = () => {
           className="product-modal"
         >
           <Modal.Header closeButton className="border-0 pb-0">
-            <Modal.Title className="fs-4 fw-bold">
-              {selectedProduct.name}
-            </Modal.Title>
+            <Modal.Title className="fs-4 fw-bold">{selectedProduct.name}</Modal.Title>
           </Modal.Header>
           <Modal.Body className="px-4">
             <div className="row">
               <div className="col-md-6">
                 <div className="product-image-container">
                   <img
-                    src={
-                      selectedProduct.images
-                        ? `http://127.0.0.1:8000/storage/${selectedProduct.images}`
-                        : "https://placehold.co/50x50"
-                    }
+                    src={selectedProduct.images ? `http://127.0.0.1:8000/storage/${selectedProduct.images}` : "https://placehold.co/50x50"}
                     className="img-fluid rounded shadow-sm"
                     alt={selectedProduct.name}
                   />
@@ -347,39 +212,23 @@ const MainContent = () => {
                     </span>
                   </div>
 
-                  {Object.keys(selectedAttributes).map(
-                    (attributeName, index) => (
-                      <Form.Group key={index} className="mb-3">
-                        <Form.Label className="fw-semibold">
-                          {attributeName}
-                        </Form.Label>
-                        <div className="d-flex flex-wrap gap-2">
-                          {availableOptions[attributeName]?.map(
-                            (attributeValue, idx) => (
-                              <Button
-                                key={idx}
-                                variant={
-                                  selectedAttributes[attributeName] ===
-                                  attributeValue
-                                    ? "primary"
-                                    : "outline-primary"
-                                }
-                                className="rounded-pill px-3 py-1"
-                                onClick={() =>
-                                  handleSelectAttribute(
-                                    attributeName,
-                                    attributeValue
-                                  )
-                                }
-                              >
-                                {attributeValue}
-                              </Button>
-                            )
-                          )}
-                        </div>
-                      </Form.Group>
-                    )
-                  )}
+                  {Object.keys(selectedAttributes).map((attributeName, index) => (
+                    <Form.Group key={index} className="mb-3">
+                      <Form.Label className="fw-semibold">{attributeName}</Form.Label>
+                      <div className="d-flex flex-wrap gap-2">
+                        {availableOptions[attributeName]?.map((attributeValue, idx) => (
+                          <Button
+                            key={idx}
+                            variant={selectedAttributes[attributeName] === attributeValue ? "primary" : "outline-primary"}
+                            className="rounded-pill px-3 py-1"
+                            onClick={() => handleSelectAttribute(attributeName, attributeValue)}
+                          >
+                            {attributeValue}
+                          </Button>
+                        ))}
+                      </div>
+                    </Form.Group>
+                  ))}
 
                   {selectedVariant && (
                     <div className="variant-details mt-4">
@@ -399,9 +248,7 @@ const MainContent = () => {
 
                       <div className="stock-info mb-3">
                         <h5 className="mb-2">Số lượng còn lại:</h5>
-                        <span className="badge bg-success">
-                          {selectedVariant.stock} sản phẩm
-                        </span>
+                        <span className="badge bg-success">{selectedVariant.stock} sản phẩm</span>
                       </div>
 
                       <div className="quantity-selector">
@@ -420,11 +267,7 @@ const MainContent = () => {
                             value={quantity}
                             onChange={(e) => {
                               const value = parseInt(e.target.value, 10);
-                              if (
-                                !isNaN(value) &&
-                                value > 0 &&
-                                value <= selectedVariant.stock
-                              ) {
+                              if (!isNaN(value) && value > 0 && value <= selectedVariant.stock) {
                                 setQuantity(value);
                               }
                             }}
@@ -471,7 +314,9 @@ const MainContent = () => {
         </Modal>
       )}
     </div>
-  );
-};
 
-export default MainContent;
+    </div>
+  )
+}
+
+export default Whishlish

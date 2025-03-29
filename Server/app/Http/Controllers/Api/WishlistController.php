@@ -5,17 +5,32 @@ namespace App\Http\Controllers\Api;
 use App\Helpers\ApiResponse;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Http\Controllers\Api\Controller;
+use App\Helpers\ApiResponse;
+use App\Http\Resources\ProductResource;
+use App\Traits\ApiDataTrait;
+use Illuminate\Database\Eloquent\Model;
+
 use Illuminate\Http\Request;
+
 use App\Models\Wishlist;
+use App\Models\Product;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+
+
+
 
 class WishlistController extends Controller
 {
+
     // Hiển thị danh sách sản phẩm yêu thích của user
     public function index(Request $request)
     {
         try {
-            $userId = auth()->id(); // Lấy ID user đăng nhập
+
+            $userId = auth()->id();
+
     
             if (!$userId) {
                 return response()->json([
@@ -48,6 +63,30 @@ class WishlistController extends Controller
             \Log::error('Lỗi lấy danh sách sản phẩm yêu thích', ['exception' => $e->getMessage()]);
             return ApiResponse::errorResponse();
         }
+    }
+    
+    
+
+
+
+    // Thêm sản phẩm vào danh sách yêu thích
+    public function store(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id'
+        ]);
+
+        $wishlist = Wishlist::firstOrCreate([
+            'user_id' => Auth::id(),
+            'product_id' => $request->product_id
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'wishlist' => $wishlist,
+            'message' => 'Sản phẩm đã được thêm vào danh sách yêu thích'
+        ], 201);
+
     }
     // Xóa sản phẩm khỏi danh sách yêu thích
     public function destroy($id)

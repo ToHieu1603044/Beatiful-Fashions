@@ -125,7 +125,7 @@ const Login = () => {
           </button>
         </form>
         <div className="text-center mt-3">
-          <a href="auth/reset-password" className="text-decoration-none text-primary">Quên mật khẩu?</a>
+          <a href="auth/forgot-password" className="text-decoration-none text-primary">Quên mật khẩu?</a>
         </div>
         <div className="text-center mt-2">
           <span>Chưa có tài khoản? </span>

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Tabs, Table, Select, Checkbox, Tag, Spin, Button, Modal } from "antd";
+import { Tabs, Table, Select, Checkbox, Tag, Spin, Button, Modal, Input } from "antd";
 import { fetchOrders, returnOrderAPI } from "../../services/homeService";
 import { updateOrderStatus, fetchReturnDetails } from "../../services/orderService";
 import { useNavigate } from "react-router-dom";
+import { render } from "react-dom";
 
 const Orders: React.FC = () => {
     const [orders, setOrders] = useState([]);
@@ -135,17 +136,33 @@ const Orders: React.FC = () => {
     };
     const handleCancelOrder = async (orderId: number) => {
         try {
-            await updateOrderStatus(orderId, "cancelled");
+            const response = await updateOrderStatus(orderId, "cancelled");
+    
             setOrders(prevOrders =>
                 prevOrders.map(order =>
                     order.id === orderId ? { ...order, shipping_status: "cancelled" } : order
                 )
             );
+    
+            if(response.status === 200){
+                console.log("Hủy đơn hàng thành công");
+            }
+    
         } catch (error) {
+            alert("Hủy đơn hàng thất bại!");
             console.error("Lỗi khi hủy đơn hàng:", error);
         }
     };
-
+    
+    const trackingStatusMap: Record<string, string> = {
+        pending: "Chờ xử lý",
+        processing: "Đang xử lý",
+        shipped: "Đã vận chuyển",
+        delivered: "Đã giao hàng",
+        cancelled: "Đã hủy",
+        completed: "Hoàn thành"
+    };
+    
     const handleConfirmReceived = async (orderId: number) => {
         try {
             await updateOrderStatus(orderId, "completed");
@@ -169,15 +186,21 @@ const Orders: React.FC = () => {
 
     const columns = [
         { title: "ID", dataIndex: "id", key: "id" },
-        { title: "User", dataIndex: "name", key: "name" },
+        { title: "Tên ", dataIndex: "name", key: "name" },
         {
-            title: "Total Amount",
+            title: "Tổng tiền",
             dataIndex: "total_amount",
             key: "total_amount",
             render: (amount: number) =>
                 amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
         },
-        { title: "Shipping Status", dataIndex: "shipping_status", key: "shipping_status" },
+        {
+            title: "Trạng thái giao hàng",
+            dataIndex: "tracking_status",
+            key: "tracking_status",
+            render: (status: string) => trackingStatusMap[status] || "Không xác định",
+        },
+        
         {
             title: "Tên sản phẩm",
             dataIndex: "product_name",
@@ -185,7 +208,7 @@ const Orders: React.FC = () => {
 
         },
         {
-            title: "Address",
+            title: "Địa chỉ ",
             key: "address",
             render: (record: any) =>
                 `${record.city}-${record.district}-${record.ward}-${record.address}`.slice(0, 30) + "...",
@@ -220,7 +243,8 @@ const Orders: React.FC = () => {
     ];
 
     return (
-        <div>
+      <div className="container mt-5">
+          <div>
             <Tabs activeKey={activeTab} onChange={handleTabChange}>
                 <Tabs.TabPane tab="Tất cả" key="all" />
                 <Tabs.TabPane tab="Chờ xác nhận" key="pending" />
@@ -384,6 +408,7 @@ const Orders: React.FC = () => {
                 )}
             </Modal>
         </div>
+      </div>
     );
 };
 

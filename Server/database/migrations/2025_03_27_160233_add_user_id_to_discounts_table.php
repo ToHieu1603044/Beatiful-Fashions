@@ -12,9 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('discounts', function (Blueprint $table) {
-            $table->integer('can_be_redeemed_with_points')->nullable()->after('is_redeemable');
+            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
         });
-        
     }
 
     /**
@@ -23,7 +22,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('discounts', function (Blueprint $table) {
-            $table->dropColumn('can_be_redeemed_with_points');
+            $table->dropForeign(['user_id']);
+            $table->dropColumn('user_id');
         });
     }
 };

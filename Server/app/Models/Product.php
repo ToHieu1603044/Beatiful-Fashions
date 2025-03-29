@@ -77,6 +77,9 @@ public function attributeOptions()
         'attribute_option_id'        // Khóa ngoại ở bảng attribute_option_sku tham chiếu attribute_options
     );
 }
+public function wishlists(){
+    return $this->hasMany(Wishlist::class);
+}
 // public static function boot()
 // {
 //     parent::boot();
