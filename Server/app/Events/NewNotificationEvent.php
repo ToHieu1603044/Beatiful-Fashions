@@ -14,29 +14,31 @@ class NewNotificationEvent implements ShouldBroadcastNow
     use InteractsWithSockets, SerializesModels;
 
     public $notification;
-    public $userIds; // Danh sách user_id nhận thông báo
+    public $userIds;
 
     public function __construct(Notification $notification)
     {
+        \Log::info('Phát sự kiện realtime', ['notification_id' => $notification->id]);
+
         $this->notification = $notification;
 
-        // Lấy danh sách user từ bảng trung gian notification_user
         $this->userIds = DB::table('notification_user')
             ->where('notification_id', $notification->id)
             ->pluck('user_id')
             ->toArray();
+
+        \Log::info('Danh sách User nhận thông báo:', ['userIds' => $this->userIds]);
     }
+
 
     public function broadcastOn()
     {
-        // Nếu là thông báo chung => gửi đến tất cả user
-        if (empty($this->userIds)) {
-            return new Channel("global-notifications");
-        }
-
-        // Nếu là thông báo cá nhân => gửi đến từng user
-        return array_map(fn ($userId) => new Channel("user-{$userId}"), $this->userIds);
+        \Log::info('📡 Phát thông báo đến tất cả người dùng trên kênh global-notifications');
+    
+        return new Channel("global-notifications");
     }
+    
+
 
     public function broadcastAs()
     {
@@ -45,12 +47,20 @@ class NewNotificationEvent implements ShouldBroadcastNow
 
     public function broadcastWith()
     {
-        return [
-            'id'      => $this->notification->id,
-            'title'   => $this->notification->title,
+        \Log::info('Dữ liệu thông báo gửi đi', [
+            'id' => $this->notification->id,
+            'title' => $this->notification->title,
             'message' => $this->notification->message,
-            'type'    => $this->notification->type,
-            'status'  => $this->notification->status,
+            'type' => $this->notification->type,
+            'user_id' => $this->notification->user_id,
+            'created_at' => $this->notification->created_at->toDateTimeString(),
+        ]);
+
+        return [
+            'id' => $this->notification->id,
+            'title' => $this->notification->title,
+            'message' => $this->notification->message,
+            'type' => $this->notification->type,
             'user_id' => $this->notification->user_id,
             'created_at' => $this->notification->created_at->toDateTimeString(),
         ];

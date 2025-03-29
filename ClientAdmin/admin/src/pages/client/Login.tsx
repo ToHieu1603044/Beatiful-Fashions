@@ -4,12 +4,12 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { FcGoogle } from "react-icons/fc";
 
-// Cấu hình API
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 axios.defaults.baseURL = API_BASE_URL;
 
-// Kiểm tra và thiết lập token từ localStorage khi reload trang
 const token = localStorage.getItem("access_token");
 if (token) {
   axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
@@ -17,10 +17,9 @@ if (token) {
   delete axios.defaults.headers.common["Authorization"];
 }
 
-// Schema kiểm tra dữ liệu đầu vào
 const schema = z.object({
   email: z.string().email({ message: "Email không hợp lệ" }),
-  password: z.string().min(5, { message: "Mật khẩu phải có ít nhất 6 ký tự" }),
+  password: z.string().min(6, { message: "Mật khẩu phải có ít nhất 6 ký tự" }),
 });
 
 const Login = () => {
@@ -47,94 +46,93 @@ const Login = () => {
     }
   }, [location]);
 
-  const login = async (email: string, password: string) => {
-    return axios.post("/login", { email, password }).then(res => res.data);
+  const login = async (email, password) => {
+    return axios.post("/login", { email, password }).then((res) => res.data);
   };
 
-  const getUserProfile = async () => {
-    try {
-      const response = await axios.get("/me"); // Gọi API /me để lấy thông tin người dùng
-      console.log("Thông tin người dùng:", response.data);
-      localStorage.setItem("user", JSON.stringify(response.data)); // Lưu thông tin người dùng
-    } catch (error) {
-      console.error("Lỗi khi lấy thông tin người dùng:", error);
-    }
+  const googleLogin = () => {
+    window.location.href = `${API_BASE_URL}/auth/google`;
   };
 
-  const onSubmit = async (data: { email: string; password: string }) => {
+  const onSubmit = async (data) => {
     setLoading(true);
-
     try {
       const response = await login(data.email, data.password);
-
       if (response.access_token) {
-        console.log("Access Token:", response.access_token); // Kiểm tra token
-
         localStorage.setItem("access_token", response.access_token);
-        console.log("Token đã lưu:", localStorage.getItem("access_token")); // Kiểm tra lưu thành công chưa
-
         axios.defaults.headers.common["Authorization"] = `Bearer ${response.access_token}`;
-
-        // Lấy thông tin người dùng sau khi đăng nhập
-        await getUserProfile();
-
-        localStorage.setItem("role", response.role[0]);
-        
-        const returnUrl = sessionStorage.getItem("returnUrl");
-        sessionStorage.removeItem("returnUrl");
-
         const userRoles = response.user.roles?.map(role => role.name);
+
         if (userRoles && userRoles.includes("admin")) {
+
           navigate("/admin");
+
         } else {
-          navigate(returnUrl || "/account");
+
+          navigate("/");
+
         }
       }
-
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        setError("email", { message: "Email hoặc mật khẩu không đúng" });
-        setError("password", { message: "Vui lòng kiểm tra lại" });
-      } else if (error.response?.status === 403) {
-        navigate("/403");
-      } else {
-        console.error("Lỗi khi đăng nhập:", error);
-      }
+    } catch (error) {
+      setError("email", { message: "Email hoặc mật khẩu không đúng" });
+      setError("password", { message: "Vui lòng kiểm tra lại" });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="p-4 border rounded bg-light">
-      <div className="mb-3">
-        <label htmlFor="email" className="form-label">Email</label>
-        <input
-          type="email"
-          {...register("email")}
-          className={`form-control ${errors.email ? "is-invalid" : ""}`}
-          id="email"
-        />
-        {errors.email && <div className="invalid-feedback">{errors.email.message}</div>}
-      </div>
-
-      <div className="mb-3">
-        <label htmlFor="password" className="form-label">Mật khẩu</label>
-        <input
-          type="password"
-          {...register("password")}
-          className={`form-control ${errors.password ? "is-invalid" : ""}`}
-          id="password"
-        />
-        {errors.password && <div className="invalid-feedback">{errors.password.message}</div>}
-      </div>
-
-      <div>
-        <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+    <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
+      <div className="card shadow-lg border-0 p-4 rounded-4" style={{ width: "380px", background: "rgba(255, 255, 255, 0.85)", backdropFilter: "blur(10px)" }}>
+        <div className="text-center mb-4">
+          <h2 className="fw-bold text-dark">Đăng nhập</h2>
+        </div>
+        <button
+          className="btn btn-light w-100 d-flex align-items-center justify-content-center border rounded-3 mb-3"
+          onClick={googleLogin}
+        >
+          <FcGoogle className="me-2" size={20} /> Đăng nhập với Google
         </button>
+        <hr />
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-3">
+          <div className="mb-3">
+            <label className="form-label fw-bold">Email</label>
+            <input
+              type="email"
+              {...register("email")}
+              className={`form-control rounded-3 ${errors.email ? "is-invalid" : ""}`}
+              placeholder="Nhập email của bạn"
+            />
+            {errors.email && <div className="invalid-feedback">{errors.email.message}</div>}
+          </div>
+          <div className="mb-3">
+            <label className="form-label fw-bold">Mật khẩu</label>
+            <input
+              type="password"
+              {...register("password")}
+              className={`form-control rounded-3 ${errors.password ? "is-invalid" : ""}`}
+              placeholder="Nhập mật khẩu"
+            />
+            {errors.password && <div className="invalid-feedback">{errors.password.message}</div>}
+          </div>
+          <button
+            type="submit"
+            className="btn btn-primary w-100 fw-bold shadow-sm rounded-3"
+            disabled={loading}
+            style={{ background: "linear-gradient(45deg, #4c6ef5, #5f3dc4)" }}
+          >
+            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+          </button>
+        </form>
+        <div className="text-center mt-3">
+          <a href="auth/forgot-password" className="text-decoration-none text-primary">Quên mật khẩu?</a>
+        </div>
+        <div className="text-center mt-2">
+          <span>Chưa có tài khoản? </span>
+          <a href="/register" className="text-decoration-none text-primary fw-bold">Đăng ký ngay</a>
+        </div>
       </div>
-    </form>
+    </div>
   );
 };
 

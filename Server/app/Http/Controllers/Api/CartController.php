@@ -16,7 +16,7 @@ class CartController
 
     public function index(Request $request)
     {
-        $this->authorize('viewAny', Cart::class);
+     //   $this->authorize('viewAny', Cart::class);
         try {
             $user = Auth::user();
             $session_id = session()->getId(); // Sử dụng session ID cho khách
@@ -53,7 +53,26 @@ class CartController
             ], 500);
         }
     }
+    public function countCart(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthorized',
+                'data' => 0,
+            ], 401);
+        }
+    
+        $count = Cart::where('user_id', $user->id)->count();
+        return response()->json([
+            'message' => 'Thành công',
+            'data' => $count,
+        ], 200);
+    }
+    
+    public function show($id){
 
+    }
     public function store(Request $request)
     {
         $request->validate([

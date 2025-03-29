@@ -35,9 +35,24 @@ const MainContent = () => {
   };
 
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [productsRes, categoriesRes] = await Promise.all([
+          getProducts(),
+          getCategories(),
+        ]);
+        setProducts(productsRes.data.data || []);
+        setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        // setLoading(false);
+      }
+    };
     fetchData();
   }, []);
 
+<<<<<<< HEAD
   const fetchData = async () => {
     try {
       const [productsRes, categoriesRes] = await Promise.all([
@@ -60,6 +75,8 @@ const MainContent = () => {
       setLoading(false);
     }
   };
+=======
+>>>>>>> b7e29bfe086bfe61d5c12c7a9f184a05e1f438bd
   const handleSubmit = () => {
     if (!selectedVariant) {
       alert("Vui lòng chọn biến thể.");
@@ -172,6 +189,7 @@ const MainContent = () => {
           </SwiperSlide>
         </Swiper>
       </div>
+<<<<<<< HEAD
       <ImageCollection />
       <h2 className="mb-4 text-center text-uppercase mt-5">
         --Tất cả sản phẩm--
@@ -179,16 +197,57 @@ const MainContent = () => {
       <div className="row g-4 mb-5">
         {loading ? (
           <p>Đang tải...</p>
+=======
+      < ImageCollection />
+      <h2 className="mb-4 text-center text-uppercase mt-5">--Tất cả sản phẩm--</h2>
+      <div className="row justify-content-center gap-4 mb-5">
+        {products.length === 0 ? (
+          <p className="text-center">Không có sản phẩm nào.</p>
+>>>>>>> b7e29bfe086bfe61d5c12c7a9f184a05e1f438bd
         ) : (
           products.map((product) => (
-            <div key={product.id} className="col-lg-3 col-md-4 col-sm-6">
-              <div className="card h-100 shadow-sm hover-card">
+            <div key={product.id} className="col-auto">
+              <div
+                className="card h-100 shadow-sm hover-card position-relative mx-auto mb-4"
+                style={{
+                  width: "260px", // Card rộng bằng ảnh + khoảng trống
+                  transition: "transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.05)";
+                  e.currentTarget.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.2)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
+                }}
+              >
+                {/* Icon trái tim */}
+                <div
+                  className="position-absolute top-0 end-0 m-2 p-2 rounded-circle bg-white shadow-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddToFavorites(product);
+                  }}
+                  style={{
+                    cursor: "pointer",
+                    zIndex: 10,
+                    transition: "color 0.2s ease-in-out",
+                  }}
+                >
+                  <i
+                    className={`fas fa-heart ${product.isFavorite ? "text-danger" : "text-muted"}`}
+                    style={{ fontSize: "1.2rem" }}
+                  ></i>
+                </div>
+
                 <div
                   onClick={() => handleProductClick(product.id)}
                   style={{ cursor: "pointer" }}
                 >
                   <div className="image-container">
                     <img
+<<<<<<< HEAD
                       src={
                         product.images
                           ? `http://127.0.0.1:8000/storage/${product.images}`
@@ -200,11 +259,22 @@ const MainContent = () => {
                         height: "300px",
                         width: "100%",
                         objectFit: "cover",
+=======
+                      src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://placehold.co/260x320"}
+                      className="card-img-top"
+                      alt={product.name}
+                      style={{
+                        height: "320px",
+                        width: "260px",
+                        objectFit: "cover",
+                        borderTopLeftRadius: "10px",
+                        borderTopRightRadius: "10px",
+>>>>>>> b7e29bfe086bfe61d5c12c7a9f184a05e1f438bd
                       }}
                     />
                   </div>
                   <div className="card-body text-center">
-                    <h5 className="card-title text-truncate">{product.name}</h5>
+                    <h5 className="card-title text-truncate fw-bold">{product.name}</h5>
                     <div className="price-container">
                       <h6 className="text-danger fw-bold mb-1">
                         {product.price
@@ -221,7 +291,7 @@ const MainContent = () => {
                 </div>
                 <div className="card-footer bg-transparent border-0 text-center pb-3">
                   <button
-                    className="btn btn-primary w-75 rounded-pill"
+                    className="btn btn-primary w-100 rounded-pill"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleShowModal(product);

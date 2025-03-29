@@ -23,7 +23,8 @@ class Discount extends Model
         'active',
         'used_count',
         'max_uses',
-       
+        'is_redeemed',
+        'can_be_redeemed_with_points'
     ];
 
     protected $casts = [
@@ -31,6 +32,15 @@ class Discount extends Model
         'end_date' => 'datetime',
         'active' => 'boolean',
     ];
+
+    public function user(){
+        return $this->belongsTo(User::class);
+    }
+    public function products()
+    {
+        return $this->belongsToMany(Product::class, 'discount_product');
+    }
+    
 
     /**
      * Kiểm tra xem mã giảm giá có hợp lệ hay không.
