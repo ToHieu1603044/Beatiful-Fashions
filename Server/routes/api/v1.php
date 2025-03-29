@@ -24,6 +24,8 @@ use App\Models\Order;
 use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\SlideController;
 
+use App\Http\Controllers\Api\WishlistController;
+
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use App\Models\Product;
@@ -209,8 +211,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
 });
 Route::apiResource('banners', BannerController::class);
-
-
-
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/wishlist', [WishlistController::class, 'index']); // Hiển thị sản phẩm yêu thích
+    Route::post('/wishlist/{product_id}', [WishlistController::class, 'store']); // Thêm sản phẩm vào danh sách yêu thích
+    Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']); // Xóa sản phẩm yêu thích
+});
 
 ?>
