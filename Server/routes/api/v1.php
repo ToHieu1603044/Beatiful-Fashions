@@ -11,14 +11,21 @@ use App\Http\Controllers\Api\MoMoController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrderReturnController;
+use App\Http\Controllers\Api\PdfController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
+
+use App\Models\Order;
+// use Barryvdh\DomPDF\Facade\Pdf;
+
 use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\SlideController;
+
 use App\Http\Controllers\Api\WishlistController;
+
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use App\Models\Product;
@@ -29,6 +36,7 @@ use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 Route::get('/', function () {
     return 'Hello World';
 });
+
 //Web
 Route::get('/momo/callback', [MoMoController::class, 'callback']);
 Route::get('/search', [ProductController::class, 'search']);
@@ -70,9 +78,13 @@ Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name(
 
 Route::middleware(['auth:sanctum'])->group(function () {
 
-    
+
+
+    Route::get('/orders/invoice', [PdfController::class, 'index']);
+    Route::get('carts/count', [CartController::class, 'countCart']);
     Route::apiResource('carts', CartController::class);
     Route::delete('carts', [CartController::class, 'clearCart']);
+
     Route::post('discounts/apply', [DiscountController::class, 'applyDiscount']);
     Route::get('/orders/{id}/return-details', [OrderController::class, 'fetchReturnDetails']);
     Route::post('redeem-points', [DiscountController::class, 'redeemPointsForVoucher']);
@@ -90,7 +102,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/orders/{id}/cancel', [OrderReturnController::class, 'cancelOrderReturn']);
     Route::get('/orders/list', [OrderController::class, 'orderUser']);
 
-   
     //Notification
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'deleteNotification']);
@@ -100,6 +111,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
+    Route::get('discounts', [DiscountController::class, 'index']);
     Route::post('discounts', [DiscountController::class, 'store']);
     Route::get('orders/returns', [OrderReturnController::class, 'index']);
     Route::patch('/order-returns/{id}/status', [OrderReturnController::class, 'updateStatus']);
@@ -153,6 +165,8 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::put('/orders/{id}/canceled', [OrderController::class, 'destroys']);
     Route::put('/orders/{id}/confirm-order', [OrderController::class, 'confirmOrder']);
     Route::post('/orders/{orderId}/return', [OrderReturnController::class, 'returnItem']);
+    Route::get('/product-sku/{id}', [AttributeController::class, 'productSku']);
+    Route::get('/sku', [AttributeController::class, 'sku']);
 
     Route::get('/roles', [RolePermissionController::class, 'indexRoles']);
     Route::get('/permissions', [RolePermissionController::class, 'indexPermissions']);
@@ -187,7 +201,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 // Cho phép tất cả mọi người xem danh sách và chi tiết đánh giá
 Route::get('/ratings', [RatingController::class, 'index']);
 Route::get('/ratings/{rating}', [RatingController::class, 'show']);
-Route::get('/ratings/product/{product_id}', [RatingController::class, 'getByProduct']);
+Route::get('/ratings/product/{id}', [RatingController::class, 'ratingByProduct']);
 Route::get('/ratings/user/{user_id}', [RatingController::class, 'getByUser']);
 
 // Yêu cầu đăng nhập mới được tạo, cập nhật, xóa đánh giá
@@ -197,10 +211,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
 });
 Route::apiResource('banners', BannerController::class);
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/wishlist', [WishlistController::class, 'index']); // Hiển thị sản phẩm yêu thích
     Route::post('/wishlist/{product_id}', [WishlistController::class, 'store']); // Thêm sản phẩm vào danh sách yêu thích
     Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']); // Xóa sản phẩm yêu thích
 });
+
 ?>

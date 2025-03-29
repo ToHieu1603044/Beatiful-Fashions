@@ -5,9 +5,10 @@ import Swal from "sweetalert2";
 import axios from "axios";
 
 const getAuthToken = () => localStorage.getItem("access_token");
-const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
+const EditOrderModal = ({ order, visible, onClose }) => {
   const [formData, setFormData] = useState({
-
+    id: "",
+    product_id: "",
     status: "",
     is_paid: false,
     payment_method: "",
@@ -18,12 +19,39 @@ const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
     district: "",
     ward: "",
     note: "",
+
     order_details: [],
   });
+  const [isSkuModalOpen, setIsSkuModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [skus, setSkus] = useState([]);
 
+  const openSkuModal = async (product) => {
+    setSelectedProduct(product);
+    setIsSkuModalOpen(true);
+
+    const token = getAuthToken();
+    try {
+      const response = await axios.get(
+        `http://127.0.0.1:8000/api/product-sku/${product.product_id}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+      console.log("Danh sách SKU nhận được:", response.data);
+      setSkus(response.data.message);
+
+    } catch (error) {
+      console.error("Lỗi khi lấy SKU:", error);
+      setSkus([]);
+    }
+  };
   useEffect(() => {
+    console.log("Order:", order);
     if (order) {
       setFormData({
+        id: order.id || "",
+        product_id: order.product_id || "",
         status: order.status || "",
         is_paid: order.is_paid || false,
         payment_method: order.payment_method || "",
@@ -39,6 +67,7 @@ const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
     }
   }, [order]);
   const [attributes, setAttributes] = useState([]);
+
 
   useEffect(() => {
     const fetchAttributes = async () => {
@@ -64,7 +93,7 @@ const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
     try {
       await updateOrder(order.id, formData);
       Swal.fire("Thành công!", "Cập nhật đơn hàng thành công.", "success");
-      refreshOrders();
+
       onClose();
     } catch (error) {
       console.error("Lỗi cập nhật đơn hàng:", error);
@@ -77,6 +106,7 @@ const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
       title={`Chỉnh sửa đơn hàng #${order?.id}`}
       open={visible}
       onCancel={onClose}
+      width={1000}
       footer={[
         <Button key="cancel" onClick={onClose}>
           Đóng
@@ -120,10 +150,15 @@ const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
           onChange={(e) => handleInputChange("ward", e.target.value)}
           placeholder="Phường/Xã"
         />
+        <Input
+          value={order.address}
+          onChange={(e) => handleInputChange("address", e.target.value)}
+          placeholder="Địa chỉ "
+        />
 
         <h6>Ghi chú:</h6>
         <Input.TextArea
-          value={formData.note}
+          value={order.note}
           onChange={(e) => handleInputChange("note", e.target.value)}
         />
 
@@ -173,41 +208,60 @@ const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
               key: "product_name",
             },
             {
+              title: "Product ID",
+              dataIndex: "product_id",
+              key: "product_id",
+              render: (product_id, record) => {
+                console.log("Dữ liệu từng dòng trong Table:", record);
+                return product_id || "Không có";
+              },
+            }
+            ,
+            {
+              title: "SKU",
+              dataIndex: "sku",
+              render: (sku, record) => (
+                <Button onClick={() => openSkuModal(record)}>Edit</Button>
+              )
+            }
+            ,
+            {
               title: "Biến thể",
               key: "variants",
               render: (item, record) => (
                 <Select
-                mode="multiple"
-                value={Object.keys(record.variant_details || {}).map(
-                  (key) => `${key}: ${record.variant_details[key]}`
-                )}
-                onChange={(values) => {
-                  const updatedVariants = values.reduce((acc, curr) => {
-                    const [key, value] = curr.split(": ");
-                    acc[key] = value;
-                    return acc;
-                  }, {});
-              
-                  const updatedOrderDetails = formData.order_details.map((od) =>
-                    od.id === record.id ? { ...od, variant_details: updatedVariants } : od
-                  );
-              
-                  setFormData({ ...formData, order_details: updatedOrderDetails });
-                }}
-                className="w-100"
-              >
-                {attributes.flatMap((attribute) =>
-                  attribute.values?.map((value) => (
-                    <Select.Option
-                      key={`${attribute.name}: ${value.value}`}
-                      value={`${attribute.name}: ${value.value}`}
-                    >
-                      {attribute.name}: {value.value}
-                    </Select.Option>
-                  ))
-                )}
-              </Select>
-              
+                  disabled
+                  mode="multiple"
+                  value={Object.keys(record.variant_details || {}).map(
+                    (key) => `${key}: ${record.variant_details[key]}`
+                  )}
+                  onChange={(values) => {
+                    const updatedVariants = values.reduce((acc, curr) => {
+                      const [key, value] = curr.split(": ");
+                      acc[key] = value;
+                      return acc;
+                    }, {});
+
+                    const updatedOrderDetails = formData.order_details.map((od) =>
+                      od.id === record.id ? { ...od, variant_details: updatedVariants } : od
+                    );
+
+                    setFormData({ ...formData, order_details: updatedOrderDetails });
+                  }}
+                  className="w-100"
+                >
+                  {attributes.flatMap((attribute) =>
+                    attribute.values?.map((value) => (
+                      <Select.Option
+                        key={`${attribute.name}: ${value.value}`}
+                        value={`${attribute.name}: ${value.value}`}
+                      >
+                        {attribute.name}: {value.value}
+                      </Select.Option>
+                    ))
+                  )}
+                </Select>
+
               ),
             },
             {
@@ -216,6 +270,7 @@ const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
               key: "quantity",
               render: (quantity, record) => (
                 <Input
+          
                   type="number"
                   min={1}
                   value={quantity}
@@ -248,6 +303,55 @@ const EditOrderModal = ({ order, visible, onClose, refreshOrders }) => {
           ]}
         />
       </div>
+      <Modal
+        title={`Chọn SKU cho ${selectedProduct?.name}`}
+        open={isSkuModalOpen}
+        onCancel={() => setIsSkuModalOpen(false)}
+        footer={null}
+      >
+        <Select
+          className="w-100"
+          value={selectedProduct?.sku}
+          onChange={(value) => {
+            // Tìm SKU được chọn trong danh sách skus
+            const selectedSku = skus.find((s) => s.sku === value);
+
+            if (!selectedSku) return;
+
+            // Lấy danh sách biến thể từ attributes của SKU
+            const updatedVariants = selectedSku.attributes.reduce((acc, attr) => {
+              acc[attr.name] = attr.value;
+              return acc;
+            }, {});
+
+            // Cập nhật order_details
+            const updatedOrderDetails = formData.order_details.map((item) =>
+              item.id === selectedProduct.id // Tìm sản phẩm theo ID
+                ? {
+                  ...item,
+                  sku: selectedSku.sku,
+                  variant_details: updatedVariants,
+                  price: selectedSku.price, // Cập nhật giá theo SKU mới
+                  subtotal: selectedSku.price * item.quantity, // Cập nhật tổng tiền
+                }
+                : item
+            );
+
+            setFormData({ ...formData, order_details: updatedOrderDetails });
+
+            setIsSkuModalOpen(false); // Đóng modal sau khi chọn SKU
+          }}
+        >
+          {skus &&
+            Array.isArray(skus) &&
+            skus.map((s) => (
+              <Select.Option key={s.id} value={s.sku}>
+                {s.sku} - {s.price.toLocaleString("vi-VN")} VND
+              </Select.Option>
+            ))}
+        </Select>
+      </Modal>
+
     </Modal>
   );
 };
