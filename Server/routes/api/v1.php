@@ -17,8 +17,15 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
+
 use App\Models\Order;
 // use Barryvdh\DomPDF\Facade\Pdf;
+
+use App\Http\Controllers\Api\BannerController;
+use App\Http\Controllers\Api\SlideController;
+
+use App\Http\Controllers\Api\WishlistController;
+
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use App\Models\Product;
@@ -107,6 +114,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/revenue', [DashboardController::class, 'revenueStats']);
 
+    Route::apiResource('slides', SlideController::class); //Slide
     // User
     Route::get('/users', [UserController::class, 'index']);
 
@@ -196,4 +204,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/ratings/{rating}', [RatingController::class, 'update']);
     Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
 });
+
+Route::apiResource('banners', BannerController::class);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/wishlist', [WishlistController::class, 'index']); // Hiển thị sản phẩm yêu thích
+    Route::post('/wishlist/{product_id}', [WishlistController::class, 'store']); // Thêm sản phẩm vào danh sách yêu thích
+    Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']); // Xóa sản phẩm yêu thích
+});
+
 ?>

@@ -5,14 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Slide extends Model
-{
+class Banner extends Model {
     use HasFactory;
 
-    protected $fillable = [
-        'title',
-        'description',
-        'images',
-        'order',
-    ];
+    protected $fillable = ['title', 'image', 'description', 'status'];
 }
