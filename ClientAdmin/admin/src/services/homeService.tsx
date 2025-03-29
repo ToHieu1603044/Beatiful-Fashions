@@ -86,6 +86,39 @@ export const getUserProfile = async () => {
   });
 };
 
+// Hàm đổi mật khẩu
+
+
+export const changePassword = async (data: { oldPassword: string; newPassword: string; newPassword_confirmation: string }) => {
+  const token = localStorage.getItem("access_token"); // Đồng nhất với các API khác
+  return await axios.post(`${API_BASE_URL}/change-password`, data, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+
+
+// Định nghĩa kiểu dữ liệu cho thông tin user
+interface UserProfileUpdate {
+  phone?: string;
+  address?: string;
+  city?: string;
+  district?: string;
+  ward?: string;
+}
+
+export const updateUserProfile = async (updatedData: UserProfileUpdate) => {
+  const token = localStorage.getItem("access_token");
+
+  return axios.put(
+    `${API_BASE_URL}/update-profile`,  // Sử dụng API_BASE_URL
+    updatedData, 
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+};
+
 
 export const getCart = async () => {
   const token = getAuthToken();
