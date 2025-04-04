@@ -11,8 +11,10 @@ use App\Models\ProductSku;
 use App\Models\Attribute;
 use App\Models\AttributeOption;
 use App\Models\AttributeOptionSku;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
@@ -162,9 +164,10 @@ class ProductController extends Controller
     }
 
     public function update(ProductRequest $request, $id)
-    {     \Log::info($request->all());
+    {
+        \Log::info($request->all());
         $validated = $request->validated();
-   
+
         DB::beginTransaction();
 
         try {
@@ -321,4 +324,40 @@ class ProductController extends Controller
         $products = Product::searchElasticsearch($query);
         return response()->json($products);
     }
+    public function status(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
+
+        $validate = Validator::make($request->all(), [
+            'active' => 'required|boolean'
+        ]);
+
+        if ($validate->fails()) {
+            return ApiResponse::errorResponse(422, $validate->errors());
+        }
+
+        $product->update([
+            'active' => $request->active
+        ]);
+
+        Cache::forget("products_cache");
+
+        Cache::tags(['products_cache'])->flush();
+
+        if (config('cache.default') === 'redis') {
+            $this->clearProductsCache();
+        }
+        Cache::flush();
+        return ApiResponse::responseSuccess('Cập nhật trạng thái thành công');
+    }
+
+    private function clearProductsCache()
+    {
+        $redis = Cache::getRedis();
+        $keys = $redis->keys('products_cache');
+        foreach ($keys as $key) {
+            $redis->del($key);
+        }
+    }
+
 }

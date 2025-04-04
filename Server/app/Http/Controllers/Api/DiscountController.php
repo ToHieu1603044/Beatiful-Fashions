@@ -20,9 +20,9 @@ class DiscountController
     public function index()
     {
         try {
-            $discounts = Discount::with('products')->get();
+            $discounts = Discount::with('products')->paginate(5);
 
-            return response()->json(['data' => $discounts], 200);
+            return response()->json( $discounts, 200);
         } catch (\Throwable $th) {
 
             return response()->json(['message' => $th->getMessage()], 500);

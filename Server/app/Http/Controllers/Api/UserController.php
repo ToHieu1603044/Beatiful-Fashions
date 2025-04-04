@@ -9,13 +9,15 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
+
 
 class UserController extends Controller
 {
     // Lấy danh sách users
     public function index()
     {
-       $users = User::paginate(10);
+       $users = User::all();
 
        return ApiResponse::responsePage(UserResource::collection($users));
     }
@@ -28,13 +30,13 @@ class UserController extends Controller
         'email' => 'required|string|email|max:255|unique:users',
         'password' => 'required|string|min:6|confirmed',
         
-        'phone' => 'required|string|max:15',
-        'address' => 'required|string|max:255',
-        'city' => 'required|string|max:100',
-        'ward' => 'required|string|max:100',
-        'district' => 'required|string|max:100',
+        'phone' => 'nullable|string|max:15',
+        'address' => 'nullable|string|max:255',
+        'city' => 'nullable|string|max:100',
+        'ward' => 'nullable|string|max:100',
+        'district' => 'nullable|string|max:100',
         'zip_code' => 'nullable|string|max:10',
-        'active' => 'required|boolean',
+        'active' => 'nullable|boolean',
         'roles' => 'nullable|array', 
         'roles.*' => 'string|exists:roles,name',
     ]);
@@ -87,13 +89,13 @@ class UserController extends Controller
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|string|email|max:255|unique:users,email,' . $id,
             'password' => 'sometimes|string|min:6|confirmed',
-            'phone' => 'required|string|max:15',
-            'address' => 'required|string|max:255',
-            'city' => 'required|string|max:100',
-            'ward' => 'required|string|max:100',
-            'district' => 'required|string|max:100',
+            'phone' => 'nullable|string|max:15',
+            'address' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'ward' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
             'zip_code' => 'nullable|string|max:10',
-            'active' => 'required|boolean',
+            'active' => 'nullable|boolean',
             'roles' => 'nullable|array', 
             'roles.*' => 'string|exists:roles,name',
         ]);
@@ -140,5 +142,41 @@ class UserController extends Controller
     // Trả về thông tin người dùng
     return ApiResponse::responseObject(new UserResource($user));
  }
+
+ public function updateProfile(Request $request) {
+    $request->validate([
+        'phone' => 'nullable|string|max:15',
+        'address' => 'nullable|string|max:255',
+        'city' => 'nullable|string|max:100',
+        'district' => 'nullable|string|max:100',
+        'ward' => 'nullable|string|max:100',
+    ]);
+
+    $user = Auth::user();
+    $user->update($request->only(['phone', 'address', 'city', 'district', 'ward']));
+
+    return response()->json(['message' => 'Cập nhật thành công!', 'user' => $user]);
+}
+
+//Đổi mật khẩu
+ public function changePassword(Request $request)
+    {
+        $request->validate([
+            'oldPassword' => 'required',
+            'newPassword' => 'required|min:6|confirmed',
+        ]);
+
+        $user = Auth::user();
+
+        if (!Hash::check($request->oldPassword, $user->password)) {
+            return response()->json(['message' => 'Mật khẩu cũ không đúng!'], 400);
+        }
+
+        $user->password = Hash::make($request->newPassword);
+        $user->save();
+
+        return response()->json(['message' => 'Đổi mật khẩu thành công!']);
+    }
+
 
 }

@@ -118,6 +118,11 @@ const Header = () => {
 
             <li className="nav-item">
               <a className="nav-link text-white" href="/whislist" onClick={(e) => { e.preventDefault(); checkLogin(); }}>
+            
+              </a>
+            </li>
+            <li className="nav-item">
+              <a className="nav-link text-white" href="/whislist" onClick={(e) => { e.preventDefault(); checkLogin(); }}>
               <Heart className="w-5 h-5 text-red-500 mr-2" />
               </a>
             </li>

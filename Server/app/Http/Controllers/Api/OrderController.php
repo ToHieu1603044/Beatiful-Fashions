@@ -78,16 +78,18 @@ class OrderController
     }
     public function store(Request $request)
     {
+        \Log::info($request->all());
         $request->validate([
             'payment_method' => 'required|in:cod,online',
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'required|string|max:15',
             'city' => 'required|string|max:255',
-            'district' => 'required|string|max:255',
-            'ward' => 'required|string|max:255',
+            'district_name' => 'required|string|max:255',
+            'ward_name' => 'required|string|max:255',
             'note' => 'nullable|string|max:500',
             'discount_code' => 'nullable|string|max:50',
+            'address' => 'required|string|max:50',
         ]);
 
         try {
@@ -122,7 +124,7 @@ class OrderController
                 'city' => $request->city,
                 'address' => $request->address,
                 'district' => $request->district_name,
-                'ward' => $request->ward,
+                'ward' => $request->ward_name,
                 'note' => $request->note,
             ]);
 
@@ -135,8 +137,13 @@ class OrderController
                     return ApiResponse::errorResponse(400, "Sản phẩm '{$cart->sku_id}' không đủ hàng.");
                 }
 
+                // Kiểm tra giá khuyến mãi Flash Sale
+                $flashSalePrice = $sku->product->flashSales->first()?->pivot->discount_price;
+                $price = $flashSalePrice ?? $sku->price;
+
+                // Lưu thông tin chi tiết sản phẩm
                 $variantDetails = $sku->attributeOptions->pluck('value', 'attribute.name')->toArray();
-                $subtotal = $sku->price * $cart->quantity;
+                $subtotal = $price * $cart->quantity;
 
                 OrderDetail::create([
                     'order_id' => $order->id,
@@ -145,21 +152,42 @@ class OrderController
                     'product_name' => $sku->product->name,
                     'variant_details' => json_encode($variantDetails),
                     'quantity' => $cart->quantity,
-                    'price' => $sku->price,
+                    'price' => $price,
                     'subtotal' => $subtotal,
                 ]);
 
-                if ($sku->product) {
-                    $sku->product->increment('total_sold', $cart->quantity);
-                } else {
-                    \Log::error("Không tìm thấy sản phẩm cho SKU ID: " . $sku->id);
-                }
+                $sku->product->increment('total_sold', $cart->quantity);
 
                 $sku->decrement('stock', $cart->quantity);
 
+                $flashSale = $sku->product->flashSales->first(); 
+                \Log::info('Flash Sale: ', ['flashSale' => $flashSale]);
+
+                if ($flashSale) {
+                    // Lấy sản phẩm trong Flash Sale
+                    $flashSaleProduct = $flashSale->products()->where('product_id', $sku->product_id)->first();
+
+                    \Log::info('Flash Sale Product: ', ['flashSaleProduct' => $flashSaleProduct]);
+
+                    if ($flashSaleProduct) {
+        
+                        $quantityInFlashSale = $flashSaleProduct->pivot->quantity; 
+                        \Log::info('Số lượng trong Flash Sale: ', ['quantityInFlashSale' => $quantityInFlashSale]);
+
+                        if ($quantityInFlashSale >= $cart->quantity) {
+            
+                            $flashSaleProduct->pivot->quantity -= $cart->quantity; 
+                            $flashSaleProduct->pivot->save(); 
+                        } else {
+                            DB::rollBack();
+                            return ApiResponse::errorResponse(400, 'Không đủ số lượng trong chương trình Flash Sale.');
+                        }
+                    }
+
+                }
+
                 $totalAmount += $subtotal;
             }
-
 
             if ($request->has('discount')) {
                 $discount = Discount::where('code', $request->discount)
@@ -171,13 +199,13 @@ class OrderController
                         'user_id' => $user->id,
                         'discount_id' => $discount->id,
                     ]);
-
                     $discount->increment('used_count');
                 }
             }
 
+            // Cập nhật tổng số tiền của đơn hàng
             $order->update([
-                'total_amount' => $request->total_amount,
+                'total_amount' => $totalAmount ? $totalAmount : $request->total_amount,
                 'discount_code' => $request->discount,
                 'discount_amount' => $request->priceDiscount,
             ]);
@@ -197,6 +225,7 @@ class OrderController
                 return ApiResponse::errorResponse(500, 'Không thể tạo thanh toán MoMo.');
             }
 
+            // Xóa giỏ hàng
             Cart::where(function ($query) use ($user, $session_id) {
                 if ($user) {
                     $query->where('user_id', $user->id);
@@ -205,20 +234,11 @@ class OrderController
                 }
             })->delete();
 
-            if (!$order) {
-                return response()->json(['message' => 'Không tìm thấy đơn hàng!'], 400);
-            }
-
-            \Log::info('Gửi mail với order:', ['order' => $order->toArray()]);
-
-            // Mail::to("tthieu160304@gmail.com")->send(new OrderPaidMail($order));
-
             OrderCreated::dispatch($order);
 
             return ApiResponse::responseSuccess($order, 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return ApiResponse::errorResponse(500, 'Lỗi khi đặt hàng: ' . $e->getMessage());
         }
     }
 

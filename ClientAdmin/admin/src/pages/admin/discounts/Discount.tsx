@@ -11,6 +11,8 @@ const Discount = () => {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [form] = Form.useForm();
     const [isRedeemable, setIsRedeemable] = useState(false);
+    const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+
     const columns = [
         {
             title: "Tên mã",
@@ -57,14 +59,38 @@ const Discount = () => {
             title: "Ngày tạo",
             dataIndex: "start_date",
             key: "start_date",
+            render: (value) => moment(value).format("YYYY-MM-DD HH:mm:ss"),
 
         },
         {
             title: "Ngày hết hạn",
             dataIndex: "end_date",
-            key: "end_date",
+            render: (value) => moment(value).format("YYYY-MM-DD HH:mm:ss"),
 
         },
+        {
+            title: "Còn lại",
+            dataIndex: "end_date",
+            render: (value, record) => {
+                if (!value) return "Không có ngày hết hạn";
+        
+                const now = moment();
+                const startDate = moment(record.start_date);
+                const endDate = moment(value);
+        
+                if (startDate.isAfter(now)) {
+                    return "Chưa bắt đầu";  // Nếu ngày bắt đầu trong tương lai
+                }
+        
+                if (endDate.isBefore(now)) {
+                    return "Đã hết hạn";  // Nếu ngày hết hạn đã qua
+                }
+        
+                const diff = endDate.diff(now, "days");
+                return `${diff} ngày`;  // Nếu còn hạn, hiển thị số ngày còn lại
+            },
+        },
+        
         {
             title: "Hành động",
             key: "actions",
@@ -78,24 +104,32 @@ const Discount = () => {
     ];
 
     useEffect(() => {
-        fetchDiscounts();
+        fetchDiscounts(1);
     }, []);
 
-    const fetchDiscounts = async () => {
-        try {
-            const response = await getDiscounts();
-            if (Array.isArray(response.data.data)) {
-                setDiscounts(response.data.data);
+    const fetchDiscounts = async (page = 1) => {
+        setLoading(true);
 
-                console.log("Discounts fetched successfully:", response.data.data);
+        try {
+            const response = await getDiscounts(page);
+            const { data, current_page, per_page, total } = response?.data;
+
+            if (Array.isArray(data)) {
+                setDiscounts(data);
+                setPagination(prev => ({
+                    ...prev,
+                    current: current_page,
+                    pageSize: per_page,
+                    total
+                }));
             } else {
-                console.error("Expected an array of discounts, but got:", response.data.data);
+                console.error("Dữ liệu API không đúng định dạng:", response.data);
                 setDiscounts([]);
             }
-            setLoading(false);
         } catch (error) {
-            console.error("Error fetching discounts:", error);
+            console.error("Lỗi khi tải danh sách mã giảm giá:", error);
             setDiscounts([]);
+        } finally {
             setLoading(false);
         }
     };
@@ -164,7 +198,14 @@ const Discount = () => {
                         columns={columns}
                         dataSource={discounts}
                         rowKey="id"
-                        pagination={false}
+                        pagination={{
+                            current: pagination.current,
+                            pageSize: pagination.pageSize,
+                            total: pagination.total,
+                            onChange: (page) => {
+                                fetchDiscounts(page);
+                            },
+                        }}
                     />
                 </Card>
             )}
@@ -198,9 +239,17 @@ const Discount = () => {
                                 </Select>
                             </Form.Item>
 
-                            <Form.Item label="Giá trị" name="value" rules={[{ required: true, message: 'Giá trị không được để trống!' }]}>
-                                <InputNumber min={1} max={100} />
+                            <Form.Item
+                                label="Giá trị"
+                                name="value"
+                                rules={[{ required: true, message: 'Giá trị không được để trống!' }]}
+                            >
+                                <InputNumber
+                                    min={1}
+                                    max={form.getFieldValue("discount_type") === "percentage" ? 100 : 10000000} 
+                                />
                             </Form.Item>
+
 
                             <Form.Item label="Giảm Tối Đa" name="max_discount">
                                 <InputNumber min={0} />
@@ -254,7 +303,6 @@ const Discount = () => {
                                 <Checkbox onChange={(e) => setIsRedeemable(e.target.checked)}>Cho phép đổi điểm</Checkbox>
                             </Form.Item>
 
-                            {/* 🟠 Chỉ hiển thị khi is_redeemable = true */}
                             {isRedeemable && (
                                 <Form.Item label="Số điểm cần để đổi" name="can_be_redeemed_with_points" rules={[{ required: true, message: 'Vui lòng nhập số điểm!' }]}>
                                     <InputNumber min={1} />

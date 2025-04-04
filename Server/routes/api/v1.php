@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DiscountController;
+use App\Http\Controllers\Api\FlashSaleController;
+use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\MoMoController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderController;
@@ -47,6 +49,7 @@ Route::get('/provinces', function () {
     $response = Http::get("https://provinces.open-api.vn/api/p/");
     return response()->json($response->json());
 });
+Route::post('/ghn/calculate-fee', [LocationController::class, 'calculateShippingFee']);
 
 Route::get('/provinces/{province}', function (Request $request, $province) {
     $depth = $request->query('depth', 1);
@@ -63,6 +66,9 @@ Route::get('/districts/{district}', function (Request $request, $district) {
     ]);
     return response()->json($response->json());
 });
+Route::get('/ghn/provinces', [LocationController::class, 'provinces']);
+Route::post('/ghn/districts', [LocationController::class, 'districts']);
+Route::post('/ghn/wards', [LocationController::class, 'wards']);
 
 //Auth
 Route::post('/login', [AuthController::class, 'login']);
@@ -134,7 +140,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::put('/products/{id}', [ProductController::class, 'update']);
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
-
+    Route::put('/products/{id}/update-status', [ProductController::class, 'status']);
     //Categories
     Route::apiResource('categories', CategoryController::class);
     Route::put('/categories/{id}', [CategoryController::class, 'update']);
@@ -190,6 +196,8 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::get('/roles/{id}/permissions', [RolePermissionController::class, 'getRolePermissions'])->middleware('role:admin');
 
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
+
+    Route::get('/flash-sales', [FlashSaleController::class, 'index']);
 });
 
 // Cho phép tất cả mọi người xem danh sách và chi tiết đánh giá
