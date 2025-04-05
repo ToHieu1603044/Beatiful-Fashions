@@ -113,7 +113,7 @@ export const updateUserProfile = async (updatedData: UserProfileUpdate) => {
   const token = localStorage.getItem("access_token");
 
   return axios.put(
-    `${API_BASE_URL}/update-profile`,  // Sử dụng API_BASE_URL
+    `${API_BASE_URL}/update-profile`,  
     updatedData, 
     { headers: { Authorization: `Bearer ${token}` } }
   );

@@ -5,12 +5,13 @@ const API_URL = "http://localhost:8000/api/discounts";
 // Lấy token từ localStorage
 const getAuthToken = () => localStorage.getItem("access_token");
 
-export const getDiscounts = async () => {
+export const getDiscounts = async (page: number) => {
   const token = getAuthToken();
-  return await axios.get(API_URL, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  return await axios.get(`${API_URL}?page=${page}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 };
+
 
 export const getCategoryById = async (id: number) => {
   const token = getAuthToken();

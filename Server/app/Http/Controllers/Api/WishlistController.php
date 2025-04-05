@@ -10,7 +10,6 @@ use App\Helpers\ApiResponse;
 use App\Http\Resources\ProductResource;
 use App\Traits\ApiDataTrait;
 use Illuminate\Database\Eloquent\Model;
-
 use Illuminate\Http\Request;
 
 use App\Models\Wishlist;
@@ -28,9 +27,7 @@ class WishlistController extends Controller
     public function index(Request $request)
     {
         try {
-
             $userId = auth()->id();
-
     
             if (!$userId) {
                 return response()->json([
