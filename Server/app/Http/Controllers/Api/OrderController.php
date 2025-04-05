@@ -203,7 +203,6 @@ class OrderController
                 }
             }
 
-            // Cập nhật tổng số tiền của đơn hàng
             $order->update([
                 'total_amount' => $totalAmount ? $totalAmount : $request->total_amount,
                 'discount_code' => $request->discount,

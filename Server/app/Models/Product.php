@@ -71,8 +71,6 @@ class Product extends Model
         return $this->belongsToMany(Attribute::class, 'attribute_option_sku', 'attribute_id', 'attribute_option_id');
     }
 
-
-
     public function attributeOptions()
     {
         return $this->hasManyThrough(

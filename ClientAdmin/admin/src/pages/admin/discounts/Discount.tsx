@@ -90,8 +90,8 @@ const Discount = () => {
                 return `${diff} ngày`;  // Nếu còn hạn, hiển thị số ngày còn lại
             },
         },
-        
         {
+
             title: "Hành động",
             key: "actions",
             render: (record: any) => (
@@ -238,7 +238,6 @@ const Discount = () => {
                                     <Select.Option value="fixed">Cố định</Select.Option>
                                 </Select>
                             </Form.Item>
-
                             <Form.Item
                                 label="Giá trị"
                                 name="value"
@@ -249,8 +248,6 @@ const Discount = () => {
                                     max={form.getFieldValue("discount_type") === "percentage" ? 100 : 10000000} 
                                 />
                             </Form.Item>
-
-
                             <Form.Item label="Giảm Tối Đa" name="max_discount">
                                 <InputNumber min={0} />
                             </Form.Item>
@@ -302,7 +299,6 @@ const Discount = () => {
                             <Form.Item label="Có thể đổi bằng điểm?" name="is_redeemable" valuePropName="checked">
                                 <Checkbox onChange={(e) => setIsRedeemable(e.target.checked)}>Cho phép đổi điểm</Checkbox>
                             </Form.Item>
-
                             {isRedeemable && (
                                 <Form.Item label="Số điểm cần để đổi" name="can_be_redeemed_with_points" rules={[{ required: true, message: 'Vui lòng nhập số điểm!' }]}>
                                     <InputNumber min={1} />

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Helpers\ApiResponse;
+use App\Http\Resources\ProductResource;
+use App\Models\Product;
 use App\Http\Controllers\Api\Controller;
 use App\Helpers\ApiResponse;
 use App\Http\Resources\ProductResource;
@@ -80,8 +83,8 @@ class WishlistController extends Controller
             'wishlist' => $wishlist,
             'message' => 'Sản phẩm đã được thêm vào danh sách yêu thích'
         ], 201);
-    }
 
+    }
     // Xóa sản phẩm khỏi danh sách yêu thích
     public function destroy($id)
     {

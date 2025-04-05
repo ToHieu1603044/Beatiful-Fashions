@@ -49,6 +49,8 @@ import Whislish from "./pages/client/Whishlish";
 import Whishlish from "./pages/client/Whishlish";
 import Comment from "./pages/admin/comments/Comment";
 import Settings from "./pages/admin/Settings";
+import Comments from "./pages/admin/comments/Comments";
+
 
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const role = localStorage.getItem("role");
@@ -125,6 +127,7 @@ function App() {
         { path: "permissions/create", element: <PermissionsAdd /> },
         { path: "permissions/:id/edit", element: <PermissionsEdit /> },
         { path: "settings", element: <Settings />, },
+        { path: "comments", element: <Comments /> },
         { path: "discounts", element: <Discount />, },
       ],
     },

@@ -39,26 +39,48 @@ class CategoryController extends Controller
     }
     public function indexWeb(Request $request)
     {
-        $cacheKey = 'categories_' . md5(json_encode($request->all()));
-    
-        $categories = Cache::remember($cacheKey, 600, function () use ($request) {
-            $query = Category::query();
-    
-            if ($request->has('search') && $request->search) {
-                $query->where('name', 'like', '%' . $request->search . '%');
-            }
-    
-            if ($request->has('parent_id') && $request->parent_id !== 'all') {
-                $query->where('parent_id', $request->parent_id);
-            }
-    
-            return $query->get();
-        });
-    
+      
+        $query = Category::query();
+
+        // Lọc theo tên
+        if ($request->has('search') && $request->search) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        // Lọc theo danh mục cha (nếu parent_id là số, lọc theo danh mục cha, nếu 'all' thì lấy tất cả)
+        if ($request->has('parent_id') && $request->parent_id !== 'all') {
+            $query->where('parent_id', $request->parent_id);
+        }
+
+        $categories = $query->get();
+
+        // Xây dựng cây danh mục
         $tree = $this->buildCategoryTree($categories);
-    
+
         return response()->json($tree);
     }
+    // public function indexWeb(Request $request)
+    // {
+    //     $cacheKey = 'categories_' . md5(json_encode($request->all()));
+    
+    //     $categories = Cache::remember($cacheKey, 600, function () use ($request) {
+    //         $query = Category::query();
+    
+    //         if ($request->has('search') && $request->search) {
+    //             $query->where('name', 'like', '%' . $request->search . '%');
+    //         }
+    
+    //         if ($request->has('parent_id') && $request->parent_id !== 'all') {
+    //             $query->where('parent_id', $request->parent_id);
+    //         }
+    
+    //         return $query->get();
+    //     });
+    
+    //     $tree = $this->buildCategoryTree($categories);
+    
+    //     return response()->json($tree);
+    // }
     
     private function buildCategoryTree($categories, $parentId = null)
     {

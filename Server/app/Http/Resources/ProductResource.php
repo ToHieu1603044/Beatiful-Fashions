@@ -30,9 +30,11 @@ class ProductResource extends JsonResource
             'active' => $this->active,
             'images' => $this->images,
             'galleries' => $this->galleries,
+
             'price' => $this->skus->min('price'), // Giá sản phẩm, nếu có giá giảm thì lấy giá giảm
             'old_price' => $this->skus->max('old_price'), // Giá cũ của sản phẩm
             'sale_price' => $flashSalePrice,
+
             'total_sold' => $this->total_sold,
             'total_rating' => $this->total_rating,
             'description' => $this->description,
