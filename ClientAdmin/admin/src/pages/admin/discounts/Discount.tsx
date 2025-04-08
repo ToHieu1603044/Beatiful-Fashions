@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { getDiscounts } from '../../../services/discountsService';
-import { Table, Spin, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message, Card, Checkbox, Row, Col } from "antd";
+import { Table, Spin, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message, Card, Checkbox, Row, Col, Switch } from "antd";
 import moment from 'moment';
 import { createDiscount } from '../../../services/discountsService';
 import { getProducts } from '../../../services/productService';
+import axios from 'axios';
 
 const Discount = () => {
     const [discounts, setDiscounts] = useState([]);
@@ -12,6 +13,35 @@ const Discount = () => {
     const [form] = Form.useForm();
     const [isRedeemable, setIsRedeemable] = useState(false);
     const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+    const handleDeleteDiscount = async (id) => {
+        const confirmDelete = confirm('Bạn có chắc chắn muốn xoá không?');
+        if (!confirmDelete) return;
+    
+        try {
+            const response = await axios.delete(`http://127.0.0.1:8000/api/discounts/${id}`);
+            if (response.status === 200 || response.status === 204) {
+                alert('Xoá thành công');
+                setDiscounts(prev => prev.filter(discount => discount.id !== id));
+            } else {
+                alert('Xoá thất bại');
+            }
+        } catch (error) {
+            console.error('Lỗi xoá:', error);
+            alert('Đã xảy ra lỗi khi xoá. Vui lòng thử lại.');
+        }
+    }
+  const handleToggleStatus = async (discounts) => {
+      try {
+        const newStatus = discounts.active ? 0 : 1; 
+         await axios.put(`http://127.0.0.1:8000/api/discounts/${id}`,newStatus);
+        message.success("Cập nhật trạng thái thành công!");
+        fetchProducts(); 
+      } catch (error) {
+        console.error("Lỗi khi cập nhật trạng thái:", error);
+        message.error("Lỗi khi cập nhật trạng thái!");
+      }
+    };
+
 
     const columns = [
         {
@@ -50,11 +80,16 @@ const Discount = () => {
             render: (value) => `${value} VNĐ`,
         },
         {
-            title: "Trạng thái ",
+            title: "Trạng thái",
             dataIndex: "active",
             key: "active",
-            render: (active) => (active ? "Kích hoạt " : "Khóa "),
-        },
+            render: (active, record) => (
+              <Switch
+                checked={active === true || active === 1} 
+                onChange={() => handleToggleStatus(record)}
+              />
+            ),
+          },
         {
             title: "Ngày tạo",
             dataIndex: "start_date",
@@ -79,15 +114,15 @@ const Discount = () => {
                 const endDate = moment(value);
         
                 if (startDate.isAfter(now)) {
-                    return "Chưa bắt đầu";  // Nếu ngày bắt đầu trong tương lai
+                    return "Chưa bắt đầu";  
                 }
         
                 if (endDate.isBefore(now)) {
-                    return "Đã hết hạn";  // Nếu ngày hết hạn đã qua
+                    return "Đã hết hạn";  
                 }
         
                 const diff = endDate.diff(now, "days");
-                return `${diff} ngày`;  // Nếu còn hạn, hiển thị số ngày còn lại
+                return `${diff} ngày`;  
             },
         },
         {
@@ -97,7 +132,8 @@ const Discount = () => {
             render: (record: any) => (
                 <Button.Group>
                     <Button type="primary">Edit</Button>
-                    <Button danger>Delete</Button>
+                    <Button danger onClick={() => handleDeleteDiscount(record.id)}>Delete</Button>
+
                 </Button.Group>
             ),
         },
