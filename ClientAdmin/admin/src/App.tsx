@@ -47,11 +47,11 @@ import OrderReturns from "./pages/client/OrderReturns";
 import ForgotPassword from "./pages/client/FogotPassword";
 import Whislish from "./pages/client/Whishlish";
 import Whishlish from "./pages/client/Whishlish";
+import Index from "./pages/admin/sales/Index";
 import Comment from "./pages/admin/comments/Comment";
 import Settings from "./pages/admin/Settings";
 import Comments from "./pages/admin/comments/Comments";
-
-
+import Sales from "./pages/admin/sales/Sales";
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const role = localStorage.getItem("role");
   const token = localStorage.getItem("access_token"); 
@@ -129,6 +129,7 @@ function App() {
         { path: "settings", element: <Settings />, },
         { path: "comments", element: <Comments /> },
         { path: "discounts", element: <Discount />, },
+        { path: "sales", element: <Sales />, },
       ],
     },
     {
@@ -146,8 +147,9 @@ function App() {
         { path: "account", element: <Profile /> },
         { path: "searchs", element: <SearchProducts /> },
         { path: "orders/return", element: <OrderReturns /> },
+        { path: "whishlish", element: <Whishlish /> },
+        {path: "sales", element: <Index />},
         { path: "whislist", element: <Whishlish /> },
-       
       ],
     },
     {

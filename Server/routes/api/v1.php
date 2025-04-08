@@ -77,7 +77,7 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name('password.reset');
 
 Route::middleware(['auth:sanctum'])->group(function () {
-
+    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
     Route::get('/orders/invoice', [PdfController::class, 'index']);
     Route::get('carts/count', [CartController::class, 'countCart']);
     Route::apiResource('carts', CartController::class);
@@ -197,10 +197,12 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
 
-    Route::get('/flash-sales', [FlashSaleController::class, 'index']);
 });
-
-// Cho phép tất cả mọi người xem danh sách và chi tiết đánh giá
+Route::get('/flash-sales', [FlashSaleController::class, 'index']);
+Route::get('/count-down', [FlashSaleController::class, 'countDown']);
+Route::post('/flash-sales', [FlashSaleController::class, 'store']);
+Route::get('/sales', [FlashSaleController::class, 'sales']);
+Route::get('/flash-sales/products', [FlashSaleController::class, 'getNameProduct']);
 Route::get('/ratings', [RatingController::class, 'index']);
 Route::get('/ratings/{rating}', [RatingController::class, 'show']);
 Route::get('/ratings/product/{id}', [RatingController::class, 'ratingByProduct']);
@@ -216,8 +218,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 Route::apiResource('banners', BannerController::class);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/wishlist', [WishlistController::class, 'index']); // Hiển thị sản phẩm yêu thích
-    Route::post('/wishlist/{product_id}', [WishlistController::class, 'store']); // Thêm sản phẩm vào danh sách yêu thích
+    Route::post('/wishlist', [WishlistController::class, 'store']); // Thêm sản phẩm vào danh sách yêu thích
     Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']); // Xóa sản phẩm yêu thích
+    Route::get('/check-favorite', [WishlistController::class, 'checkFavorite']);
+   
+
 });
+Route::middleware('auth:sanctum')->get('/favorites', [WishlistController::class, 'getFavorites']);
+
+Route::middleware('auth:sanctum')->post('/toggle-favorite', [WishlistController::class, 'toggleFavorite']);
 
 ?>

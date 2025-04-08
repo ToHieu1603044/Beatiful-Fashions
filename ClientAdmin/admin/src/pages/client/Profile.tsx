@@ -201,6 +201,7 @@ export default function ProfilePage() {
                     <div className="card border-secondary">
                       <div className="card-body text-center">
                         <h6 className="text-secondary">{voucher.name}</h6>
+                        <h6>Mã: {voucher.code}</h6>
                         <p className="text-muted">Giảm {voucher.value}% (Tối đa {voucher.max_discount.toLocaleString()}đ)</p>
                         <p className="text-muted">HSD: {new Date(voucher.end_date).toLocaleDateString()}</p>
                         <Button className="btn btn-outline-secondary mt-2">
