@@ -57,44 +57,44 @@ class RatingController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'rating' => 'required|integer|min:1|max:5',
-            'review' => 'nullable|string',
-        ]);
+  public function store(Request $request)
+{
+    $request->validate([
+        'product_id' => 'required|exists:products,id',
+        'rating' => 'required|integer|min:1|max:5',
+        'review' => 'nullable|string',
+    ]);
 
-        $user = Auth::user();
+    $user = Auth::user();
+    
+    // Kiểm tra xem user đã mua sản phẩm chưa
+    $hasPurchased = DB::table('orders')
+        ->join('order_details', 'orders.id', '=', 'order_details.order_id')
+        ->where('orders.user_id', $user->id)
+        ->where('order_details.product_id', $request->product_id)
+        ->where('orders.status', 'completed') // Chỉ tính đơn hàng đã hoàn thành
+        ->exists();
 
-        // Kiểm tra xem user đã mua sản phẩm chưa
-        $hasPurchased = DB::table('orders')
-            ->join('order_details', 'orders.id', '=', 'order_details.order_id')
-            ->where('orders.user_id', $user->id)
-            ->where('order_details.product_id', $request->product_id)
-            ->where('orders.status', 'completed') // Chỉ tính đơn hàng đã hoàn thành
-            ->exists();
-
-        if (!$hasPurchased) {
-            return response()->json(['message' => 'Bạn chỉ có thể đánh giá sản phẩm đã mua.'], 403);
-        }
-
-        // Thêm đánh giá mới
-        $rating = Rating::create([
-            'user_id' => $user->id,
-            'product_id' => $request->product_id,
-            'rating' => $request->rating,
-            'review' => $request->review,
-        ]);
-
-        // Gửi Event để cập nhật total_rating
-        event(new RatingCreated($rating));
-
-        return response()->json([
-            'message' => 'Đánh giá thành công!',
-            'data' => $rating
-        ], 201);
+    if (!$hasPurchased) {
+        return response()->json(['message' => 'Bạn chỉ có thể đánh giá sản phẩm đã mua.'], 403);
     }
+
+    // Thêm đánh giá mới
+    $rating = Rating::create([
+        'user_id' => $user->id,
+        'product_id' => $request->product_id,
+        'rating' => $request->rating,
+        'review' => $request->review,
+    ]);
+
+    // Gửi Event để cập nhật total_rating
+    event(new RatingCreated($rating));
+
+    return response()->json([
+        'message' => 'Đánh giá thành công!',
+        'data' => $rating
+    ], 201);
+}
 
 
     public function show($id)
@@ -116,20 +116,16 @@ class RatingController extends Controller
         return response()->json($rating);
     }
 
-    public function destroy($id)
+    public function destroy(Rating $rating)
     {
-
-        $user = Auth::user();
-
-        $rating = Rating::findOrFail($id);
-
-        if ($rating->user_id !== $user->id) {
-            return response()->json(['message' => 'Bạn không có quyền xóa đánh giá này.'], 403);
+        if (Auth::id() !== $rating->user_id) {
+            return response()->json([
+                'message' => 'Bạn chỉ có thể xóa đánh giá của chính mình.'
+            ], 403);
         }
-
-
+    
         $rating->delete();
-
+    
         return response()->json([
             'message' => 'Xóa đánh giá thành công!'
         ], 204);
@@ -139,7 +135,7 @@ class RatingController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        $ratings = $product->ratings()->with(['user'])->get();
+        $ratings = $product->ratings()->get();
         return response()->json([
             'code' => 200,
             'message' => 'success',
