@@ -4,6 +4,7 @@ import { getProductById, storeCart } from "../../services/homeService";
 import { Link, useParams } from "react-router-dom";
 import { Send, User } from "lucide-react";
 import Swal from 'sweetalert2'
+import DOMPurify from "dompurify";
 const DetailProducts: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     console.log(id);
@@ -146,31 +147,31 @@ const DetailProducts: React.FC = () => {
     const handleImageClick = (imageUrl: string) => {
         setMainImage(imageUrl);
     };
-    const handleShowModal = (product) => {
-        setSelectedProduct(product);
-        setSelectedVariant(null);
+    // const handleShowModal = (product) => {
+    //     setSelectedProduct(product);
+    //     setSelectedVariant(null);
 
-        const allAttributes = [...new Set(product.variants.flatMap((variant) => variant.attributes.map((attr) => attr.name)))];
-        // Loc tat ca variants va lay ra ten cac thuoc tinh -> dung Set de ne cac truong giong nhau-> chuyen thnanh mang
+    //     const allAttributes = [...new Set(product.variants.flatMap((variant) => variant.attributes.map((attr) => attr.name)))];
+    //     // Loc tat ca variants va lay ra ten cac thuoc tinh -> dung Set de ne cac truong giong nhau-> chuyen thnanh mang
 
-        const initialSelectedAttributes = Object.fromEntries(allAttributes.map((attr) => [attr, null]));
+    //     const initialSelectedAttributes = Object.fromEntries(allAttributes.map((attr) => [attr, null]));
 
-        const initialAvailableOptions = {};
-        allAttributes.forEach((attrName) => {
-            initialAvailableOptions[attrName] = [
-                ...new Set(
-                    product.variants.flatMap((variant) =>
-                        variant.attributes
-                            .filter((attr) => attr.name === attrName)
-                            .map((attr) => attr.value)
-                    )
-                ),
-            ];
-        });
+    //     const initialAvailableOptions = {};
+    //     allAttributes.forEach((attrName) => {
+    //         initialAvailableOptions[attrName] = [
+    //             ...new Set(
+    //                 product.variants.flatMap((variant) =>
+    //                     variant.attributes
+    //                         .filter((attr) => attr.name === attrName)
+    //                         .map((attr) => attr.value)
+    //                 )
+    //             ),
+    //         ];
+    //     });
 
-        setSelectedAttributes(initialSelectedAttributes);
-        //  setAvailableOptions(initialAvailableOptions);
-    };
+    //     setSelectedAttributes(initialSelectedAttributes);
+    //     //  setAvailableOptions(initialAvailableOptions);
+    // };
 
     return (
         <div className="container mt-5">
@@ -274,8 +275,13 @@ const DetailProducts: React.FC = () => {
                             {activeTab === "description" ? (
                                 <div className="card p-3">
                                     <h4 className="fw-bold">Thông tin sản phẩm</h4>
-                                    <p className="text-muted">{product.description || "Chưa có mô tả cho sản phẩm này."}</p>
+                                    <p className="text-muted"
+                                        dangerouslySetInnerHTML={{
+                                            __html: DOMPurify.sanitize(product.description || "Chưa có mô tả cho sản phẩm này.")
+                                        }}
+                                    />
                                 </div>
+
                             ) : (
                                 <div className="mt-3">
                                     <h3 className="fw-bold">Bình luận</h3>
@@ -310,7 +316,7 @@ const DetailProducts: React.FC = () => {
                         </div>
                     </div>
                     {/* SẢN PHẨM LIÊN QUAN */}
-                    <div className="mt-5">
+                    {/* <div className="mt-5">
                         <h3 className="fw-bold">Sản phẩm liên quan</h3>
                         {popularProducts.length > 0 ? (
                             <div className="row mt-3">
@@ -347,7 +353,7 @@ const DetailProducts: React.FC = () => {
                         ) : (
                             <p className="text-muted">Không có sản phẩm liên quan.</p>
                         )}
-                    </div>
+                    </div> */}
 
                     <br />
 

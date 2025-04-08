@@ -93,6 +93,20 @@ export const getCart = async () => {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 };
+export const exportPdf = async () => {
+  const token = getAuthToken();
+  return await axios.get(`${API_BASE_URL}/orders/invoice`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    responseType: "blob"  // Đảm bảo response trả về dạng blob
+  });
+};
+
+export const getCartCount = async () => {
+  const token = getAuthToken();
+  return await axios.get(`${API_BASE_URL}/carts/count`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+};
 export const deleteCartItem = async (id: number) => {
   const token = getAuthToken();
   return await axios.delete(`${API_BASE_URL}/carts/${id}`, {

@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { getDiscounts } from '../../../services/discountsService';
-import { Table, Spin, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message, Card } from "antd";
+import { Table, Spin, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message, Card, Checkbox } from "antd";
 import moment from 'moment';
 import { createDiscount } from '../../../services/discountsService';
+import { getProducts } from '../../../services/productService';
 
 const Discount = () => {
     const [discounts, setDiscounts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [form] = Form.useForm();
-
+    const [isRedeemable, setIsRedeemable] = useState(false);
     const columns = [
         {
             title: "Tên mã",
@@ -63,6 +64,8 @@ const Discount = () => {
             const response = await getDiscounts();
             if (Array.isArray(response.data.data)) {
                 setDiscounts(response.data.data);
+
+                console.log("Discounts fetched successfully:", response.data.data);
             } else {
                 console.error("Expected an array of discounts, but got:", response.data.data);
                 setDiscounts([]);
@@ -82,13 +85,34 @@ const Discount = () => {
     const handleCancel = () => {
         setIsModalVisible(false);
     };
-
+    const [products, setProducts] = useState([]);
+    const [selectedProducts, setSelectedProducts] = useState([]);
+    
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+    
+    const fetchProducts = async () => {
+        try {
+            const response = await getProducts();
+            if (Array.isArray(response.data.data)) {
+                setProducts(response.data.data);
+            }
+        } catch (error) {
+            console.error("Error fetching products:", error);
+        }
+    };
+    
     const handleOk = async () => {
         try {
             const data = await form.validateFields();
-
-            const response = await createDiscount(data);
-
+            console.log(data);
+            const requestData = {
+                ...data,
+                product_ids: selectedProducts,
+            };
+            const response = await createDiscount(requestData);
+            console.log(response);
             if (response.status == 201) {
                 message.success("Mã giảm giá đã được tạo thành công!");
                 fetchDiscounts();
@@ -97,6 +121,7 @@ const Discount = () => {
                 message.error(response.message || "Lỗi khi tạo mã giảm giá.");
             }
         } catch (error) {
+            console.error("Error creating discount:", error);
             message.error("Có lỗi xảy ra khi tạo mã giảm giá.");
         }
     };
@@ -104,7 +129,7 @@ const Discount = () => {
     return (
         <div style={{ padding: '20px' }}>
             <h1 className="text-center pt-5">Danh sách Mã Giảm Giá</h1>
-            
+
             <div style={{ marginBottom: '16px', textAlign: 'right' }}>
                 <Button type="primary" onClick={showModal}>Thêm Mã Giảm Giá +</Button>
             </div>
@@ -130,7 +155,7 @@ const Discount = () => {
                 onOk={handleOk}
                 okText="Lưu"
                 cancelText="Hủy"
-                width={600} // Custom modal width to make it more compact
+                width={600}
             >
                 <Form form={form} layout="vertical">
                     <Form.Item label="Tên Mã Giảm Giá" name="name" rules={[{ required: true, message: 'Tên mã giảm giá không được để trống!' }]}>
@@ -171,6 +196,18 @@ const Discount = () => {
                     <Form.Item label="Số Lượng Sử Dụng Tối Đa" name="max_uses">
                         <InputNumber min={1} />
                     </Form.Item>
+                    <Form.Item label="Chọn sản phẩm áp dụng" name="product_ids">
+                        <Select
+                            mode="multiple"
+                            allowClear
+                            placeholder="Chọn sản phẩm..."
+                            options={products.map(product => ({
+                                label: product.name,
+                                value: product.id
+                            }))}
+                            onChange={(values) => setSelectedProducts(values)}
+                        />
+                    </Form.Item>
 
                     <Form.Item label="Là Mã Toàn Quốc?" name="is_global" valuePropName="checked">
                         <Select>
@@ -182,6 +219,18 @@ const Discount = () => {
                     <Form.Item label="Cần Ranking Tối Thiểu" name="required_ranking">
                         <InputNumber min={1} />
                     </Form.Item>
+
+                    {/* 🟢 Checkbox bật/tắt "Có thể đổi bằng điểm" */}
+                    <Form.Item label="Có thể đổi bằng điểm?" name="is_redeemable" valuePropName="checked">
+                        <Checkbox onChange={(e) => setIsRedeemable(e.target.checked)}>Cho phép đổi điểm</Checkbox>
+                    </Form.Item>
+
+                    {/* 🟠 Chỉ hiển thị khi is_redeemable = true */}
+                    {isRedeemable && (
+                        <Form.Item label="Số điểm cần để đổi" name="can_be_redeemed_with_points" rules={[{ required: true, message: 'Vui lòng nhập số điểm!' }]}>
+                            <InputNumber min={1} />
+                        </Form.Item>
+                    )}
                 </Form>
             </Modal>
         </div>

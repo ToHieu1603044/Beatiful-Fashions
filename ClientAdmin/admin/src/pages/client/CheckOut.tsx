@@ -19,14 +19,16 @@ const CheckOut = () => {
     const [selectedWard, setSelectedWard] = useState("");
     const [totalAmount, setTotalAmount] = useState(0);
     const [discountedTotal, setDiscountedTotal] = useState(0);
-        
+    const [products, setProducts] = useState([]);
+    const [priceDiscount, setPriceDiscount] = useState(0);
+    const [priceShipping, setPriceShipping] = useState(45000);
     const [formData, setFormData] = useState({
         email: "",
         name: "",
         phone: "",
         address: "",
         discount: "",
-        total_amount: discountedTotal,
+        total_amount: discountedTotal+ priceShipping,
         payment_method: "",
         note: "",
         province: "",
@@ -34,12 +36,8 @@ const CheckOut = () => {
         district: "",
         district_name: "",
         ward: ""
+        
     });
-    const [products, setProducts] = useState([]);
-    const [priceDiscount, setPriceDiscount] = useState(0);
-    const [priceShipping, setPriceShipping] = useState(45000);
-
-
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -119,11 +117,14 @@ const CheckOut = () => {
             });
             return;
         }
-    
+        console.log("Products:", products);
+       
         try {
             const response = await axios.post("http://127.0.0.1:8000/api/discounts/apply", {
-                discountCode: formData.discount,  // Đúng key API Laravel mong đợi
+                discountCode: formData.discount,  
                 totalAmount: totalAmount,
+                cartData: products
+                
             }, {
                 headers: { "Content-Type": "application/json" },
             });
@@ -160,22 +161,24 @@ const CheckOut = () => {
     
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Dữ liệu đã gửi:", JSON.stringify(formData, null, 2));
-
+        console.log("Dữ liệu đã gửi:", JSON.stringify({ ...formData, priceDiscount }, null, 2));
+    
         try {
-
-            const response = await axiosInstance.post('/orders', formData, {
+            const response = await axiosInstance.post('/orders', { 
+                ...formData, 
+                priceDiscount 
+            }, {
                 headers: { 'Content-Type': 'application/json' },
             });
-
+    
             console.log("Response từ backend:", response.data);
-
+    
             if (response.data.payUrl) {
                 console.log("🔗 Chuyển hướng đến MoMo:", response.data.payUrl);
                 window.open(response.data.payUrl, "_self");
                 return;
             }
-
+    
             if (response.status === 200) {
                 Swal.fire({
                     title: "Đặt hàng thành công",
@@ -185,7 +188,7 @@ const CheckOut = () => {
                     window.location.href = "/orders";
                 });
             }
-
+    
         } catch (error: any) {
             console.error("Lỗi khi gửi dữ liệu:", error);
             Swal.fire({
@@ -196,6 +199,7 @@ const CheckOut = () => {
             });
         }
     };
+    
 
     return (
         <>

@@ -9,6 +9,7 @@ use App\Http\Resources\OrderResource;
 use App\Mail\OrderPaidMail;
 use App\Models\Cart;
 use App\Models\Discount;
+use App\Models\DiscountUsage;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\OrderReturn;
@@ -139,7 +140,8 @@ class OrderController
 
                 OrderDetail::create([
                     'order_id' => $order->id,
-                      'sku' => $sku->sku,
+                    'sku' => $sku->sku,
+                    'product_id' => $sku->product_id,
                     'product_name' => $sku->product->name,
                     'variant_details' => json_encode($variantDetails),
                     'quantity' => $cart->quantity,
@@ -158,51 +160,32 @@ class OrderController
                 $totalAmount += $subtotal;
             }
 
-            $discountAmount = 0;
-            $discountCode = null;
-
+       
             if ($request->has('discount')) {
                 $discount = Discount::where('code', $request->discount)
-                    ->where('active', 1)
-                    ->where(function ($query) {
-                        $query->whereNull('start_date')->orWhere('start_date', '<=', now());
-                    })
-                    ->where(function ($query) {
-                        $query->whereNull('end_date')->orWhere('end_date', '>=', now());
-                    })
-                    ->where(function ($query) {
-                        $query->whereColumn('used_count', '<', 'max_uses')
-                            ->orWhereNull('max_uses');
-                    })
+                    ->where('active', true)
                     ->first();
-
-                if ($discount && $totalAmount >= $discount->min_order_amount) {
-                    if ($discount->discount_type === 'fixed') {
-                        $discountAmount = min($discount->value, $totalAmount);
-                    } else {
-                        $discountAmount = $totalAmount * ($discount->value / 100);
-                        if (!is_null($discount->max_discount)) {
-                            $discountAmount = min($discountAmount, $discount->max_discount);
-                        }
-                    }
-
-                    $discountAmount = min($discountAmount, $totalAmount);
+    
+                if ($discount) {
+                    DiscountUsage::create([
+                        'user_id' => $user->id,
+                        'discount_id' => $discount->id,
+                    ]);
+    
                     $discount->increment('used_count');
-                    $discountCode = $discount->code;
                 }
             }
-
-            $finalTotalAmount = $totalAmount - $discountAmount;
+          
             $order->update([
-                'total_amount' => $finalTotalAmount,
-                'discount_code' => $discountCode,
-                'discount_amount' => $discountAmount,
+                'total_amount' => $request->total_amount,
+                'discount_code' => $request->discount,
+                'discount_amount' => $request->priceDiscount,
             ]);
 
             DB::commit();
 
             if ($request->payment_method === 'online') {
-                $payUrl = MoMoService::createPayment($order->id, $finalTotalAmount);
+                $payUrl = MoMoService::createPayment($order->id, $request->total_amount);
 
                 if ($payUrl) {
                     return response()->json([
@@ -225,8 +208,6 @@ class OrderController
             if (!$order) {
                 return response()->json(['message' => 'Không tìm thấy đơn hàng!'], 400);
             }
-
-
 
             \Log::info('Gửi mail với order:', ['order' => $order->toArray()]);
 
@@ -254,49 +235,67 @@ class OrderController
             return ApiResponse::errorResponse(500, 'Lỗi khi tìm kiếm đơn hàng: ' . $e->getMessage());
         }
     }
-    public function update(StoreOrderRequest $request, Order $order)
-    {
-        $validated = $request->validated();
-    
+    public function update(Request $request, Order $order)
+    {   
+        $validated = $request->all();
+        \Log::info($validated);
         DB::beginTransaction();
         try {
-       
-            $order->update([
-                'status'         => $validated['status'] ?? $order->status,
-                'is_paid'        => $validated['is_paid'] ?? $order->is_paid,
-                'payment_method' => $validated['payment_method'] ?? $order->payment_method,
-                'name'           => $validated['name'] ?? $order->name,
-                'phone'          => $validated['phone'] ?? $order->phone,
-                'email'          => $validated['email'] ?? $order->email,
-                'ward'           => $validated['ward'] ?? $order->ward,
-                'district'       => $validated['district'] ?? $order->district,
-                'city'           => $validated['city'] ?? $order->city,
-                'note'           => $validated['note'] ?? $order->note,
-            ]);
+            // Chỉ cập nhật các trường có trong request
+            $order->update(array_filter([
+                'status'         => $validated['status'] ?? null,
+                'is_paid'        => $validated['is_paid'] ?? null,
+                'payment_method' => $validated['payment_method'] ?? null,
+                'name'           => $validated['name'] ?? null,
+                'phone'          => $validated['phone'] ?? null,
+                'email'          => $validated['email'] ?? null,
+                'ward'           => $validated['ward'] ?? null,
+                'district'       => $validated['district'] ?? null,
+                'city'           => $validated['city'] ?? null,
+                'note'           => $validated['note'] ?? null,
+                'address'        => $validated['address'] ?? null
+            ], fn($value) => !is_null($value))); // Loại bỏ các giá trị null
     
-          
             if (!empty($validated['order_details'])) {
-            
-                $order->orderDetails()->delete();
-    
-               
+
                 foreach ($validated['order_details'] as $detail) {
-                    $sku = ProductSku::find($detail['sku_id']); 
-    
+                    // Tìm SKU mới trong danh sách sản phẩm
+                    $sku = ProductSku::where('sku', $detail['sku'])->first();
+                    \Log::info("Thông tin SKU:", ['sku' => $sku]);
+                    
                     if ($sku) {
-                        $order->orderDetails()->create([
-                            'product_name'   => $sku->product->name, 
-                            'variant_details' => json_encode($detail['variant_details']),
-                            'quantity'       => $detail['quantity'],
-                            'price'          => $sku->price,
-                            'subtotal'       => $sku->price * $detail['quantity'],
-                        ]);
+                        // Tìm sản phẩm trong order_details theo ID (không tìm theo SKU)
+                        $orderDetail = $order->orderDetails()->where('id', $detail['id'])->first();
+        
+                        if ($orderDetail) {
+                            // Nếu sản phẩm đã có trong đơn hàng, cập nhật thông tin
+                            $orderDetail->update([
+                                'sku'             => $sku->sku,
+                                'product_id'      => $sku->product_id,
+                                'product_name'    => $sku->product->name,
+                                'variant_details' => json_encode($detail['variant_details']),
+                                'quantity'        => $detail['quantity'],
+                                'price'           => $sku->price,
+                                'subtotal'        => $sku->price * $detail['quantity'],
+                            ]);
+                        } else {
+                            // Nếu sản phẩm chưa có, thêm mới
+                            $order->orderDetails()->create([
+                                'product_id'      => $sku->product_id, // Thêm product_id
+                                'sku'             => $sku->sku,
+                                'product_name'    => $sku->product->name,
+                                'variant_details' => json_encode($detail['variant_details']),
+                                'quantity'        => $detail['quantity'],
+                                'price'           => $sku->price,
+                                'subtotal'        => $sku->price * $detail['quantity'],
+                            ]);
+                        }
                     }
                 }
             }
     
             $order->update([
-                'total_amount' => $order->orderDetails->sum('subtotal'),
+                'total_amount' => $order->orderDetails()->sum('subtotal'),
             ]);
     
             DB::commit();
@@ -304,9 +303,11 @@ class OrderController
             return ApiResponse::responseSuccess(new OrderResource($order));
         } catch (\Exception $e) {
             DB::rollBack();
-            return ApiResponse::responseError('Cập nhật đơn hàng thất bại', 500, $e->getMessage());
+            return ApiResponse::errorResponse(500, 'Cập nhật đơn hàng thất bại', $e->getMessage());
         }
     }
+    
+    
     public function completeOrder($id)
     {
         $order = Order::findOrFail($id);
@@ -391,7 +392,9 @@ class OrderController
         DB::beginTransaction();
 
         try {
-
+            if(!$order->tracking_status === 'completed' && !$order->is_paid == 0){
+                return ApiResponse::errorResponse(400, 'Không thể hoàn thanh đơn hàng!');
+            }
             $order->update([
                 'status' => 'completed',
                 'is_paid' => 1

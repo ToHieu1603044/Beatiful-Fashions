@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Events\NewNotificationEvent;
+use App\Helpers\ApiResponse;
 use App\Models\Discount;
 use App\Models\DiscountUsage;
 use App\Models\Notification;
@@ -22,7 +23,7 @@ class DiscountController
      */
     public function index()
     {
-        $discounts = Discount::get();
+        $discounts = Discount::with('products')->get();
         return response()->json(['data' => $discounts], 200);
     }
 
@@ -31,10 +32,10 @@ class DiscountController
      */
     public function applyDiscount(Request $request)
     {
-        \Log::info($request->all()); // Kiểm tra request nhận được
+        \Log::info($request->all());
 
         $data = [
-            'discount_code' => $request->input('discountCode'),  // Chuyển từ camelCase sang snake_case
+            'discount_code' => $request->input('discountCode'),
             'total_amount' => $request->input('totalAmount'),
         ];
 
@@ -89,6 +90,10 @@ class DiscountController
             return response()->json(['message' => 'Bạn đã sử dụng mã giảm giá này trước đó.'], 422);
         }
 
+        if ($discount->max_uses !== null && $discount->max_uses === 0) {
+            return response()->json(['message' => 'Mã giảm giá này không còn khả dụng.'], 400);
+        }
+
         if ($discount->max_uses !== null && $discount->used_count >= $discount->max_uses) {
             return response()->json(['message' => 'Mã giảm giá này đã hết lượt sử dụng.'], 400);
         }
@@ -97,100 +102,152 @@ class DiscountController
             return response()->json(['message' => 'Đơn hàng của bạn phải tối thiểu ' . number_format($discount->min_order_amount) . ' VNĐ để áp dụng mã giảm giá.'], 400);
         }
 
-        if ($discount->discount_type === 'percentage') {
-            $discountAmount = ($totalAmount * $discount->value) / 100;
-            $discountAmount = min($discountAmount, $discount->max_discount);
-        } else {
-            $discountAmount = min($discount->value, $discount->max_discount);
+        $cartData = $request->input('cartData', []);
+        $discountedProducts = $discount->products->pluck('id')->toArray();
+
+        // Lọc ra các sản phẩm trong giỏ hàng có thể áp dụng mã giảm giá
+        $validCartItems = collect($cartData)->filter(function ($item) use ($discountedProducts) {
+            return in_array($item['product']['id'], $discountedProducts);
+        });
+
+        // Nếu không có sản phẩm nào hợp lệ, báo lỗi
+        if ($discount->products->count() > 0 && $validCartItems->isEmpty()) {
+            return response()->json([
+                'message' => 'Mã giảm giá không áp dụng cho sản phẩm trong giỏ hàng của bạn.'
+            ], 400);
         }
 
-        $newTotalAmount = $totalAmount - $discountAmount;
+        $totalValidAmount = $validCartItems->sum(fn($item) => $item['price'] * $item['quantity']);
 
-        DiscountUsage::create([
-            'user_id' => $user->id,
-            'discount_id' => $discount->id,
-        ]);
+        // Nếu tổng giá trị các sản phẩm hợp lệ không đạt mức tối thiểu, báo lỗi
+        if ($totalValidAmount < $discount->min_order_amount) {
+            return response()->json([
+                'message' => 'Đơn hàng của bạn phải tối thiểu ' . number_format($discount->min_order_amount) . ' VNĐ để áp dụng mã giảm giá.'
+            ], 400);
+        }
 
-        $discount->increment('used_count');
+        // Chỉ áp dụng giảm giá trên sản phẩm hợp lệ
+        $totalDiscount = 0;
+        foreach ($validCartItems as $item) {
+            $productPrice = $item['price'] * $item['quantity'];
+
+            if ($discount->discount_type === 'percentage') {
+                $discountAmount = ($productPrice * $discount->value) / 100;
+            } else {
+                $discountAmount = min($discount->value, $productPrice);
+            }
+
+            $totalDiscount += $discountAmount;
+        }
+
+        // Giới hạn số tiền giảm giá tối đa (nếu có)
+        if ($discount->max_discount !== null) {
+            $totalDiscount = min($totalDiscount, $discount->max_discount);
+        }
+
+        // Đảm bảo giảm giá không vượt quá tổng tiền sản phẩm hợp lệ
+        $totalDiscount = min($totalDiscount, $totalValidAmount);
+
+        // Tính toán tổng tiền mới
+        $newTotalAmount = max(0, $totalAmount - $totalDiscount);
+
+        //  Ghi  mã giảm giá đã sử dụng
+        // DiscountUsage::create([
+        //     'user_id' => $user->id,
+        //     'discount_id' => $discount->id,
+        // ]);
+
+        // $discount->increment('used_count');
 
         return response()->json([
             'success' => true,
             'newTotalAmount' => $newTotalAmount,
-            'discountAmount' => $discountAmount,
+            'discountAmount' => $totalDiscount,
             'message' => 'Mã giảm giá đã được áp dụng thành công.',
         ]);
     }
 
-
     public function store(Request $request)
     {
-        if (!$request->has('code')) {
-            return response()->json(['message' => 'The discount code field is required.'], 400);
-        }
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'string|max:50|unique:discounts,code',
-            'discount_type' => 'required|in:percentage,fixed',
-            'value' => 'required|numeric|min:1',
-            'max_discount' => 'nullable|numeric|min:0',
-            'min_order_amount' => 'nullable|numeric|min:0',
-            'max_uses' => 'nullable|integer|min:1',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'is_global' => 'required|boolean',
-            'required_ranking' => 'nullable|integer|min:1',
-        ]);
-        $startDate = Carbon::parse($request->start_date);
-        $endDate = Carbon::parse($request->end_date);
-
-        if ($request->discount_type == 'percentage' && $request->value > 100) {
-            throw ValidationException::withMessages([
-                'value' => 'Giá trị phần trăm không thể lớn hơn 100%.',
+        \Log::info($request->all());
+        try {
+            if (!$request->has('code')) {
+                return response()->json(['message' => 'The discount code field is required.'], 400);
+            }
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'code' => 'string|max:50|unique:discounts,code',
+                'discount_type' => 'required|in:percentage,fixed',
+                'value' => 'required|numeric|min:1',
+                'max_discount' => 'nullable|numeric|min:0',
+                'min_order_amount' => 'nullable|numeric|min:0',
+                'max_uses' => 'nullable|integer|min:1',
+                'start_date' => 'required|date',
+                'end_date' => 'required|date|after_or_equal:start_date',
+                'is_global' => 'required|boolean',
+                'required_ranking' => 'nullable|integer|min:1',
+                'is_redeemable' => 'required|boolean',
+                'can_be_redeemed_with_points' => 'nullable|integer',
             ]);
-        }
+            $startDate = Carbon::parse($request->start_date);
+            $endDate = Carbon::parse($request->end_date);
 
-        if ($request->discount_type == 'fixed' && $request->value < 0) {
-            throw ValidationException::withMessages([
-                'value' => 'Giá trị tiền khóa phải lớn hơn 0.',
+            if ($request->discount_type == 'percentage' && $request->value > 100) {
+                throw ValidationException::withMessages([
+                    'value' => 'Giá trị phần trăm không thể lớn hơn 100%.',
+                ]);
+            }
+
+            if ($request->discount_type == 'fixed' && $request->value < 0) {
+                throw ValidationException::withMessages([
+                    'value' => 'Giá trị tiền khóa phải lớn hơn 0.',
+                ]);
+            }
+
+            if (!$validated['is_global'] && empty($validated['required_ranking'])) {
+                throw ValidationException::withMessages([
+                    'required_ranking' => 'Vui lòng nhập mức ranking tối thiểu để sử dụng mã này.',
+                ]);
+            }
+
+
+            $discount = Discount::create($validated);
+
+            if (!empty($request->product_ids)) {
+                $discount->products()->sync($request->product_ids);
+            }
+            // Tạo thông báo
+            $notification = Notification::create([
+                'title' => 'Mã giảm giá mới: ' . $discount->name,
+                'message' => 'Mã giảm giá ' . $discount->code . ' vừa được thêm. Hãy kiểm tra ngay!',
+                'type' => 'discount',
+                // 'status' => 'unread',
             ]);
+
+            $userIds = User::pluck('id')->toArray();
+            if (!empty($userIds)) {
+                $data = array_map(fn($id) => [
+                    'user_id' => $id,
+                    'notification_id' => $notification->id,
+                    'status' => 'unread',
+                    'deleted' => false
+                ], $userIds);
+
+                \DB::table('notification_user')->insert($data);
+            }
+
+            $mess = Notification::find($notification->id)->first();
+
+            // Phát sự kiện realtime
+            event(new NewNotificationEvent($mess));
+
+            return response()->json([
+                'message' => 'Tạo mã giảm giá thành công!',
+                'discount' => $discount,
+            ], 201);
+        } catch (\Throwable $th) {
+            return ApiResponse::errorResponse(500, $th->getMessage());
         }
-
-        if (!$validated['is_global'] && empty($validated['required_ranking'])) {
-            throw ValidationException::withMessages([
-                'required_ranking' => 'Vui lòng nhập mức ranking tối thiểu để sử dụng mã này.',
-            ]);
-        }
-
-
-        $discount = Discount::create($validated);
-
-        // Tạo thông báo
-        $notification = Notification::create([
-            'title' => 'Mã giảm giá mới: ' . $discount->name,
-            'message' => 'Mã giảm giá ' . $discount->code . ' vừa được thêm. Hãy kiểm tra ngay!',
-            'type' => 'discount',
-            'status' => 'unread',
-        ]);
-
-        $userIds = User::pluck('id')->toArray();
-        if (!empty($userIds)) {
-            $data = array_map(fn($id) => [
-                'user_id' => $id,
-                'notification_id' => $notification->id,
-                'status' => 'unread',
-                'deleted' => false
-            ], $userIds);
-
-            DB::table('notification_user')->insert($data);
-        }
-
-        // Phát sự kiện realtime
-        event(new NewNotificationEvent($notification));
-
-        return response()->json([
-            'message' => 'Tạo mã giảm giá thành công!',
-            'discount' => $discount,
-        ], 201);
     }
 
     public function show(string $id)
