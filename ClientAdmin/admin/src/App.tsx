@@ -55,6 +55,7 @@ import OrderReturns from "./pages/client/OrderReturns";
 import ForgotPassword from "./pages/client/FogotPassword";
 import Whislish from "./pages/client/Whishlish";
 import Whishlish from "./pages/client/Whishlish";
+import Index from "./pages/admin/sales/Index";
 
 
 
@@ -152,6 +153,7 @@ function App() {
         { path: "searchs", element: <SearchProducts /> },
         { path: "orders/return", element: <OrderReturns /> },
         { path: "whishlish", element: <Whishlish /> },
+        {path: "sales", element: <Index />},
       ],
     },
     {
