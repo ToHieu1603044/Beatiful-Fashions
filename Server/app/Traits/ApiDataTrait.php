@@ -3,9 +3,11 @@
 namespace App\Traits;
 
 use App\Helpers\ApiResponse;
+use App\Models\Wishlist;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 trait ApiDataTrait
 {

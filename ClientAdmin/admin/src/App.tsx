@@ -49,8 +49,12 @@ import Whislish from "./pages/client/Whishlish";
 import Whishlish from "./pages/client/Whishlish";
 import Comment from "./pages/admin/comments/Comment";
 import Settings from "./pages/admin/Settings";
+<<<<<<< HEAD
 import Comments from "./pages/admin/comments/Comments";
 
+=======
+import Sales from "./pages/admin/sales/Sales";
+>>>>>>> 1145162 (Hien thi san pham co falshsale o home)
 
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const role = localStorage.getItem("role");
@@ -129,6 +133,7 @@ function App() {
         { path: "settings", element: <Settings />, },
         { path: "comments", element: <Comments /> },
         { path: "discounts", element: <Discount />, },
+        { path: "sales", element: <Sales />, },
       ],
     },
     {

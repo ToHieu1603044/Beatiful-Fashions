@@ -28,43 +28,41 @@ class WishlistController extends Controller
     {
         try {
             $userId = auth()->id();
-    
+
             if (!$userId) {
                 return response()->json([
                     'message' => 'Bạn cần đăng nhập để xem danh sách yêu thích',
                     'data' => []
                 ], Response::HTTP_UNAUTHORIZED);
             }
-    
+
             // Chỉ lấy các sản phẩm mà user đã yêu thích
             $query = Product::whereHas('wishlists', function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             })->with(['brand', 'category', 'skus.attributeOptions', 'galleries', 'wishlists'])
-              ->withCount(['wishlists as is_favorite' => function ($q) use ($userId) {
-                  $q->where('user_id', $userId);
-              }]);
-    
+                ->withCount([
+                    'wishlists as is_favorite' => function ($q) use ($userId) {
+                        $q->where('user_id', $userId);
+                    }
+                ]);
+
             $perPage = request()->query('per_page', 10);
             $data = $query->orderBy('created_at', 'desc')->paginate($perPage);
-    
+
             if ($data->isEmpty()) {
                 return response()->json([
                     'message' => 'Không có sản phẩm yêu thích nào',
                     'data' => []
                 ], Response::HTTP_OK);
             }
-    
+
             return ApiResponse::responsePage(ProductResource::collection($data));
-    
+
         } catch (\Exception $e) {
             \Log::error('Lỗi lấy danh sách sản phẩm yêu thích', ['exception' => $e->getMessage()]);
             return ApiResponse::errorResponse();
         }
     }
-    
-    
-
-
 
     // Thêm sản phẩm vào danh sách yêu thích
     public function store(Request $request)
@@ -97,4 +95,51 @@ class WishlistController extends Controller
 
         return response()->json(['status' => 'error', 'message' => 'Sản phẩm không tồn tại trong danh sách yêu thích'], 404);
     }
+    public function getFavorites()
+    {
+        if (!Auth::check()) {
+            return response()->json([
+                'status' => 'success',
+                'product_id' => [],
+            ]);
+        }
+    
+        $user_id = Auth::id();
+        $favoriteIds = Wishlist::where('user_id', $user_id)->pluck('product_id');
+    
+        return response()->json([
+            'status' => 'success',
+            'product_id' => $favoriteIds,
+        ]);
+    }
+    
+    public function toggleFavorite(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+        ]);
+
+        $user_id = Auth::id();
+        $product_id = $request->product_id;
+
+        $wishlist = Wishlist::where('user_id', $user_id)->where('product_id', $product_id)->first();
+
+        if ($wishlist) {
+            $wishlist->delete();
+            $isFavorite = false;
+        } else {
+            Wishlist::create([
+                'user_id' => $user_id,
+                'product_id' => $product_id,
+            ]);
+            $isFavorite = true;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'is_favorite' => $isFavorite,
+        ]);
+    }
+
+
 }
