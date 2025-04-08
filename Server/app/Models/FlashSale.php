@@ -16,7 +16,6 @@ class FlashSale extends Model
         'status',  // Trạng thái chương trình (active, inactive)
     ];
 
-    // Tạo quan hệ với Product (Nhiều Flash Sale có thể có nhiều sản phẩm)
     public function products()
     {
         return $this->belongsToMany(Product::class, 'flash_sale_products', 'flash_sale_id', 'product_id')
@@ -24,16 +23,15 @@ class FlashSale extends Model
                     ->withTimestamps();
     }
 
-    // Lọc những sản phẩm Flash Sale còn hiệu lực
     public function scopeActive($query)
     {
         return $query->where('start_time', '<=', now())
                      ->where('end_time', '>=', now());
     }
 
-    // Hàm kiểm tra xem Flash Sale có còn hiệu lực không
     public function isActive()
     {
         return $this->start_time <= now() && $this->end_time >= now();
     }
+    
 }

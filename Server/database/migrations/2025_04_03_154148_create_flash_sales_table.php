@@ -13,17 +13,14 @@ return new class extends Migration
     {
             Schema::create('flash_sales', function (Blueprint $table) {
                 $table->id();
-                $table->string('name'); // Tên chương trình Flash Sale
-                $table->timestamp('start_time'); // Thời gian bắt đầu
-                $table->timestamp('end_time'); // Thời gian kết thúc
-                $table->enum('status', ['active', 'inactive'])->default('inactive'); // Trạng thái
+                $table->string('name')->unique();
+                $table->timestamp('start_time');
+                $table->string('image')->nullable();
+                $table->timestamp('end_time'); 
+                $table->enum('status', ['active', 'inactive'])->default('inactive'); 
                 $table->timestamps();
             });
     }
-
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('flash_sales');

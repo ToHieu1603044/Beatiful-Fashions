@@ -14,6 +14,7 @@ use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
+use App\Models\Product;
 use App\Models\ProductSku;
 use App\Models\User;
 use App\Services\MoMoService;
@@ -137,11 +138,9 @@ class OrderController
                     return ApiResponse::errorResponse(400, "Sản phẩm '{$cart->sku_id}' không đủ hàng.");
                 }
 
-                // Kiểm tra giá khuyến mãi Flash Sale
                 $flashSalePrice = $sku->product->flashSales->first()?->pivot->discount_price;
                 $price = $flashSalePrice ?? $sku->price;
 
-                // Lưu thông tin chi tiết sản phẩm
                 $variantDetails = $sku->attributeOptions->pluck('value', 'attribute.name')->toArray();
                 $subtotal = $price * $cart->quantity;
 
@@ -391,6 +390,15 @@ class OrderController
                     return ApiResponse::errorResponse(400, "Chỉ có thể hủy đơn hàng khi đang ở trạng thái 'pending'.");
                 }
                 $order->status = 'cancelled';
+
+                foreach ($order->orderDetails as $detail) {
+                    $product = Product::find($detail->product_id);
+                    if ($product) {
+                        $product->update([
+                            'total_sold' => $product->total_sold - $detail->quantity
+                        ]);
+                    }
+                }
             }
 
             if ($request->has('tracking_status')) {
@@ -497,7 +505,7 @@ class OrderController
         $orderDetail = OrderDetail::where('id', $orderDetailId)
             ->with([
                 'returnDetails' => function ($query) {
-                    $query->with('orderReturn'); // Sửa lỗi gọi sai quan hệ
+                    $query->with('orderReturn'); 
                 },
                 'order' => function ($query) {
                     $query->select('id', 'name', 'phone', 'email', 'address', 'district', 'city')
@@ -518,4 +526,42 @@ class OrderController
             'data' => $orderDetail
         ], 200);
     }
+    public function handleRebuy(Request $request, $id)
+    {
+        $order = Order::with('orderDetails')->find($id);
+    
+        if (!$order) {
+            return ApiResponse::responseError(404, "Đơn hàng không tồn tại.");
+        }
+    
+        // Kiểm tra trạng thái đơn hàng phải là "cancelled" mới có thể mua lại
+        if ($order->status !== 'cancelled' && $order->tracking_status !== 'cancelled') {
+            return ApiResponse::responseError(400, "Chỉ có thể mua lại đơn hàng đã bị hủy.");
+        }
+    
+        try {
+            // Cập nhật trạng thái đơn hàng thành "pending" khi mua lại
+            $order->update([
+                'status' => 'pending',
+                'tracking_status' => 'pending'
+            ]);
+    
+            foreach ($order->orderDetails as $detail) {
+                \Log::info($detail);
+                $product = Product::find($detail->product_id);
+                if ($product) {
+                    $product->update([
+                        'total_sold' => $product->total_sold + $detail->quantity
+                    ]);
+                }
+            }
+
+            OrderCreated::dispatch($order);
+    
+            return ApiResponse::responseSuccess($order, 200, "Mua lại thành công");
+        } catch (\Exception $e) {
+            return ApiResponse::responseError(500, "Có lỗi xảy ra khi mua lại.");
+        }
+    }
+     
 }

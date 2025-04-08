@@ -41,6 +41,10 @@ export const getProductByCategory = async (
 export const getCategories = async (params?: { search?: string; parent_id?: number }) => {
   return await axios.get(`${API_BASE_URL}/categories/web`, { params });
 };
+export const getProductSales = async (params?: { search?: string; parent_id?: number }) => {
+  return await axios.get(`${API_BASE_URL}/flash-sales`, { params });
+};
+
 
 export const getCategoryById = async (id: number) => {
   return await axios.get(`${API_BASE_URL}/categories/web/${id}`);
