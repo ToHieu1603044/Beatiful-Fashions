@@ -34,6 +34,12 @@ export const getProductById = async (id: number) => {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 };
+export const updateProductStatus = async (id: number, active: number) => {
+  const token = getAuthToken();
+  return await axios.put(`${API_URL}/${id}/update-status`, { active }, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+}
 
 export const createProduct = async (data: FormData) => {
   const token = getAuthToken();

@@ -20,18 +20,13 @@ import DetailProducts from "./pages/client/DetailProducts";
 import CheckOut from "./pages/client/CheckOut";
 import Login from "./pages/client/Login";
 import Register from "./pages/client/Register";
-
-
 import Cart from "./pages/client/Cart";
 import Authorization from "./pages/403";
 import Roles from "./pages/admin/roles/Roles";
 import RolesAdd from "./pages/admin/roles/Rolesadd";
 import EditRole from "./pages/admin/roles/Rolesedit";
-
 import AddUser from "./pages/admin/users/AddUser";
 import EditUser from "./pages/admin/users/EditUser";
-
-
 import OrderCallback from "./pages/client/OrderCallback";
 import OrderSuccess from "./pages/client/OrderSuccess";
 import OrderFail from "./pages/client/OrderFail";
@@ -40,14 +35,11 @@ import Permission from "./pages/admin/permissions/Permission";
 import PermissionsAdd from "./pages/admin/permissions/PermissionsAdd";
 import PermissionsEdit from "./pages/admin/permissions/PermissionsEdit";
 import Staff from "./pages/admin/users/Staff";
-
-import Profile from "./pages/client/Profile";
-
+import Profile from "./pages/client/Profile"
 import ProductTrash from "./pages/admin/products/ProductTrash";
 import ResetPassword from "./pages/client/ResetPassword";
 import SearchProducts from "./pages/client/SearchProducts";
 import Order from "./pages/client/Order";
-
 import Dashboard from "./pages/admin/Dashboard";
 import Discount from "./pages/admin/discounts/Discount";
 import OrderReturn from "./pages/admin/orders/OrderReturn";
@@ -56,9 +48,10 @@ import ForgotPassword from "./pages/client/FogotPassword";
 import Whislish from "./pages/client/Whishlish";
 import Whishlish from "./pages/client/Whishlish";
 import Index from "./pages/admin/sales/Index";
-
-
-
+import Comment from "./pages/admin/comments/Comment";
+import Settings from "./pages/admin/Settings";
+import Comments from "./pages/admin/comments/Comments";
+import Sales from "./pages/admin/sales/Sales";
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const role = localStorage.getItem("role");
   const token = localStorage.getItem("access_token"); 
@@ -133,8 +126,10 @@ function App() {
         { path: "permissions", element: <Permission /> },
         { path: "permissions/create", element: <PermissionsAdd /> },
         { path: "permissions/:id/edit", element: <PermissionsEdit /> },
-
+        { path: "settings", element: <Settings />, },
+        { path: "comments", element: <Comments /> },
         { path: "discounts", element: <Discount />, },
+        { path: "sales", element: <Sales />, },
       ],
     },
     {
@@ -154,6 +149,7 @@ function App() {
         { path: "orders/return", element: <OrderReturns /> },
         { path: "whishlish", element: <Whishlish /> },
         {path: "sales", element: <Index />},
+        { path: "whislist", element: <Whishlish /> },
       ],
     },
     {

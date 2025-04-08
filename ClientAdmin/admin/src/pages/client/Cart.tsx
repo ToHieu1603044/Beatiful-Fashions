@@ -18,7 +18,7 @@ const Cart = () => {
                 ...item,
                 quantity: item.quantity || 1,
             }));
-
+            console.log('Resss', response.data);
             setProducts(cartData);
         } catch (error) {
             if (error.response && error.response.status === 401) {
@@ -123,10 +123,10 @@ const Cart = () => {
                                             <p>{item.product.name}</p>
                                             <p className="mt-2">
                                                 {item.attributes.map((attr: any) => (
-                                                    <span key={attr.id}>{attr.attribute}: {attr.value}{" "}</span>
+                                                    <span key={attr.id}>{attr.attribute}: {attr.value}{" "}{attr.price}</span>
                                                 ))}
                                             </p>
-                                            <p>{item.price} VNĐ</p>
+                                          
                                         </div>
 
                                         <div style={{

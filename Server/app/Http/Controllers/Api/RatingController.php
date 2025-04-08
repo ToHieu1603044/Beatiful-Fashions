@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\User;
 use App\Models\Product;
 use App\Models\Rating;
 use Illuminate\Http\Request;
@@ -58,16 +59,29 @@ class RatingController extends Controller
 
     public function store(Request $request)
     {
-
         $request->validate([
             'product_id' => 'required|exists:products,id',
             'rating' => 'required|integer|min:1|max:5',
             'review' => 'nullable|string',
         ]);
 
+        $user = Auth::user();
+
+        // Kiểm tra xem user đã mua sản phẩm chưa
+        $hasPurchased = DB::table('orders')
+            ->join('order_details', 'orders.id', '=', 'order_details.order_id')
+            ->where('orders.user_id', $user->id)
+            ->where('order_details.product_id', $request->product_id)
+            ->where('orders.status', 'completed') // Chỉ tính đơn hàng đã hoàn thành
+            ->exists();
+
+        if (!$hasPurchased) {
+            return response()->json(['message' => 'Bạn chỉ có thể đánh giá sản phẩm đã mua.'], 403);
+        }
+
         // Thêm đánh giá mới
         $rating = Rating::create([
-            'user_id' => Auth::id(),
+            'user_id' => $user->id,
             'product_id' => $request->product_id,
             'rating' => $request->rating,
             'review' => $request->review,
@@ -81,6 +95,7 @@ class RatingController extends Controller
             'data' => $rating
         ], 201);
     }
+
 
     public function show($id)
     {
@@ -101,23 +116,35 @@ class RatingController extends Controller
         return response()->json($rating);
     }
 
-    public function destroy(Rating $rating)
+    public function destroy($id)
     {
-        $this->authorize('delete', $rating);
+
+        $user = Auth::user();
+
+        $rating = Rating::findOrFail($id);
+
+        if ($rating->user_id !== $user->id) {
+            return response()->json(['message' => 'Bạn không có quyền xóa đánh giá này.'], 403);
+        }
+
 
         $rating->delete();
 
-        return response()->json(null, 204);
+        return response()->json([
+            'message' => 'Xóa đánh giá thành công!'
+        ], 204);
     }
+
     public function ratingByProduct($id)
     {
         $product = Product::findOrFail($id);
 
-        $ratings = $product->ratings()->get();
+        $ratings = $product->ratings()->with(['user'])->get();
         return response()->json([
             'code' => 200,
             'message' => 'success',
             'data' => $ratings
         ]);
     }
+
 }

@@ -12,12 +12,11 @@ const UserInfo = () => {
     axios
       .get("http://127.0.0.1:8000/api/profile", {
         headers: {
-          Authorization: `Bearer ${token}`, 
+          Authorization: `Bearer ${token}`,
         },
-        withCredentials: true, 
+        withCredentials: true,
       })
       .then((response) => {
-        console.log(response.data); 
         setUser(response.data.data);
       })
       .catch((error) => {
@@ -25,8 +24,20 @@ const UserInfo = () => {
         setUser(null);
       });
   }, []);
-  console.log(user);
-  return <div>{user ? <a className="text-decoration-none" href="/account"> <span>{user.name}</span></a> : <FaUser size={20} />}  </div>;
+
+  return (
+    <div>
+      {user ? (
+        <a className="text-decoration-none" href="/account">
+          <span>{user.name}</span>
+        </a>
+      ) : (
+        <a href="/login">
+          <FaUser size={20} />
+        </a>
+      )}
+    </div>
+  );
 };
 
 export default UserInfo;
