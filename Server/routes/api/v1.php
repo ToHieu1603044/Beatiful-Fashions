@@ -227,5 +227,9 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->get('/favorites', [WishlistController::class, 'getFavorites']);
 
 Route::middleware('auth:sanctum')->post('/toggle-favorite', [WishlistController::class, 'toggleFavorite']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/devices', [AuthController::class, 'myDevices']);
+    Route::delete('/devices/{id}', [AuthController::class, 'revokeDevice']);
+});
 
 ?>

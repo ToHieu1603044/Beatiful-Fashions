@@ -33,7 +33,7 @@ const Discount = () => {
   const handleToggleStatus = async (discounts) => {
       try {
         const newStatus = discounts.active ? 0 : 1; 
-         await axios.put(`http://127.0.0.1:8000/api/discounts/${id}`,newStatus);
+         await axios.put(`http://127.0.0.1:8000/api/discounts/${discounts.id}`,newStatus);
         message.success("Cập nhật trạng thái thành công!");
         fetchProducts(); 
       } catch (error) {

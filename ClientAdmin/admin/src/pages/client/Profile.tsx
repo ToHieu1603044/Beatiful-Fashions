@@ -3,8 +3,7 @@ import { FaEdit, FaEnvelope, FaPhone, FaTicketAlt, FaCoins, FaMapMarkerAlt, FaCo
 import { Link } from "react-router-dom";
 import { getDiscount, getDiscountForUser, getUserProfile, handleRedeemVoucher } from "../../services/homeService";
 import ResetPassword from "./ResetPassword";
-
-
+import MyDevices from "../../components/MyDevices";
 
 function Avatar({ src, className }: { src: string; className?: string }) {
   return <img src={src} alt="Avatar" className={`rounded-circle ${className}`} style={{ width: "80px", height: "80px" }} />;
@@ -17,11 +16,9 @@ function Button({ children, className, onClick }: { children: React.ReactNode; c
     </button>
   );
 }
-
 function Tab({ children }: { children: React.ReactNode }) {
   return <div className="tab-pane fade show active">{children}</div>;
 }
-
 function Tabs({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState(0);
   return (
@@ -50,6 +47,10 @@ export default function ProfilePage() {
   const [userVouchers, setuserVouchers] = useState([]);
   const [user, setUser] = useState({});
   const [redeemableVouchers, setRedeemableVouchers] = useState([]);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showDevices, setShowDevices] = useState(false);
+  const [securityTab, setSecurityTab] = useState<"password" | "devices" | null>("password");
+
   useEffect(() => {
     fetProfile();
     fetchRedeemableVouchers();
@@ -227,12 +228,47 @@ export default function ProfilePage() {
           </div>
         </Tab>
         <Tab label="Bảo mật & Cài đặt" icon={<FaCog />}>
-          <div className="text-center py-4">
-            <FaCog className="fs-1 mb-3 text-muted" />
-            <p>Thay đổi mật khẩu và cài đặt bảo mật</p>
-            <ResetPassword/>
+          <div className="row">
+            {/* Sidebar bên trái */}
+            <div className="col-md-3 border-end">
+              <ul className="list-group list-group-flush">
+                <li
+                  className={`list-group-item list-group-item-action ${securityTab === "password" ? "active" : ""}`}
+                  onClick={() => setSecurityTab("password")}
+                  style={{ cursor: "pointer" }}
+                >
+                  🔐 Đổi mật khẩu
+                </li>
+                <li
+                  className={`list-group-item list-group-item-action ${securityTab === "devices" ? "active" : ""}`}
+                  onClick={() => setSecurityTab("devices")}
+                  style={{ cursor: "pointer" }}
+                >
+                  📱 Thiết bị đã đăng nhập
+                </li>
+              </ul>
+            </div>
+
+            {/* Nội dung bên phải */}
+            <div className="col-md-9">
+              {securityTab === "password" && (
+                <div>
+                  <h5 className="mb-3">🔐 Đổi mật khẩu</h5>
+                  <p className="text-muted">Để an toàn, bạn nên đổi mật khẩu định kỳ.</p>
+                  <ResetPassword />
+                </div>
+              )}
+              {securityTab === "devices" && (
+                <div>
+                  <h5 className="mb-3">📱 Thiết bị đăng nhập</h5>
+                  <p className="text-muted">Danh sách thiết bị đang đăng nhập tài khoản.</p>
+                  <MyDevices />
+                </div>
+              )}
+            </div>
           </div>
         </Tab>
+
       </Tabs>
     </div>
   );
