@@ -9,7 +9,7 @@ class SlideController extends Controller
 {
     public function index()
     {
-        return response()->json(Slide::orderBy('order')->get());
+        return response()->json(Slide::get());
     }
 
     public function store(Request $request)
@@ -18,7 +18,6 @@ class SlideController extends Controller
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'images' => 'required|string',
-            'order' => 'integer',
         ]);
 
         $slide = Slide::create($validated);

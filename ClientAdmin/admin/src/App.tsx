@@ -130,6 +130,7 @@ function App() {
         { path: "comments", element: <Comments /> },
         { path: "discounts", element: <Discount />, },
         { path: "sales", element: <Sales />, },
+        { path: "index-sales", element: <Index />, },
       ],
     },
     {

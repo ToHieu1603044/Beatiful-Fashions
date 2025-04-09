@@ -164,7 +164,7 @@ const Products = () => {
       key: "active",
       render: (active, record) => (
         <Switch
-          checked={active === true || active === 1} // Chấp nhận cả true/false và 1/0
+          checked={active === true || active === 1} 
           onChange={() => handleToggleStatus(record)}
         />
       ),

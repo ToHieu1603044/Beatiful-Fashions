@@ -57,9 +57,7 @@ const Header = () => {
     };
 
     fetchCartCount();
-  }, []); // Chạy 1 lần khi component render
-
-
+  }, []); 
 
   return (
     <header className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -114,7 +112,7 @@ const Header = () => {
               <UserInfo />
             </li>
             <li className="nav-item">
-              <a className="nav-link text-white" href="/whislist" onClick={(e) => { e.preventDefault(); checkLogin(); }}>
+              <a className="nav-link text-white" href="/whislist">
                 <Heart className="w-5 h-5 text-red-500 mr-2" />
               </a>
             </li>
