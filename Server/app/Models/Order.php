@@ -60,6 +60,8 @@ class Order extends Model
     {
         return $this->hasMany(OrderReturn::class, 'order_id');
     }
-
-
+    public function statusHistories()
+    {
+        return $this->hasMany(OrderStatusHistory::class);
+    }
 }

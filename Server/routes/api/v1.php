@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DiscountController;
+use App\Http\Controllers\Api\FlashSaleController;
+use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\MoMoController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderController;
@@ -29,14 +31,11 @@ use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use App\Models\Product;
-
 use Illuminate\Support\Facades\Route;
 use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
-
 Route::get('/', function () {
     return 'Hello World';
 });
-
 //Web
 Route::get('/momo/callback', [MoMoController::class, 'callback']);
 Route::get('/search', [ProductController::class, 'search']);
@@ -45,13 +44,12 @@ Route::get('/products/web/{id}/', [ProductController::class, 'productDetail']);
 Route::get('/products/categories/{id}', [CategoryController::class, 'getProductsByCategory']);
 Route::get('/categories/web', [CategoryController::class, 'indexWeb']);
 Route::get('/categories/web{id}/', [CategoryController::class, 'categoryDetail']);
-
-//Discount
-
+//Dis
 Route::get('/provinces', function () {
     $response = Http::get("https://provinces.open-api.vn/api/p/");
     return response()->json($response->json());
 });
+Route::post('/ghn/calculate-fee', [LocationController::class, 'calculateShippingFee']);
 
 Route::get('/provinces/{province}', function (Request $request, $province) {
     $depth = $request->query('depth', 1);
@@ -68,18 +66,18 @@ Route::get('/districts/{district}', function (Request $request, $district) {
     ]);
     return response()->json($response->json());
 });
+Route::get('/ghn/provinces', [LocationController::class, 'provinces']);
+Route::post('/ghn/districts', [LocationController::class, 'districts']);
+Route::post('/ghn/wards', [LocationController::class, 'wards']);
 
 //Auth
-
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name('password.reset');
 
 Route::middleware(['auth:sanctum'])->group(function () {
-
-
-
+    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
     Route::get('/orders/invoice', [PdfController::class, 'index']);
     Route::get('carts/count', [CartController::class, 'countCart']);
     Route::apiResource('carts', CartController::class);
@@ -96,6 +94,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('products/trash', [ProductController::class, 'productDelete'])->middleware('role:admin');
     Route::post('/momo/payment', [MoMoController::class, 'createPayment']);
 
+    Route::get('list-discount-for-user', [DiscountController::class, 'listDiscountForUser']);
+    Route::post('redeem-points-for-voucher', [DiscountController::class, 'redeemPointsForVoucher']);
+    Route::get('redeem-points', [DiscountController::class, 'redeemPoints']);
     //order
     Route::patch('/order-returns/{id}/status/user', [OrderReturnController::class, 'updateStatusUser']);
     Route::get('/orders/returns/user', [OrderReturnController::class, 'returnItemUser']);
@@ -139,7 +140,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::put('/products/{id}', [ProductController::class, 'update']);
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
-
+    Route::put('/products/{id}/update-status', [ProductController::class, 'status']);
     //Categories
     Route::apiResource('categories', CategoryController::class);
     Route::put('/categories/{id}', [CategoryController::class, 'update']);
@@ -151,7 +152,6 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::apiResource('attribute-options', AttributeOptionController::class);
     Route::apiResource('attributes', AttributeController::class);
     Route::apiResource('attribute-options', AttributeOptionController::class);
-
 
     //Cart
     Route::apiResource('carts', CartController::class);
@@ -196,9 +196,13 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::get('/roles/{id}/permissions', [RolePermissionController::class, 'getRolePermissions'])->middleware('role:admin');
 
     Route::patch('/products/{id}/restore', [ProductController::class, 'restore']);
-});
 
-// Cho phép tất cả mọi người xem danh sách và chi tiết đánh giá
+});
+Route::get('/flash-sales', [FlashSaleController::class, 'index']);
+Route::get('/count-down', [FlashSaleController::class, 'countDown']);
+Route::post('/flash-sales', [FlashSaleController::class, 'store']);
+Route::get('/sales', [FlashSaleController::class, 'sales']);
+Route::get('/flash-sales/products', [FlashSaleController::class, 'getNameProduct']);
 Route::get('/ratings', [RatingController::class, 'index']);
 Route::get('/ratings/{rating}', [RatingController::class, 'show']);
 Route::get('/ratings/product/{id}', [RatingController::class, 'ratingByProduct']);
@@ -210,11 +214,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/ratings/{rating}', [RatingController::class, 'update']);
     Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
 });
+
 Route::apiResource('banners', BannerController::class);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/wishlist', [WishlistController::class, 'index']); // Hiển thị sản phẩm yêu thích
-    Route::post('/wishlist/{product_id}', [WishlistController::class, 'store']); // Thêm sản phẩm vào danh sách yêu thích
+    Route::post('/wishlist', [WishlistController::class, 'store']); // Thêm sản phẩm vào danh sách yêu thích
     Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']); // Xóa sản phẩm yêu thích
+    Route::get('/check-favorite', [WishlistController::class, 'checkFavorite']);
+   
+
 });
+Route::middleware('auth:sanctum')->get('/favorites', [WishlistController::class, 'getFavorites']);
+
+Route::middleware('auth:sanctum')->post('/toggle-favorite', [WishlistController::class, 'toggleFavorite']);
 
 ?>

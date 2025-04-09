@@ -71,8 +71,8 @@ export default function AddProductForm() {
         const response = await axiosInstance.get("/attribute-options");
         console.log("response", response);
         const options = response.data.map((option) => ({
-          label: option.value, 
-          value: option.id,  
+          label: option.value,
+          value: option.id,
         }));
 
         console.log("options", options);
@@ -106,15 +106,6 @@ export default function AddProductForm() {
     }
 
     setSelectedOptions([]); // Reset giá trị đã chọn
-  };
-
-  const renderCategoryTree = (categories: CategoryType[], level: number = 0): JSX.Element[] => {
-    return categories.flatMap((category) => [
-      <option key={category.id} value={category.id}>
-        {"—".repeat(level)} {category.name}
-      </option>,
-      ...renderCategoryTree(category.children, level + 1),
-    ]);
   };
   const addAttribute = () => {
     if (!selectedAttribute || selectedOptions.length === 0) return;
@@ -176,6 +167,14 @@ export default function AddProductForm() {
     }));
 
   };
+  const renderCategoryTree = (categories: CategoryType[], level: number = 0): JSX.Element[] => {
+    return categories.flatMap((category) => [
+      <option key={category.id} value={category.id}>
+        {"—".repeat(level)} {category.name}
+      </option>,
+      ...renderCategoryTree(category.children, level + 1),
+    ]);
+  };
   const handleGalleryChange = (e) => {
     const files = Array.from(e.target.files);
     setProduct((prev) => ({
@@ -220,7 +219,6 @@ export default function AddProductForm() {
         });
 
       }
-      window.location.href = "/admin/products";
     } catch (error) {
       console.error("Lỗi khi thêm sản phẩm:", error);
       const errorMessage = error.response?.data?.message || "Lỗi khi thêm sản phẩm";
@@ -427,14 +425,14 @@ export default function AddProductForm() {
           <div className="card mb-4">
             <div className="card-body">
               <h4 className="card-title">Ảnh sản phẩm</h4>
-            
+
               {product.image && product.image instanceof File && (
                 <div className="text-center mb-2">
                   <img
                     src={URL.createObjectURL(product.image)}
                     alt="Main Product"
                     className="img-thumbnail"
-                    style={{ maxWidth: '100%', height: 'auto' }} 
+                    style={{ maxWidth: '100%', height: 'auto' }}
                   />
                 </div>
               )}
