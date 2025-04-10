@@ -50,7 +50,7 @@ const Header = () => {
         console.log("Số sản phẩm trong giỏ hàng:", response.data);
         setCartCount(response.data.data);
 
-   
+
       } catch (error) {
         console.error("Lỗi khi lấy số lượng giỏ hàng:", error);
       }
@@ -111,14 +111,11 @@ const Header = () => {
             </li>
 
             <li className="nav-item">
-              <a className="nav-link text-white" href="/login" onClick={(e) => { e.preventDefault(); checkLogin(); }}>
-                <UserInfo />
-              </a>
+              <UserInfo />
             </li>
-
             <li className="nav-item">
               <a className="nav-link text-white" href="/whislist" onClick={(e) => { e.preventDefault(); checkLogin(); }}>
-              <Heart className="w-5 h-5 text-red-500 mr-2" />
+                <Heart className="w-5 h-5 text-red-500 mr-2" />
               </a>
             </li>
           </ul>

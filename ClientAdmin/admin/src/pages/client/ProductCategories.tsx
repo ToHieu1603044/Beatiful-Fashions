@@ -108,74 +108,84 @@ const ProductCategories = () => {
       return newSelectedAttributes;
     });
   };
-    const handleSubmit = async () => {
-          if (!selectedVariant) {
-              Swal.fire({
-                  icon: "warning",
-                  title: "Vui lòng chọn biến thể.",
-              });
-              return;
+  const handleSubmit = async () => {
+    if (!selectedVariant) {
+      Swal.fire({
+        icon: "warning",
+        title: "Vui lòng chọn biến thể.",
+      });
+      return;
+    }
+
+    if (quantity <= 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Số lượng phải lớn hơn 0.",
+      });
+      return;
+    }
+
+    const data = {
+      sku_id: selectedVariant.sku_id,
+      quantity: quantity
+    };
+
+    console.log("Dữ liệu gửi đi:", data);
+
+    try {
+      const response = await storeCart(data);
+      console.log("Phản hồi từ API:", response.data);
+
+      if (response.status === 200) {
+        Swal.fire({
+          title: "Thêm giỏ hàng thành công!",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Lỗi!",
+          text: "Vui lòng thử lại sau.",
+        });
+      }
+    } catch (error: any) {
+
+      if (error?.response?.status === 401) {
+        Swal.fire({
+          icon: "error",
+          title: "Bạn chưa đăng nhập!",
+          text: "Vui lòng đăng nhập để tiếp tục.",
+          confirmButtonText: "Đăng nhập"
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = "/login";
           }
-      
-          if (quantity <= 0) {
-              Swal.fire({
-                  icon: "warning",
-                  title: "Số lượng phải lớn hơn 0.",
-              });
-              return;
-          }
-      
-          const data = {
-              sku_id: selectedVariant.sku_id,
-              quantity: quantity
-          };
-      
-          console.log("Dữ liệu gửi đi:", data);
-      
-          try {
-              const response = await storeCart(data);
-              console.log("Phản hồi từ API:", response.data);
-      
-              if (response.status === 200) {
-                  Swal.fire({
-                      title: "Thêm giỏ hàng thành công!",
-                      icon: "success",
-                      timer: 1500,
-                      showConfirmButton: false
-                  });
-              } else {
-                  Swal.fire({
-                      icon: "error",
-                      title: "Lỗi!",
-                      text: "Vui lòng thử lại sau.",
-                  });
-              }
-          } catch (error: any) {
-  
-              if (error?.response?.status === 401) {
-                  Swal.fire({
-                      icon: "error",
-                      title: "Bạn chưa đăng nhập!",
-                      text: "Vui lòng đăng nhập để tiếp tục.",
-                      confirmButtonText: "Đăng nhập"
-                  }).then((result) => {
-                      if (result.isConfirmed) {
-                          window.location.href = "/login";
-                      }
-                  });
-              } else {
-                 
-                  Swal.fire({
-                      icon: "error",
-                      title: "Lỗi!",
-                      text: error?.response?.data?.message || "Đã có lỗi xảy ra, vui lòng thử lại!",
-                  });
-              }
-          }
-      };
+        });
+      } else {
+
+        Swal.fire({
+          icon: "error",
+          title: "Lỗi!",
+          text: error?.response?.data?.message || "Đã có lỗi xảy ra, vui lòng thử lại!",
+        });
+      }
+    }
+  };
   return (
     <div className="container mt-4">
 
+      <nav aria-label="breadcrumb">
+        <ol className="breadcrumb">
+          <li className="breadcrumb-item">
+            <a href="/">Trang chủ</a>
+          </li>
+          <li className="breadcrumb-item active" aria-current="page">
+                Danh mục
+          </li>
+        </ol>
+      </nav>
 
       <div className="container mt-4">
         {/* Thanh lọc sản phẩm và danh sách sản phẩm */}
@@ -235,9 +245,11 @@ const ProductCategories = () => {
                 variant="outline-secondary"
                 className="mt-3 w-100"
                 onClick={() => {
-                  setDate("");
                   setPrice("");
-                  setPriceRange({ min: null, max: null });
+                  setPriceRange("");
+                  setSortBy("");
+                  setPagination((prev) => ({ ...prev, currentPage: 1 }));
+                  fetchProducts();                  
                 }}
               >
                 Reset bộ lọc

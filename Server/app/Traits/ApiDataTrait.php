@@ -3,9 +3,11 @@
 namespace App\Traits;
 
 use App\Helpers\ApiResponse;
+use App\Models\Wishlist;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Response;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 trait ApiDataTrait
 {
@@ -14,7 +16,7 @@ trait ApiDataTrait
         try {
             $filters = request()->query();
             $page = request()->query('page', 1);
-            $cacheKey = 'products_' . md5(json_encode($filters) . "_page_$page");
+            $cacheKey = 'products_cache';
             if (Cache::has($cacheKey)) {
                 \Log::info("Lấy dữ liệu từ cache: $cacheKey");
             } else {
@@ -85,7 +87,7 @@ trait ApiDataTrait
 
                 $perPage = request()->query('per_page', 10);
                 return $query->orderBy('created_at', 'desc')
-                    ->where('active', 1)
+                    // ->where('active', 1)
                     ->paginate($perPage);
             });
             $end = microtime(true);
@@ -104,7 +106,6 @@ trait ApiDataTrait
             return ApiResponse::errorResponse();
         }
     }
-
     public function getDataById(Model $model, $id, $relations = [], $message = "Ket qua")
     {
         try {
@@ -127,15 +128,13 @@ trait ApiDataTrait
     public function deleteDataById(Model $model, $id, $message = "Xóa thành công")
     {
         try {
-            // Tìm bản ghi theo ID, nếu không tìm thấy sẽ tự động ném lỗi
             $data = $model::findOrFail($id);
 
-            // Xóa bản ghi (soft delete nếu có SoftDeletes)
             $data->delete();
 
             return ApiResponse::responseSuccess($message);
         } catch (\Throwable $th) {
-            // Xử lý ngoại lệ khi gặp lỗi
+
             return ApiResponse::errorResponse(500, $th->getMessage());
         }
     }

@@ -15,21 +15,40 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
-
 class DiscountController
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+
+
+    public function redeemPoints(Request $request)
     {
-        $discounts = Discount::with('products')->get();
-        return response()->json(['data' => $discounts], 200);
+        try {
+            $discounts = Discount::with('products')
+                ->where('is_redeemable', true)
+                ->get();
+
+            return response()->json(['data' => $discounts], 200);
+
+        } catch (\Throwable $th) {
+
+            return response()->json(['message' => $th->getMessage()], 500);
+        }
+    }
+    public function listDiscountForUser(Request $request){
+        try {
+            $user = Auth::user();
+
+            $discounts = Discount::with('products')
+                ->where('user_id', $user->id)
+                ->get();
+
+            return response()->json(['data' => $discounts], 200);
+
+        } catch (\Throwable $th) {
+
+            return response()->json(['message' => $th->getMessage()], 500);
+        }
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function applyDiscount(Request $request)
     {
         \Log::info($request->all());
@@ -54,7 +73,12 @@ class DiscountController
 
         $discount = Discount::where('code', $discountCode)
             ->where('active', true)
+            ->where(function ($query) use ($user) {
+                $query->whereNull('user_id')
+                    ->orWhere('user_id', $user->id);
+            })
             ->first();
+
 
         if (!$discount) {
             return response()->json(['message' => 'Mã giảm giá không tồn tại hoặc đã bị vô hiệu hóa.'], 404);
@@ -105,12 +129,10 @@ class DiscountController
         $cartData = $request->input('cartData', []);
         $discountedProducts = $discount->products->pluck('id')->toArray();
 
-        // Lọc ra các sản phẩm trong giỏ hàng có thể áp dụng mã giảm giá
         $validCartItems = collect($cartData)->filter(function ($item) use ($discountedProducts) {
             return in_array($item['product']['id'], $discountedProducts);
         });
 
-        // Nếu không có sản phẩm nào hợp lệ, báo lỗi
         if ($discount->products->count() > 0 && $validCartItems->isEmpty()) {
             return response()->json([
                 'message' => 'Mã giảm giá không áp dụng cho sản phẩm trong giỏ hàng của bạn.'
@@ -119,14 +141,12 @@ class DiscountController
 
         $totalValidAmount = $validCartItems->sum(fn($item) => $item['price'] * $item['quantity']);
 
-        // Nếu tổng giá trị các sản phẩm hợp lệ không đạt mức tối thiểu, báo lỗi
         if ($totalValidAmount < $discount->min_order_amount) {
             return response()->json([
                 'message' => 'Đơn hàng của bạn phải tối thiểu ' . number_format($discount->min_order_amount) . ' VNĐ để áp dụng mã giảm giá.'
             ], 400);
         }
 
-        // Chỉ áp dụng giảm giá trên sản phẩm hợp lệ
         $totalDiscount = 0;
         foreach ($validCartItems as $item) {
             $productPrice = $item['price'] * $item['quantity'];
@@ -140,12 +160,10 @@ class DiscountController
             $totalDiscount += $discountAmount;
         }
 
-        // Giới hạn số tiền giảm giá tối đa (nếu có)
         if ($discount->max_discount !== null) {
             $totalDiscount = min($totalDiscount, $discount->max_discount);
         }
 
-        // Đảm bảo giảm giá không vượt quá tổng tiền sản phẩm hợp lệ
         $totalDiscount = min($totalDiscount, $totalValidAmount);
 
         // Tính toán tổng tiền mới
@@ -280,7 +298,7 @@ class DiscountController
         $discount = Discount::findOrFail($request->discount_id);
 
         // Kiểm tra xem mã giảm giá này có thể đổi bằng điểm không
-        if (!$discount->can_be_redeemed_with_points) {
+        if ($discount->is_redeemable == false) {
             return response()->json(['message' => 'Mã giảm giá này không thể đổi bằng điểm.'], 400);
         }
 
@@ -293,7 +311,7 @@ class DiscountController
         }
 
         // Trừ điểm của người dùng
-        $user->decrement('points', $requiredPoints);
+        $user->decrement('points', $discount->can_be_redeemed_with_points);
 
         // Tạo mã giảm giá mới và lưu vào bảng discount
         $discountCode = strtoupper(\Str::random(8)); // Tạo mã giảm giá ngẫu nhiên
@@ -302,7 +320,7 @@ class DiscountController
         $newDiscount = Discount::create([
             'name' => "Voucher từ điểm",
             'code' => $discountCode,
-            'discount_type' => 'percentage',
+            'discount_type' => $discount->discount_type,
             'value' => $discount->value, // Giảm giá là phần trăm theo mã gốc
             'max_discount' => $discount->max_discount, // Lấy max_discount từ mã đã chọn
             'min_order_amount' => $discount->min_order_amount, // Lấy min_order_amount từ mã đã chọn
@@ -313,10 +331,10 @@ class DiscountController
             'active' => true,
             'is_global' => false,
             'required_ranking' => $discount->required_ranking, // Lấy required_ranking từ mã gốc
-            'can_be_redeemed_with_points' => true, // Mã giảm giá này có thể đổi bằng điểm
+            'can_be_redeemed_with_points' => false, // Mã giảm giá này có thể đổi bằng điểm
+            'user_id' => $user->id
         ]);
 
-        // Lưu giao dịch đổi điểm
         PointRedemption::create([
             'user_id' => $user->id,
             'discount_id' => $newDiscount->id,
@@ -329,6 +347,4 @@ class DiscountController
             'discount_code' => $discountCode
         ]);
     }
-
-
 }

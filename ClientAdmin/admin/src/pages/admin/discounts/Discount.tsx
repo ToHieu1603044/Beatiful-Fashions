@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getDiscounts } from '../../../services/discountsService';
-import { Table, Spin, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message, Card, Checkbox } from "antd";
+import { Table, Spin, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message, Card, Checkbox, Row, Col } from "antd";
 import moment from 'moment';
 import { createDiscount } from '../../../services/discountsService';
 import { getProducts } from '../../../services/productService';
@@ -11,6 +11,8 @@ const Discount = () => {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [form] = Form.useForm();
     const [isRedeemable, setIsRedeemable] = useState(false);
+    const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+
     const columns = [
         {
             title: "Tên mã",
@@ -23,12 +25,12 @@ const Discount = () => {
             key: "code",
         },
         {
-            title: "Discount Type",
+            title: "Loại giảm giá",
             dataIndex: "discount_type",
             key: "discount_type",
         },
         {
-            title: "Value",
+            title: "Giá trị ",
             dataIndex: "value",
             key: "value",
             render: (value, record) => {
@@ -36,44 +38,98 @@ const Discount = () => {
             },
         },
         {
-            title: "Max Discount",
+            title: "Giảm giá giới hạn ",
             dataIndex: "max_discount",
             key: "max_discount",
             render: (value) => `${value} VNĐ`,
         },
         {
-            title: "Min Order Amount",
+            title: "Giá áp dụng tối thiểu ",
             dataIndex: "min_order_amount",
             key: "min_order_amount",
             render: (value) => `${value} VNĐ`,
         },
         {
-            title: "Active",
+            title: "Trạng thái ",
             dataIndex: "active",
             key: "active",
-            render: (active) => (active ? "Yes" : "No"),
+            render: (active) => (active ? "Kích hoạt " : "Khóa "),
+        },
+        {
+            title: "Ngày tạo",
+            dataIndex: "start_date",
+            key: "start_date",
+            render: (value) => moment(value).format("YYYY-MM-DD HH:mm:ss"),
+
+        },
+        {
+            title: "Ngày hết hạn",
+            dataIndex: "end_date",
+            render: (value) => moment(value).format("YYYY-MM-DD HH:mm:ss"),
+
+        },
+        {
+            title: "Còn lại",
+            dataIndex: "end_date",
+            render: (value, record) => {
+                if (!value) return "Không có ngày hết hạn";
+        
+                const now = moment();
+                const startDate = moment(record.start_date);
+                const endDate = moment(value);
+        
+                if (startDate.isAfter(now)) {
+                    return "Chưa bắt đầu";  // Nếu ngày bắt đầu trong tương lai
+                }
+        
+                if (endDate.isBefore(now)) {
+                    return "Đã hết hạn";  // Nếu ngày hết hạn đã qua
+                }
+        
+                const diff = endDate.diff(now, "days");
+                return `${diff} ngày`;  // Nếu còn hạn, hiển thị số ngày còn lại
+            },
+        },
+        {
+
+            title: "Hành động",
+            key: "actions",
+            render: (record: any) => (
+                <Button.Group>
+                    <Button type="primary">Edit</Button>
+                    <Button danger>Delete</Button>
+                </Button.Group>
+            ),
         },
     ];
 
     useEffect(() => {
-        fetchDiscounts();
+        fetchDiscounts(1);
     }, []);
 
-    const fetchDiscounts = async () => {
-        try {
-            const response = await getDiscounts();
-            if (Array.isArray(response.data.data)) {
-                setDiscounts(response.data.data);
+    const fetchDiscounts = async (page = 1) => {
+        setLoading(true);
 
-                console.log("Discounts fetched successfully:", response.data.data);
+        try {
+            const response = await getDiscounts(page);
+            const { data, current_page, per_page, total } = response?.data;
+
+            if (Array.isArray(data)) {
+                setDiscounts(data);
+                setPagination(prev => ({
+                    ...prev,
+                    current: current_page,
+                    pageSize: per_page,
+                    total
+                }));
             } else {
-                console.error("Expected an array of discounts, but got:", response.data.data);
+                console.error("Dữ liệu API không đúng định dạng:", response.data);
                 setDiscounts([]);
             }
-            setLoading(false);
         } catch (error) {
-            console.error("Error fetching discounts:", error);
+            console.error("Lỗi khi tải danh sách mã giảm giá:", error);
             setDiscounts([]);
+        } finally {
             setLoading(false);
         }
     };
@@ -87,11 +143,11 @@ const Discount = () => {
     };
     const [products, setProducts] = useState([]);
     const [selectedProducts, setSelectedProducts] = useState([]);
-    
+
     useEffect(() => {
         fetchProducts();
     }, []);
-    
+
     const fetchProducts = async () => {
         try {
             const response = await getProducts();
@@ -102,7 +158,7 @@ const Discount = () => {
             console.error("Error fetching products:", error);
         }
     };
-    
+
     const handleOk = async () => {
         try {
             const data = await form.validateFields();
@@ -142,7 +198,14 @@ const Discount = () => {
                         columns={columns}
                         dataSource={discounts}
                         rowKey="id"
-                        pagination={false}
+                        pagination={{
+                            current: pagination.current,
+                            pageSize: pagination.pageSize,
+                            total: pagination.total,
+                            onChange: (page) => {
+                                fetchDiscounts(page);
+                            },
+                        }}
                     />
                 </Card>
             )}
@@ -158,80 +221,92 @@ const Discount = () => {
                 width={600}
             >
                 <Form form={form} layout="vertical">
-                    <Form.Item label="Tên Mã Giảm Giá" name="name" rules={[{ required: true, message: 'Tên mã giảm giá không được để trống!' }]}>
-                        <Input />
-                    </Form.Item>
+                    <Row gutter={16}>
+                        {/* Cột 1 */}
+                        <Col xs={24} md={12}>
+                            <Form.Item label="Tên Mã Giảm Giá" name="name" rules={[{ required: true, message: 'Tên mã giảm giá không được để trống!' }]}>
+                                <Input />
+                            </Form.Item>
 
-                    <Form.Item label="Code" name="code" rules={[{ required: true, message: 'Code mã giảm giá không được để trống!' }]}>
-                        <Input />
-                    </Form.Item>
+                            <Form.Item label="Code" name="code" rules={[{ required: true, message: 'Code mã giảm giá không được để trống!' }]}>
+                                <Input />
+                            </Form.Item>
 
-                    <Form.Item label="Loại Giảm Giá" name="discount_type" rules={[{ required: true, message: 'Vui lòng chọn loại giảm giá!' }]}>
-                        <Select>
-                            <Select.Option value="percentage">Phần trăm</Select.Option>
-                            <Select.Option value="fixed">Cố định</Select.Option>
-                        </Select>
-                    </Form.Item>
+                            <Form.Item label="Loại Giảm Giá" name="discount_type" rules={[{ required: true, message: 'Vui lòng chọn loại giảm giá!' }]}>
+                                <Select>
+                                    <Select.Option value="percentage">Phần trăm</Select.Option>
+                                    <Select.Option value="fixed">Cố định</Select.Option>
+                                </Select>
+                            </Form.Item>
+                            <Form.Item
+                                label="Giá trị"
+                                name="value"
+                                rules={[{ required: true, message: 'Giá trị không được để trống!' }]}
+                            >
+                                <InputNumber
+                                    min={1}
+                                    max={form.getFieldValue("discount_type") === "percentage" ? 100 : 10000000} 
+                                />
+                            </Form.Item>
+                            <Form.Item label="Giảm Tối Đa" name="max_discount">
+                                <InputNumber min={0} />
+                            </Form.Item>
 
-                    <Form.Item label="Giá trị" name="value" rules={[{ required: true, message: 'Giá trị không được để trống!' }]}>
-                        <InputNumber min={1} max={100} />
-                    </Form.Item>
+                            <Form.Item label="Số Tiền Đơn Hàng Tối Thiểu" name="min_order_amount">
+                                <InputNumber min={0} />
+                            </Form.Item>
 
-                    <Form.Item label="Giảm Tối Đa" name="max_discount">
-                        <InputNumber min={0} />
-                    </Form.Item>
+                            <Form.Item label="Ngày Bắt Đầu" name="start_date" rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}>
+                                <DatePicker format="YYYY-MM-DD" />
+                            </Form.Item>
+                        </Col>
 
-                    <Form.Item label="Số Tiền Đơn Hàng Tối Thiểu" name="min_order_amount">
-                        <InputNumber min={0} />
-                    </Form.Item>
+                        {/* Cột 2 */}
+                        <Col xs={24} md={12}>
+                            <Form.Item label="Ngày Kết Thúc" name="end_date" rules={[{ required: true, message: 'Vui lòng chọn ngày kết thúc!' }]}>
+                                <DatePicker format="YYYY-MM-DD" />
+                            </Form.Item>
 
-                    <Form.Item label="Ngày Bắt Đầu" name="start_date" rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}>
-                        <DatePicker format="YYYY-MM-DD" />
-                    </Form.Item>
+                            <Form.Item label="Số Lượng Sử Dụng Tối Đa" name="max_uses">
+                                <InputNumber min={1} />
+                            </Form.Item>
 
-                    <Form.Item label="Ngày Kết Thúc" name="end_date" rules={[{ required: true, message: 'Vui lòng chọn ngày kết thúc!' }]}>
-                        <DatePicker format="YYYY-MM-DD" />
-                    </Form.Item>
+                            <Form.Item label="Chọn sản phẩm áp dụng" name="product_ids">
+                                <Select
+                                    mode="multiple"
+                                    allowClear
+                                    placeholder="Chọn sản phẩm..."
+                                    options={products.map(product => ({
+                                        label: product.name,
+                                        value: product.id
+                                    }))}
+                                    onChange={(values) => setSelectedProducts(values)}
+                                />
+                            </Form.Item>
 
-                    <Form.Item label="Số Lượng Sử Dụng Tối Đa" name="max_uses">
-                        <InputNumber min={1} />
-                    </Form.Item>
-                    <Form.Item label="Chọn sản phẩm áp dụng" name="product_ids">
-                        <Select
-                            mode="multiple"
-                            allowClear
-                            placeholder="Chọn sản phẩm..."
-                            options={products.map(product => ({
-                                label: product.name,
-                                value: product.id
-                            }))}
-                            onChange={(values) => setSelectedProducts(values)}
-                        />
-                    </Form.Item>
+                            <Form.Item label="Là Mã Toàn Quốc?" name="is_global">
+                                <Select>
+                                    <Select.Option value={true}>Có</Select.Option>
+                                    <Select.Option value={false}>Không</Select.Option>
+                                </Select>
+                            </Form.Item>
 
-                    <Form.Item label="Là Mã Toàn Quốc?" name="is_global" valuePropName="checked">
-                        <Select>
-                            <Select.Option value={true}>Có</Select.Option>
-                            <Select.Option value={false}>Không</Select.Option>
-                        </Select>
-                    </Form.Item>
+                            <Form.Item label="Cần Ranking Tối Thiểu" name="required_ranking">
+                                <InputNumber min={1} />
+                            </Form.Item>
 
-                    <Form.Item label="Cần Ranking Tối Thiểu" name="required_ranking">
-                        <InputNumber min={1} />
-                    </Form.Item>
-
-                    {/* 🟢 Checkbox bật/tắt "Có thể đổi bằng điểm" */}
-                    <Form.Item label="Có thể đổi bằng điểm?" name="is_redeemable" valuePropName="checked">
-                        <Checkbox onChange={(e) => setIsRedeemable(e.target.checked)}>Cho phép đổi điểm</Checkbox>
-                    </Form.Item>
-
-                    {/* 🟠 Chỉ hiển thị khi is_redeemable = true */}
-                    {isRedeemable && (
-                        <Form.Item label="Số điểm cần để đổi" name="can_be_redeemed_with_points" rules={[{ required: true, message: 'Vui lòng nhập số điểm!' }]}>
-                            <InputNumber min={1} />
-                        </Form.Item>
-                    )}
-                </Form>
+                            {/* 🟢 Checkbox bật/tắt "Có thể đổi bằng điểm" */}
+                            <Form.Item label="Có thể đổi bằng điểm?" name="is_redeemable" valuePropName="checked">
+                                <Checkbox onChange={(e) => setIsRedeemable(e.target.checked)}>Cho phép đổi điểm</Checkbox>
+                            </Form.Item>
+                            {isRedeemable && (
+                                <Form.Item label="Số điểm cần để đổi" name="can_be_redeemed_with_points" rules={[{ required: true, message: 'Vui lòng nhập số điểm!' }]}>
+                                    <InputNumber min={1} />
+                                </Form.Item>
+                            )}
+                        </Col>
+                    </Row>
+                </Form>;
             </Modal>
         </div>
     );
