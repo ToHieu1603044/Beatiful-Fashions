@@ -32,7 +32,7 @@ const DetailProducts: React.FC = () => {
     };
     useEffect(() => {
         fetchProduct();
-        fetrchcomment();
+        fetchcomment();
     }, [id]);
 
     const fetchProduct = async () => {
@@ -64,7 +64,7 @@ const DetailProducts: React.FC = () => {
         setLoading(false);
     };
 
-    const fetrchcomment = async () => {
+    const fetchcomment = async () => {
         const id = product.id
         const response = await axios.get("http://127.0.0.1:8000/api/ratings/product/${id}");
         console.log("Dữ liệu API---:", response.data);
