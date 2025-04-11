@@ -231,3 +231,15 @@ class FlashSaleController extends Controller
            return response()->json(['message' => 'Xoá Flash Sale thành công!']);
        }
 };
+
+    public function sales(Request $request)
+    {
+      
+        $sales = FlashSale::with(['products' => function($query) {
+            $query->select('products.id', 'products.name');
+        }])->get();
+    
+        return response()->json($sales);
+    }
+}
+

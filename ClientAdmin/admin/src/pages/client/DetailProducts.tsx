@@ -175,6 +175,17 @@ const DetailProducts: React.FC = () => {
 
     return (
         <div className="container mt-5">
+            <nav aria-label="breadcrumb">
+                <ol className="breadcrumb">
+                    <li className="breadcrumb-item">
+                        <a href="/">Trang chủ</a>
+                    </li>
+                    <li className="breadcrumb-item active" aria-current="page">
+                        Chi tiết sản phẩm
+                    </li>
+                </ol>
+            </nav>
+
             {loading ? (
                 <div className="text-center">
                     <div className="spinner-border text-primary" role="status"></div>
@@ -356,7 +367,8 @@ const DetailProducts: React.FC = () => {
                     </div> */}
 
                     <br />
-
+                        <hr />
+                        <br />
                 </>
             )
             }

@@ -26,7 +26,12 @@ class UserResource extends JsonResource
             'address' => $this->address,
             'zip_code' => $this->zip_code,
             'active' => $this->active,
-           // 'last_password_changed_at' => $this->last_password_changed_at->format('Y-m-d H:i:s'),
+            'last_password_changed_at' => $this->last_password_changed_at
+                ? $this->last_password_changed_at->format('Y-m-d H:i:s')
+                : null,
+
+            'ranking' => $this->ranking,
+            'points' => $this->points
         ];
     }
 }
