@@ -44,11 +44,9 @@ Route::get('/products/web', [ProductController::class, 'indexWeb']);
 Route::get('/products/web/{id}/', [ProductController::class, 'productDetail']);
 Route::get('/products/categories/{id}', [CategoryController::class, 'getProductsByCategory']);
 Route::get('/categories/web', [CategoryController::class, 'indexWeb']);
-
 Route::get('/categories/web/{id}/', [CategoryController::class, 'categoryDetail']);
 
 //Discount
-
 Route::get('/provinces', function () {
     $response = Http::get("https://provinces.open-api.vn/api/p/");
     return response()->json($response->json());
@@ -87,7 +85,7 @@ Route::get('google/login', [GoogleController::class, 'redirectToGoogle'])->name(
 Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
 
     Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
-
+    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
     Route::get('/orders/invoice', [PdfController::class, 'index']);
     Route::get('carts/count', [CartController::class, 'countCart']);
     Route::apiResource('carts', CartController::class);
