@@ -196,6 +196,11 @@ const MainContent = () => {
           <SwiperSlide>
             <div className="position-relative">
               <video src={videoSrc} autoPlay muted playsInline loop className="w-100" style={{ height: "500px", objectFit: "cover", borderRadius: "10px" }}></video>
+              {/* <div className="position-absolute top-50 start-50 translate-middle text-white text-center"
+                style={{ backgroundColor: "rgba(0,0,0,0.5)", padding: "20px", borderRadius: "10px" }}>
+                <h2>Khám phá sản phẩm mới</h2>
+                <h4 className="text-warning">Ưu đãi hấp dẫn hôm nay!</h4>
+              </div> */
             </div>
           </SwiperSlide>
 
