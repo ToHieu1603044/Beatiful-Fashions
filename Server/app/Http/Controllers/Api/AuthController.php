@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use App\Http\Controllers\Api\Controller;
 use Illuminate\Validation\Validator;
@@ -16,45 +18,60 @@ use Jenssegers\Agent\Agent;
 class AuthController extends Controller
 {
   use ApiDataTrait;
-  // Đăng nhập
+
+  
   public function login(Request $request)
   {
-    $request->validate([
-      'email' => 'required|string|email',
-      'password' => 'required|string',
-    ]);
-
-    if (!Auth::attempt($request->only('email', 'password'))) {
-      return response()->json(['message' => 'Sai email hoặc mật khẩu'], 401);
-    }
-    $userAgent = $request->header('User-Agent');
-    $ip = $request->ip();
-    \Log::info($ip);
-    \Log::info($userAgent);
-    $user = Auth::user();
-
-    $tokenResult = $user->createToken('auth_token');
-    $plainTextToken = $tokenResult->plainTextToken;
-
-    $tokenResult->accessToken->update([
-      'name' => $this->parseDeviceName($userAgent),
-      'user_agent' => $userAgent,
-      'ip_address' => $ip,
-    ]);
-
-    if ($user->roles()->exists()) {
-      event(new \App\Events\UserLoggedIn($user));
-    }
-
-    return response()->json([
-      'message' => 'Đăng nhập thành công!',
-      'access_token' => $plainTextToken,
-      'token_type' => 'Bearer',
-      'user' => $user,
-      'role' => $user->getRoleNames()
-    ]);
-
+      $request->validate([
+          'email' => 'required|string|email',
+          'password' => 'required|string',
+      ]);
+  
+      $key = Str::lower($request->input('email')) . '|' . $request->ip();
+  
+      if (RateLimiter::tooManyAttempts($key, 5)) {
+          $seconds = RateLimiter::availableIn($key);
+  
+          return response()->json([
+              'message' => "Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau $seconds giây."
+          ], 429);
+      }
+  
+      if (!Auth::attempt($request->only('email', 'password'))) {
+          RateLimiter::hit($key, 60); 
+          return response()->json(['message' => 'Sai email hoặc mật khẩu'], 401);
+      }
+  
+      RateLimiter::clear($key); 
+        
+      $userAgent = $request->header('User-Agent');
+      $ip = $request->ip();
+      \Log::info($ip);
+      \Log::info($userAgent);
+  
+      $user = Auth::user();
+      $tokenResult = $user->createToken('auth_token');
+      $plainTextToken = $tokenResult->plainTextToken;
+  
+      $tokenResult->accessToken->update([
+          'name' => $this->parseDeviceName($userAgent),
+          'user_agent' => $userAgent,
+          'ip_address' => $ip,
+      ]);
+  
+      if ($user->roles()->exists()) {
+          event(new \App\Events\UserLoggedIn($user));
+      }
+  
+      return response()->json([
+          'message' => 'Đăng nhập thành công!',
+          'access_token' => $plainTextToken,
+          'token_type' => 'Bearer',
+          'user' => $user,
+          'role' => $user->getRoleNames()
+      ]);
   }
+  
   protected function parseDeviceName($userAgent)
   {
     $agent = new \Jenssegers\Agent\Agent();

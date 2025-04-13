@@ -43,6 +43,7 @@ const DetailProducts: React.FC = () => {
 
             console.log("Dữ liệu API---:", response.data);
             const productData = response.data.data.data;
+            console.log("Dữ liệu API---:", productData);
             const popular = response.data.data.popular;
             console.log("kbdw", popular)
             console.log("Dữ liệu sản phẩm: ", productData);

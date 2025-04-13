@@ -157,7 +157,7 @@ const CheckOut = () => {
     }, [selectedProvince, selectedDistrict, selectedWard]);
 
     const calculateTotal = (items: any[]) => {
-        const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const total = items.reduce((sum, item) => sum + (item.price - item.sale_price) * item.quantity, 0);
         console.log("Total amount:", total);
 
         setTotalAmount(total);
@@ -227,6 +227,7 @@ const CheckOut = () => {
         try {
             const response = await axiosInstance.post('/orders', {
                 ...formData,
+                priceShipping,
                 priceDiscount
             }, {
                 headers: { 'Content-Type': 'application/json' },
@@ -663,7 +664,7 @@ const CheckOut = () => {
                                         </p>
                                     ))}
                                 </div>
-                                <p style={{ marginLeft: "60px" }}>{item.price.toLocaleString()}₫</p>
+                                <p style={{ marginLeft: "60px" }}>{(item.price - item.sale_price).toLocaleString()}₫</p>
                             </div>
                         ))}
                     </div>

@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
 
+use App\Http\Controllers\SettingController;
 use App\Models\Order;
 // use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -28,6 +29,7 @@ use App\Http\Controllers\Api\SlideController;
 
 use App\Http\Controllers\Api\WishlistController;
 
+use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use App\Models\Product;
@@ -231,5 +233,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/devices', [AuthController::class, 'myDevices']);
     Route::delete('/devices/{id}', [AuthController::class, 'revokeDevice']);
 });
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::put('/system-settings', [SettingController::class, 'update']);
+  
+  
+});
+Route::get('/maintenance', [SettingController::class, 'index']);
+
+Route::get('/maintenance-status', function () {
+    $maintenanceMode = Setting::get('maintenance_mode', false);
+    $maintenanceMessage = Setting::get('maintenance_message', 'Hệ thống đang bảo trì, vui lòng quay lại sau.');
+    
+    return response()->json([
+        'maintenance_mode' => $maintenanceMode,
+        'maintenance_message' => $maintenanceMessage
+    ]);
+});
+
+
 
 ?>
