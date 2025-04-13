@@ -52,6 +52,7 @@ import Whishlish from "./pages/client/Whishlish";
 
 // Other Pages
 import Authorization from "./pages/403";
+
 import Dieukhoan from "./pages/client/chinhsach/Dieukhoan";
 import GioiThieu from "./pages/client/chinhsach/Gioithieu";
 import HuongDan from "./pages/client/chinhsach/HuongDan";
@@ -59,6 +60,8 @@ import ChinhSachBaoMat from "./pages/client/chinhsach/ChinhSachBaoMat";
 import ChinhSachThanhToan from "./pages/client/chinhsach/ChinhSachThanhToan";
 import ChinhSachVanChuyen from "./pages/client/chinhsach/ChinhSachVanChuyen";
 import ChinhSachDoiHang from "./pages/client/chinhsach/ChinhSachDoiHang";
+
+
 
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const role = localStorage.getItem("role");
@@ -157,6 +160,7 @@ function App() {
         { path: "order-pending", element: <OrderPending /> },
         { path: "wishlist", element: <Whishlish /> },
         { path: "order-returns", element: <OrderReturns /> },
+
         { path: "dieu-khoan", element: <Dieukhoan /> },
         { path: "gioi-thieu", element: <GioiThieu /> },
         { path: "huong-dan", element: <HuongDan /> },
@@ -164,6 +168,7 @@ function App() {
         { path: "chinh-sach-thanh-toan", element: <ChinhSachThanhToan /> },
         { path: "chinh-sach-van-chuyen", element: <ChinhSachVanChuyen /> },
         { path: "chinh-sach-doi-hang", element: <ChinhSachDoiHang /> },
+
       ],
     },
     { path: "/403", element: <Authorization /> },
