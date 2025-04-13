@@ -34,6 +34,9 @@ const DetailProducts: React.FC = () => {
     };
     useEffect(() => {
         fetchProduct();
+
+        fetchcomment();
+
     }, [id]);
 
     const fetchProduct = async () => {
@@ -66,6 +69,13 @@ const DetailProducts: React.FC = () => {
         setLoading(false);
     };
 
+
+    const fetchcomment = async () => {
+        const id = product.id
+        const response = await axios.get("http://127.0.0.1:8000/api/ratings/product/${id}");
+        console.log("Dữ liệu API---:", response.data);
+        setComments(response.data.data);
+    }
 
     const selectedVariant = useMemo(() => {
         if (!product || !product.variants) return null;
