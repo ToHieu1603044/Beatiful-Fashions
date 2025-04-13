@@ -14,6 +14,7 @@ use App\Models\AttributeOptionSku;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
@@ -108,7 +109,8 @@ class ProductController extends Controller
                     'stock' => $variant['stock'],
                     'sku' => $sku,
                 ]);
-
+                Redis::set("stock:sku:{$productSku->id}", $variant['stock']);
+                Redis::set("sku:stock:{$sku->sku}", $sku->stock);
                 foreach ($sku_values as $option_id) {
                     AttributeOptionSku::create([
                         'sku_id' => $productSku->id,

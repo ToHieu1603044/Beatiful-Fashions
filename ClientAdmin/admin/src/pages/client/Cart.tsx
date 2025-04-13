@@ -14,6 +14,7 @@ const Cart = () => {
     const fetchCarts = async () => {
         try {
             const response = await getCart();
+            console.log('Resss', response.data);
             const cartData = response.data.data.map((item) => ({
                 ...item,
                 quantity: item.quantity || 1,
@@ -126,7 +127,7 @@ const Cart = () => {
                                                     <span key={attr.id}>{attr.attribute}: {attr.value}{" "}{attr.price}</span>
                                                 ))}
                                             </p>
-                                          
+
                                         </div>
 
                                         <div style={{
@@ -168,7 +169,11 @@ const Cart = () => {
                                         </div>
 
                                         <div style={{ margin: "110px 0px 0px 50px", width: "100px" }}>
-                                            <p>{item.price * item.quantity} VNĐ</p>
+                                            <p>
+                                                {(item.price - item.sale_price) * item.quantity
+                                                    .toLocaleString()} VNĐ
+                                            </p>
+
                                         </div>
 
                                         <div
@@ -188,7 +193,7 @@ const Cart = () => {
                             <thead>
                                 <tr>
                                     <td>Tổng tiền</td>
-                                    <td>{products.reduce((total, item) => total + item.price * item.quantity, 0)} VNĐ</td>
+                                    <td>{products.reduce((total, item) => total + (item.price - item.sale_price) * item.quantity, 0)} VNĐ</td>
                                 </tr>
                             </thead>
                             <tbody style={{ borderTop: "1px solid #ccc", borderBottom: "1px solid #ccc", height: "30px" }}>
@@ -205,7 +210,7 @@ const Cart = () => {
                 </div>
 
                 <div>
-                   <Link to={"/"} className="text-uppercase btn btn-dark py-3 mt-5" style={{ borderRadius: "30px", width: "240px", marginLeft: "200px" }} >Tiếp tục mua sắm</Link>
+                    <Link to={"/"} className="text-uppercase btn btn-dark py-3 mt-5" style={{ borderRadius: "30px", width: "240px", marginLeft: "200px" }} >Tiếp tục mua sắm</Link>
                 </div>
             </div>
         </div>

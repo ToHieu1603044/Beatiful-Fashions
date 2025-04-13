@@ -48,11 +48,13 @@ const MainContent = () => {
         getCategories(),
         getProductSales(),
       ]);
-  
+
       setProducts(productsRes.data.data || []);
+      console.log("Danh sách san pham:", productsRes.data.data);
       setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
       setSales(salesRes.data.message || []);
-  
+      console.log("Danh sách khuyen mai:", salesRes.data.message);
+
       const token = localStorage.getItem("access_token");
       if (token) {
         const favoritesRes = await axios.get('http://127.0.0.1:8000/api/favorites', {
@@ -68,11 +70,11 @@ const MainContent = () => {
       console.error("Error loading data:", error);
     }
   };
-  
+
   useEffect(() => {
     fetchData();
   }, []);
-  
+
   const handleSubmit = () => {
     if (!selectedVariant) {
       alert("Vui lòng chọn biến thể.");
@@ -90,7 +92,7 @@ const MainContent = () => {
         alert("Bạn cần đăng nhập để sử dụng chức năng yêu thích.");
         return;
       }
-  
+
       const res = await axios.post(
         "http://127.0.0.1:8000/api/toggle-favorite",
         { product_id: product.id },
@@ -100,7 +102,7 @@ const MainContent = () => {
           },
         }
       );
-  
+
       if (res.data.status === "success") {
         const isFavorite = res.data.is_favorite;
 
@@ -109,7 +111,7 @@ const MainContent = () => {
             item.id === product.id ? { ...item, isFavorite } : item
           )
         );
-  
+
         setSales((prevSales) =>
           prevSales.map((item) =>
             item.id === product.id ? { ...item, isFavorite } : item
@@ -126,7 +128,7 @@ const MainContent = () => {
       }
     }
   };
-  
+
   const handleShowModal = (product) => {
     setSelectedProduct(product);
     setSelectedVariant(null);
@@ -347,7 +349,10 @@ const MainContent = () => {
                     <div className="card-body text-center">
                       <h5 className="card-title text-truncate fw-bold">{sale.name}</h5>
                       <div className="price-container">
-                        <h6 className="text-danger fw-bold mb-1">{sale.price.toLocaleString()} VND</h6>
+                        <h6 className="text-danger fw-bold mb-1">
+                          {(sale.price - sale.sale_price).toLocaleString()} VND
+                        </h6>
+
                         {sale.old_price && (
                           <small className="text-muted text-decoration-line-through">
                             {sale.old_price.toLocaleString()} VND
@@ -375,7 +380,7 @@ const MainContent = () => {
       )}
 
       {sales.length === 0 && (
-        <p className="text-center">Không có sản phẩm nào.</p>
+        <p className="text-center"></p>
       )}
 
       <CountDown />

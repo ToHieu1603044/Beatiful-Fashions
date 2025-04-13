@@ -324,8 +324,19 @@ export const returnOrderAPI = async (orderId: number, items: any[]) => {
     }
   );
 };
+export const getMaintenanceStatus = async () => {
+  const token = getAuthToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  return axios.get(`${API_BASE_URL}/maintenance`,{
+      headers
+  });
+};
 
-
+export const updateSystemSettings = async (data: any) => {
+  const token = getAuthToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  return axios.put(`${API_BASE_URL}/system-settings`, data, { headers });
+};
 
 
 

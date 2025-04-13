@@ -17,6 +17,7 @@ class ProductResource extends JsonResource
     public function toArray(Request $request): array
     {
         $flashSalePrice = $this->flashSales->isNotEmpty() ? $this->flashSales->first()->pivot->discount_price : null;
+        \Log::info($flashSalePrice);
         $isFavorite = false;
         return [
             'id' => $this->id,
