@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\GoogleController;
 
 use App\Http\Controllers\SettingController;
 use App\Models\Order;
@@ -45,8 +46,9 @@ Route::get('/products/web', [ProductController::class, 'indexWeb']);
 Route::get('/products/web/{id}/', [ProductController::class, 'productDetail']);
 Route::get('/products/categories/{id}', [CategoryController::class, 'getProductsByCategory']);
 Route::get('/categories/web', [CategoryController::class, 'indexWeb']);
-Route::get('/categories/web{id}/', [CategoryController::class, 'categoryDetail']);
-//Dis
+Route::get('/categories/web/{id}/', [CategoryController::class, 'categoryDetail']);
+
+//Discount
 Route::get('/provinces', function () {
     $response = Http::get("https://provinces.open-api.vn/api/p/");
     return response()->json($response->json());
@@ -79,6 +81,12 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name('password.reset');
 
 Route::middleware(['auth:sanctum'])->group(function () {
+
+// Google OAuth
+Route::get('google/login', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
+Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
+
+    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
     Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
     Route::get('/orders/invoice', [PdfController::class, 'index']);
     Route::get('carts/count', [CartController::class, 'countCart']);
