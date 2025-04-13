@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal, Button, Form } from "react-bootstrap";
-import { getProducts, getCategories } from "../../services/homeService";
+import { getsales, getCategories, getProductSales, getProducts } from "../../services/homeService";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/navigation";
@@ -11,6 +11,11 @@ import { Product } from "../../interfaces/Products";
 import { Category } from "../../interfaces/Categories";
 import videoSrc from "../../assets/slider-video.mp4";
 import ImageCollection from "../ImageCollection";
+import CountDown from "../CountDown";
+import axios from "axios";
+// import { ToastContainer } from 'react-toastify';
+// import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 const MainContent = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -21,6 +26,8 @@ const MainContent = () => {
   const [availableOptions, setAvailableOptions] = useState({});
   const [quantity, setQuantity] = useState(1);
   const navigate = useNavigate();
+  const [sales, setSales] = useState([]);
+  const [favoriteProductIds, setFavoriteProductIds] = useState([]);
 
   const handleIncrease = () => {
     if (selectedVariant && quantity < selectedVariant.stock) {
@@ -34,21 +41,37 @@ const MainContent = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [productsRes, categoriesRes] = await Promise.all([
-          getProducts(),
-          getCategories(),
-        ]);
-        setProducts(productsRes.data.data || []);
-        setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
-      } catch (error) {
-        console.error("Error loading data:", error);
-      } finally {
-        // setLoading(false);
+  const fetchData = async () => {
+    try {
+      const [productsRes, categoriesRes, salesRes] = await Promise.all([
+        getProducts(),
+        getCategories(),
+        getProductSales(),
+      ]);
+
+      setProducts(productsRes.data.data || []);
+      console.log("Danh sách san pham:", productsRes.data.data);
+      setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
+      setSales(salesRes.data.message || []);
+      console.log("Danh sách khuyen mai:", salesRes.data.message);
+
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        const favoritesRes = await axios.get('http://127.0.0.1:8000/api/favorites', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setFavoriteProductIds(favoritesRes.data.product_id || []);
+      } else {
+        setFavoriteProductIds([]);
       }
-    };
+    } catch (error) {
+      console.error("Error loading data:", error);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -62,6 +85,50 @@ const MainContent = () => {
   const handleCategoryClick = (id: number, slug: string) => {
     navigate(`/category/${id}/${slug}`);
   };
+  const handleAddToFavorites = async (product) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert("Bạn cần đăng nhập để sử dụng chức năng yêu thích.");
+        return;
+      }
+
+      const res = await axios.post(
+        "http://127.0.0.1:8000/api/toggle-favorite",
+        { product_id: product.id },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (res.data.status === "success") {
+        const isFavorite = res.data.is_favorite;
+
+        setProducts((prev) =>
+          prev.map((item) =>
+            item.id === product.id ? { ...item, isFavorite } : item
+          )
+        );
+
+        setSales((prevSales) =>
+          prevSales.map((item) =>
+            item.id === product.id ? { ...item, isFavorite } : item
+          )
+        );
+        await fetchData();
+        toast.success(res.data.is_favorite ? "Đã thêm vào yêu thích!" : "Đã xóa khỏi yêu thích!");
+      }
+    } catch (error) {
+      if (error.response?.status === 401) {
+        alert("Bạn cần đăng nhập để sử dụng chức năng này.");
+      } else {
+        console.error("Lỗi toggle favorite:", error);
+      }
+    }
+  };
+
   const handleShowModal = (product) => {
     setSelectedProduct(product);
     setSelectedVariant(null);
@@ -126,7 +193,6 @@ const MainContent = () => {
           className="w-100"
           style={{ maxWidth: "100%", height: "500px" }}
         >
-          {/* Slide Video */}
           <SwiperSlide>
             <div className="position-relative">
               <video src={videoSrc} autoPlay muted playsInline loop className="w-100" style={{ height: "500px", objectFit: "cover", borderRadius: "10px" }}></video>
@@ -134,7 +200,7 @@ const MainContent = () => {
                 style={{ backgroundColor: "rgba(0,0,0,0.5)", padding: "20px", borderRadius: "10px" }}>
                 <h2>Khám phá sản phẩm mới</h2>
                 <h4 className="text-warning">Ưu đãi hấp dẫn hôm nay!</h4>
-              </div> */}
+              </div> */
             </div>
           </SwiperSlide>
 
@@ -177,11 +243,10 @@ const MainContent = () => {
                   }}
                 >
                   <i
-                    className={`fas fa-heart ${product.isFavorite ? "text-danger" : "text-muted"}`}
+                    className={`fas fa-heart ${favoriteProductIds.includes(product.id) ? "text-danger" : "text-muted"}`}
                     style={{ fontSize: "1.2rem" }}
                   ></i>
                 </div>
-
                 <div
                   onClick={() => handleProductClick(product.id)}
                   style={{ cursor: "pointer" }}
@@ -228,7 +293,102 @@ const MainContent = () => {
           ))
         )}
       </div>
+      {sales.length > 0 && (
+        <>
+          <h2 className="mb-4 text-center text-uppercase mt-5">--Sản phẩm khuyến mại--</h2>
+          <div className="row justify-content-center gap-4 mb-5">
+            {sales.map((sale) => (
+              <div key={sale.id} className="col-auto">
+                <div
+                  className="card h-100 shadow-sm hover-card position-relative mx-auto mb-4"
+                  style={{
+                    width: "260px",
+                    transition: "transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "scale(1.05)";
+                    e.currentTarget.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.2)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "scale(1)";
+                    e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
+                  }}
+                >
+                  {/* Icon trái tim */}
+                  {/* <div
+                    className="position-absolute top-0 end-0 m-2 p-2 rounded-circle bg-white shadow-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToFavorites(sale);
+                    }}
+                    style={{
+                      cursor: "pointer",
+                      zIndex: 10,
+                      transition: "color 0.2s ease-in-out",
+                    }}
+                  >
+                    <i
+                      className={`fas fa-heart ${sale.is_favorite ? "text-danger" : "text-muted"}`}
+                      style={{ fontSize: "1.2rem" }}
+                    ></i>
+                  </div> */}
 
+                  <div
+                    onClick={() => handleProductClick(sale.id)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <div className="image-container">
+                      <img
+                        src={sale.images ? `http://127.0.0.1:8000/storage/${sale.images}` : "https://placehold.co/260x320"}
+                        className="card-img-top"
+                        alt={sale.name}
+                        style={{
+                          height: "320px",
+                          width: "260px",
+                          objectFit: "cover",
+                          borderTopLeftRadius: "10px",
+                          borderTopRightRadius: "10px",
+                        }}
+                      />
+                    </div>
+                    <div className="card-body text-center">
+                      <h5 className="card-title text-truncate fw-bold">{sale.name}</h5>
+                      <div className="price-container">
+                        <h6 className="text-danger fw-bold mb-1">
+                          {(sale.price - sale.sale_price).toLocaleString()} VND
+                        </h6>
+
+                        {sale.old_price && (
+                          <small className="text-muted text-decoration-line-through">
+                            {sale.old_price.toLocaleString()} VND
+                          </small>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card-footer bg-transparent border-0 text-center pb-3">
+                    <button
+                      className="btn btn-primary w-100 rounded-pill"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShowModal(sale);
+                      }}
+                    >
+                      Mua ngay
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {sales.length === 0 && (
+        <p className="text-center"></p>
+      )}
+
+      <CountDown />
       {selectedProduct && (
         <Modal
           show={!!selectedProduct}

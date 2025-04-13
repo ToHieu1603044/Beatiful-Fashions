@@ -89,7 +89,7 @@ const OrderReturns: React.FC = () => {
                 }
 
                 if (record.status === "refunded") {
-                
+
                     return (
                         <Button
                             type="primary"
@@ -98,7 +98,7 @@ const OrderReturns: React.FC = () => {
                             Đã nhận tiền
                         </Button>
                     );
-                  }
+                }
                 return <span>{record.status}</span>;
             },
         },
@@ -118,11 +118,25 @@ const OrderReturns: React.FC = () => {
                 </>
             ),
         },
-        
+
     ];
 
     return (
         <div className="container mt-4">
+            <nav aria-label="breadcrumb">
+                <ol className="breadcrumb">
+                    <li className="breadcrumb-item">
+                        <a href="/">Trang chủ</a>
+                    </li>
+                    <li className="breadcrumb-item">
+                        <a href="/orders">Đơn hàng</a>
+                    </li>
+                    <li className="breadcrumb-item active" aria-current="page">
+                        Trả hàng
+                    </li>
+                </ol>
+            </nav>
+
             <h2>Danh sách đơn hàng hoàn</h2>
             <Table dataSource={orders} columns={columns} rowKey="id" pagination={{ pageSize: 5 }} />
 

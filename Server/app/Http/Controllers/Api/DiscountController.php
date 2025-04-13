@@ -17,18 +17,20 @@ use Illuminate\Validation\ValidationException;
 
 class DiscountController
 {
-    public function index()
-    {
-        try {
-            $discounts = Discount::with('products')->get();
 
-            return response()->json(['data' => $discounts], 200);
+    public function index(Request $request){
+        try {
+            $discounts = Discount::with('products')
+                ->where('is_redeemable', false)
+                ->paginate(5);
+
+            return response()->json($discounts);
+
         } catch (\Throwable $th) {
 
             return response()->json(['message' => $th->getMessage()], 500);
         }
     }
-
     public function redeemPoints(Request $request)
     {
         try {

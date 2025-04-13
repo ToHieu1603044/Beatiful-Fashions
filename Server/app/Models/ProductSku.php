@@ -27,6 +27,11 @@ class ProductSku extends Model
     return $this->belongsToMany(Attribute::class, 'attribute_option_sku', 'sku_id', 'attribute_id')
                 ->withPivot('attribute_option_id');
 }
-
+public function flashSales()
+{
+    return $this->belongsToMany(FlashSale::class, 'flash_sale_products')
+                ->withPivot('discount_price')
+                ->withTimestamps();
+}
 
 }

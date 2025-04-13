@@ -1,199 +1,199 @@
-  import { useState, useEffect } from "react";
-  import { Outlet, useLocation, useNavigate } from "react-router-dom";
-  import { getCategories, deleteCategory } from "../../../services/categoryService";
-  import { AxiosError } from "axios";
+import React, { useState, useEffect } from "react";
+import { Table, Button, Popconfirm, message, Modal, Input } from "antd";
 import { BsEye, BsPencilSquare, BsTrash } from "react-icons/bs";
-  type CategoryType = {
-    id: number;
-    name: string;
-    slug: string;
-    image?: string | null;
-    parent_id?: number | null;
-    children: CategoryType[];
-    created_at?: string;
-    updated_at?: string;
+import { useNavigate } from "react-router-dom";
+import { getCategories, deleteCategory } from "../../../services/categoryService";
+import CategoriesAdd from "./CategoriesAdd";
+
+
+type CategoryType = {
+  id: number;
+  name: string;
+  slug: string;
+  image?: string | null;
+  parent_id?: number | null;
+  children: CategoryType[];
+  created_at?: string;
+  updated_at?: string;
+};
+
+const Categories = () => {
+  const navigate = useNavigate();
+  const [categories, setCategories] = useState<CategoryType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false); // Show category detail modal
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isModalVisible, setIsModalVisible] = useState(false); // Modal for adding new category
+
+  const handleShowCategoryModal = (category: CategoryType) => {
+    setSelectedCategory(category);
+    setShowCategoryModal(true);
   };
 
-  const Categories = () => {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const isRootCategories = location.pathname === "/admin/categories";
+  const handleCloseCategoryModal = () => {
+    setShowCategoryModal(false);
+    setSelectedCategory(null);
+  };
 
-    const [categories, setCategories] = useState<CategoryType[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
-    const [showModal, setShowModal] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
+  const hideModal = () => setIsModalVisible(false);
+  const showModal = () => setIsModalVisible(true);
 
-    useEffect(() => {
+  useEffect(() => {
+    fetchCategories();
+  }, [searchTerm]);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await getCategories({ search: searchTerm });
+      setCategories(response.data);
+    } catch (error) {
+      if(error.response.status === 401){
+        navigate("/login");
+      }
+      if(error.response.status === 403){
+        navigate("/403");
+      }
+      console.error("Lỗi khi lấy danh mục:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getParentName = (parentId: number | null) => {
+    if (!parentId) return "Không có danh mục cha ";
+    const parent = categories.find((c) => c.id === parentId);
+    return parent ? parent.name : "Không có danh mục cha ";
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteCategory(id);
+      message.success("Xóa danh mục thành công!");
       fetchCategories();
-    }, [searchTerm]);
-
-    const fetchCategories = async () => {
-      try {
-        const response = await getCategories({ search: searchTerm });
-        setCategories(response.data);
-      } catch (error) {
-        console.error("Lỗi khi lấy danh mục:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const getParentName = (parentId: number | null) => {
-      if (!parentId) return "----";
-      const parent = categories.find((c) => c.id === parentId);
-      return parent ? parent.name : "----";
-    };
-
-    const handleDelete = async (id: number) => {
-      if (!window.confirm("Bạn có chắc chắn muốn xóa danh mục này không?")) return;
-
-      try {
-        await deleteCategory(id);
-        alert("Xóa danh mục thành công!");
-        fetchCategories();
-      } catch (error) {
-        const axiosError = error as AxiosError<{ message: string }>;
-        console.error("Lỗi khi xóa danh mục:", axiosError);
-        alert("Không thể xóa danh mục. Vui lòng thử lại.");
-      }
-    };
-
-    const handleShowModal = (category: CategoryType) => {
-      setSelectedCategory(category);
-      setShowModal(true);
-    };
-
-    const handleCloseModal = () => {
-      setShowModal(false);
-      setSelectedCategory(null);
-    };
-
-    const renderCategories = (categories: CategoryType[], level: number = 0): JSX.Element[] => {
-      return categories.flatMap((category) => [
-        <tr key={category.id}>
-          <td>{category.id}</td>
-          <td style={{ paddingLeft: `${level * 20}px` }}>{category.name}</td>
-          <td>{category.slug}</td>
-          <td>
-            <img
-              src={category.image || "https://placehold.co/50x50"}
-              alt={category.name}
-              className="rounded"
-              width={50}
-              height={50}
-            />
-          </td>
-          <td>{getParentName(category.parent_id ?? null)}</td>
-          <td>{category.created_at || "----"}</td>
-          <td>{category.updated_at || "----"}</td>
-          <td className="d-flex justify-content-start gap-2">
-            <button  className="btn btn-outline-primary btn-sm d-flex align-items-center" onClick={() => handleShowModal(category)}>
-            <BsEye />
-            </button>
-            <button  className="btn btn-outline-danger btn-sm d-flex align-items-center" onClick={() => handleDelete(category.id)}>
-            <BsTrash />
-            </button>
-            <button    className="btn btn-outline-success btn-sm d-flex align-items-center" onClick={() => navigate(`/admin/categories/${category.id}/edit`)}>
-            <BsPencilSquare />
-            </button>
-          </td>
-
-
-        </tr>,
-        ...renderCategories(category.children, level + 1),
-      ]);
-    };
-
-    return (
-      <div className="container mt-4">
-        {isRootCategories && (
-          <>
-            <div className="d-flex align-items-center mb-3">
-              <h2 className="mb-0">Danh sách Danh Mục</h2>
-              <button className="btn btn-success ms-3" onClick={() => navigate("/admin/categories/create")}>
-                Thêm mới
-              </button>
-            </div>
-
-            <div className="mb-3">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Tìm kiếm danh mục..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="table-responsive">
-              <table className="table table-bordered table-striped">
-                <thead className="table-dark">
-                  <tr>
-                    <th>ID</th>
-                    <th>Tên</th>
-                    <th>Slug</th>
-                    <th>Hình ảnh</th>
-                    <th>Danh mục cha</th>
-                    <th>Ngày tạo</th>
-                    <th>Ngày cập nhật</th>
-                    <th>Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={8} className="text-center">Đang tải dữ liệu...</td>
-                    </tr>
-                  ) : categories.length > 0 ? (
-                    renderCategories(categories)
-                  ) : (
-                    <tr>
-                      <td colSpan={8} className="text-center">Không có danh mục nào.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-
-        {selectedCategory && (
-          <div className={`modal fade ${showModal ? "show d-block" : ""}`} tabIndex={-1} style={{ background: "rgba(0,0,0,0.5)" }}>
-            <div className="modal-dialog">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">Chi tiết danh mục</h5>
-                  <button type="button" className="btn-close" onClick={handleCloseModal}></button>
-                </div>
-                <div className="modal-body">
-                  <p><strong>ID:</strong> {selectedCategory.id}</p>
-                  <p><strong>Tên:</strong> {selectedCategory.name}</p>
-                  <p><strong>Slug:</strong> {selectedCategory.slug}</p>
-                  <p><strong>Danh mục cha:</strong> {getParentName(selectedCategory.parent_id || null)}</p>
-                  <p>
-                    <strong>Hình ảnh:</strong><br />
-                    <img
-                      src={selectedCategory.image || "https://placehold.co/100x100"}
-                      alt={selectedCategory.name}
-                      className="rounded mt-2"
-                      width={100}
-                      height={100}
-                    />
-                  </p>
-                </div>
-                <div className="modal-footer">
-                  <button className="btn btn-secondary" onClick={handleCloseModal}>Đóng</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <Outlet />
-      </div>
-    );
+    } catch (error) {
+      console.error("Lỗi khi xóa danh mục:", error);
+      message.error("Không thể xóa danh mục. Vui lòng thử lại.");
+    }
   };
 
-  export default Categories;
+  // Hàm này trả về dữ liệu phù hợp cho Ant Design Table
+  const renderCategories = (categories: CategoryType[], level: number = 0): any[] => {
+    return categories.flatMap((category) => [
+      {
+        key: category.id,
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        image: category.image || "https://placehold.co/50x50",
+        parent_id: category.parent_id,
+        children: category.children,
+        actions: (
+          <div>
+            <Button icon={<BsEye />} onClick={() => handleShowCategoryModal(category)} size="small" />
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa danh mục này?"
+              onConfirm={() => handleDelete(category.id)}
+              okText="Đồng ý"
+              cancelText="Hủy"
+            >
+              <Button icon={<BsTrash />} type="danger" size="small" />
+            </Popconfirm>
+            <Button icon={<BsPencilSquare />} onClick={() => navigate(`/admin/categories/${category.id}/edit`)} size="small" />
+          </div>
+        ),
+        level: level, // Gán cấp độ cho mỗi danh mục
+      },
+      ...renderCategories(category.children, level + 1), // Lặp đệ quy cho danh mục con và tăng cấp lùi
+    ]);
+  };
+
+  const columns = [
+    {
+      title: "ID",
+      dataIndex: "id",
+    },
+    {
+      title: "Tên",
+      dataIndex: "name",
+      render: (text: string, record: CategoryType) => (
+        <div style={{ marginLeft: record.level * 20 }}>{text}</div> // Lùi tên danh mục con
+      ),
+    },
+    {
+      title: "Slug",
+      dataIndex: "slug",
+    },
+    {
+      title: "Hình ảnh",
+      dataIndex: "image",
+      render: (image: string) => <img src={image || "https://placehold.co/50x50"} alt="Hình ảnh" width={50} height={50} />,
+    },
+    {
+      title: "Danh mục cha",
+      dataIndex: "parent_id",
+      render: (parentId: number) => getParentName(parentId),
+    },
+    {
+      title: "Hành động",
+      render: (text: any, record: CategoryType) => record.actions,
+    },
+  ];
+
+  return (
+    <div className="container mt-4">
+      <div className="d-flex align-items-center mb-3">
+        <h2 className="mb-0">Danh sách Danh Mục</h2>
+        <Button type="primary" className="ms-3" onClick={showModal}>
+          Thêm mới
+        </Button>
+      </div>
+
+      <div className="mb-3">
+        <Input
+          type="text"
+          className="form-control"
+          placeholder="Tìm kiếm danh mục..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      <Table
+        columns={columns}
+        dataSource={renderCategories(categories)} // Dữ liệu truyền vào Table
+        rowKey="id"
+        loading={loading}
+        pagination={true}
+      
+        childrenColumnName="children"
+      />
+
+      <CategoriesAdd visible={isModalVisible} onClose={hideModal} /> 
+
+      {selectedCategory && (
+        <Modal
+          title="Chi tiết danh mục"
+          visible={showCategoryModal}
+          onCancel={handleCloseCategoryModal}
+          footer={<Button onClick={handleCloseCategoryModal}>Đóng</Button>}
+        >
+          <p><strong>ID:</strong> {selectedCategory.id}</p>
+          <p><strong>Tên:</strong> {selectedCategory.name}</p>
+          <p><strong>Slug:</strong> {selectedCategory.slug}</p>
+          <p><strong>Danh mục cha:</strong> {getParentName(selectedCategory.parent_id || null)}</p>
+          <p><strong>Hình ảnh:</strong></p>
+          <img
+            src={selectedCategory.image || "https://placehold.co/100x100"}
+            alt={selectedCategory.name}
+            className="rounded mt-2"
+            width={100}
+            height={100}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+};
+
+export default Categories;
