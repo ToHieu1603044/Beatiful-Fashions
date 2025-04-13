@@ -279,11 +279,18 @@ export const fetchOrders = async (params: { is_paid?: boolean; tracking_status?:
   return data;
 };
 
-export const fetchDashboardData = async () => {
+export const fetchDashboardData = async (startDate, endDate) => {
   const token = getAuthToken();
-  const { data } = await axios.get(`${API_BASE_URL}/dashboard/stats`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const { data } = await axios.get(`${API_BASE_URL}/dashboard/stats`, {
+    params: {
+      start_date: startDate,
+      end_date: endDate,
+    },
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   return data;
 };
+
 
 export const fetchRevenueData = async (type = "daily") => {
   try {
@@ -317,8 +324,19 @@ export const returnOrderAPI = async (orderId: number, items: any[]) => {
     }
   );
 };
+export const getMaintenanceStatus = async () => {
+  const token = getAuthToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  return axios.get(`${API_BASE_URL}/maintenance`,{
+      headers
+  });
+};
 
-
+export const updateSystemSettings = async (data: any) => {
+  const token = getAuthToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  return axios.put(`${API_BASE_URL}/system-settings`, data, { headers });
+};
 
 
 
