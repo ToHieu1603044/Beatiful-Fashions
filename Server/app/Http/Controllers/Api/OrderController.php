@@ -526,6 +526,18 @@ class OrderController
 
         return ApiResponse::responseSuccess('Đơn hàng đã được hủy', 204);
     }
+     public function destroys($id)
+    {
+        $order = Order::findOrFail($id);
+
+        if ($order->shipping_status !== 'pending') {
+            return ApiResponse::errorResponse(400, 'Không thể hủy đơn hàng khi đã được xử lý');
+        }
+    
+        $order->update(['status' => 'canceled']);
+
+        return ApiResponse::responseSuccess('Đơn hàng đã được hủy', 204);
+    }
     public function updateStatus(Request $request, $id)
     {
         $order = Order::findOrFail($id);
