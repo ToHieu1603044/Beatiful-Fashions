@@ -49,9 +49,8 @@ const AddUser = () => {
 
   const onSubmit = async (data: IUsers) => {
     try {
-      data.roles = selectedRoles;
+      data.role = selectedRoles;
       data.createDate = dayjs().tz("Asia/Ho_Chi_Minh").format(); // Add create date
-      
       const token = localStorage.getItem("access_token");
       if (!token) {
         alert("Bạn chưa đăng nhập!");
@@ -117,8 +116,8 @@ const AddUser = () => {
 
         <div className="mb-3">
           <label className="form-label">Mã Bưu Điện</label>
-          <input type="text" className="form-control" {...register("zip_code", { required: true })} />
-          {errors.zip_code && <p className="text-danger">Zip Code is required</p>}
+          <input type="text" className="form-control" {...register("zipCode", { required: true })} />
+          {errors.zipCode && <p className="text-danger">Zip Code is required</p>}
         </div>
 
         <div className="mb-3">
