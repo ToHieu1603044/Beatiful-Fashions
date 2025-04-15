@@ -39,14 +39,37 @@ class SettingController
             'maintenance'         => $request->boolean('maintenance'),
             'maintenance_message' => $request->input('maintenance_message'),
         ];
-
+    
         foreach ($settings as $key => $value) {
             Setting::updateOrCreate(
                 ['key' => $key],
                 ['value' => is_bool($value) ? ($value ? 'true' : 'false') : $value]
             );
         }
-
+        
+        if ($request->hasFile('logo')) {
+            $file = $request->file('logo');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('uploads/logo', $filename, 'public');
+    
+            Setting::updateOrCreate(
+                ['key' => 'logo'],
+                ['value' => $filename]
+            );
+        }
+    
         return response()->json(['message' => 'Đã cập nhật thành công']);
+    }
+    
+    public function siteName(Request $request){
+        $key = [
+            'site_name',
+            'support_email',
+            'hotline',
+        ];
+        $site = Setting::whereIn('key', $key)->pluck('value', 'key');
+        return response()->json([
+            'data' => $site
+        ]);
     }
 }

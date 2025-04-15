@@ -298,14 +298,14 @@ class OrderController
                 }
 
                 // Xử lý tồn kho bằng Redis
-                $stockResult = InventoryService::reduceStock($sku->sku, $cart->quantity);
-                if ($stockResult === -1) {
-                    DB::rollBack();
-                    return ApiResponse::errorResponse(400, "SKU {$sku->sku} không đủ hàng.");
-                } elseif ($stockResult === -2) {
-                    DB::rollBack();
-                    return ApiResponse::errorResponse(400, "Tồn kho SKU {$sku->sku} chưa được đồng bộ Redis.");
-                }
+                // $stockResult = InventoryService::reduceStock($sku->sku, $cart->quantity);
+                // if ($stockResult === -1) {
+                //     DB::rollBack();
+                //     return ApiResponse::errorResponse(400, "SKU {$sku->sku} không đủ hàng.");
+                // } elseif ($stockResult === -2) {
+                //     DB::rollBack();
+                //     return ApiResponse::errorResponse(400, "Tồn kho SKU {$sku->sku} chưa được đồng bộ Redis.");
+                // }
 
                 $price = $sku->price;
                 $now = Carbon::now();
@@ -353,6 +353,7 @@ class OrderController
                 ]);
 
                 $sku->product->increment('total_sold', $cart->quantity);
+                $sku->decrement('stock', $cart->quantity);
                 $totalAmount += $subtotal;
             }
 
@@ -520,7 +521,7 @@ class OrderController
         if ($order->shipping_status !== 'pending') {
             return ApiResponse::errorResponse(400, 'Không thể hủy đơn hàng khi đã được xử lý');
         }
-
+    
         $order->update(['status' => 'canceled']);
 
         return ApiResponse::responseSuccess('Đơn hàng đã được hủy', 204);

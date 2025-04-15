@@ -8,5 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 class Banner extends Model {
     use HasFactory;
 
-    protected $fillable = ['title', 'image', 'description', 'status'];
+    protected $fillable = ['banners'];
+
+    protected $casts = [
+        'banners' => 'array',
+    ];
 }

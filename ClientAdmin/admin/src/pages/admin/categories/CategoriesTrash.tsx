@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Table, Button, Popconfirm, message, Modal, Input, Switch } from "antd";
 import { BsEye, BsPencilSquare, BsTrash } from "react-icons/bs";
 import { useNavigate } from "react-router-dom";
-import { getCategories, deleteCategory, updateCategoryStatus } from "../../../services/categoryService";
+import { getCategoriesTrash, deleteCategory, updateCategoryStatus } from "../../../services/categoryService";
 import CategoriesAdd from "./CategoriesAdd";
 import axios from "axios";
 import DeleteButton from "../../../components/DeleteButton ";
@@ -20,7 +20,7 @@ type CategoryType = {
   updated_at?: string;
 };
 
-const Categories = () => {
+const CategoriesTrash = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<CategoryType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +48,7 @@ const Categories = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await getCategories({ search: searchTerm });
+      const response = await getCategoriesTrash({ search: searchTerm });
       setCategories(response.data);
       console.log("Dữ liệu ---:", response.data);
     } catch (error) {
@@ -85,7 +85,7 @@ const Categories = () => {
 
   const handleDelete = async (id: number) => {
     try {
-      await deleteCategory(id);
+      await axios.delete(`http://localhost:8000/api/categories/force-delete/${id}`);
       message.success("Xóa danh mục thành công!");
       fetchCategories();
     } catch (error) {
@@ -94,6 +94,16 @@ const Categories = () => {
     }
   };
 
+  const handleRestore = async (id: number) => {
+    try {
+      await axios.post(`http://localhost:8000/api/categories/restore/${id}`);
+      message.success("Khôi phục danh mục thành công!");
+      fetchCategories();
+    } catch (error) {
+      console.error("Lỗi khi khôi phục danh mục:", error);
+      message.error("Khôi phục danh mục thất bại.");
+    }
+  };
 
   const renderCategories = (categories: CategoryType[], level: number = 0): any[] => {
     return categories.flatMap((category) => [
@@ -117,12 +127,20 @@ const Categories = () => {
             >
               <Button icon={<BsTrash />} type="danger" size="small" />
             </Popconfirm>
-            <Button icon={<BsPencilSquare />} onClick={() => navigate(`/admin/categories/${category.id}/edit`)} size="small" />
+
+            <Button
+              type="dashed"
+              onClick={() => handleRestore(category.id)}
+              size="small"
+            >
+              Khôi phục
+            </Button>
+
           </div>
         ),
         level: level,
       },
-      ...renderCategories(category.children, level + 1), 
+      ...renderCategories(category.children, level + 1),
     ]);
   };
 
@@ -157,8 +175,8 @@ const Categories = () => {
       dataIndex: "active",
       render: (active: any, record: CategoryType) => (
         <Switch
-          checked={active === 1} 
-          onChange={(checked) => handleToggleStatus(record.id, checked)} 
+          checked={active === 1}
+          onChange={(checked) => handleToggleStatus(record.id, checked)}
         />
       ),
     },
@@ -172,9 +190,6 @@ const Categories = () => {
     <div className="container mt-4">
       <div className="d-flex align-items-center mb-3">
         <h2 className="mb-0">Danh sách Danh Mục</h2>
-        <Button type="primary" className="ms-3" onClick={showModal}>
-          Thêm mới
-        </Button>
       </div>
 
       <div className="mb-3">
@@ -195,11 +210,6 @@ const Categories = () => {
         pagination={true}
 
         childrenColumnName="children"
-      />
-
-      <DeleteButton
-        label="Đã xóa"
-        navigateTo="/admin/categories/trashed"
       />
 
       <CategoriesAdd visible={isModalVisible} onClose={hideModal} />
@@ -229,4 +239,4 @@ const Categories = () => {
   );
 };
 
-export default Categories;
+export default CategoriesTrash;

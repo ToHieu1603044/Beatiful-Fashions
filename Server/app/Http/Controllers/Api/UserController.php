@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Controller;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
@@ -16,11 +17,20 @@ class UserController extends Controller
 {
     // Lấy danh sách users
     public function index()
-    {
-       $users = User::all();
-
-       return ApiResponse::responsePage(UserResource::collection($users));
+{
+    // Check thử xem cache có không
+    if (Cache::has('users')) {
+        logger('✅ Cache tồn tại: users');
+    } else {
+        logger('❌ Không có cache users');
     }
+
+    $users = User::withoutTrashed()->get();
+
+    return ApiResponse::responsePage(UserResource::collection($users));
+}
+
+    
 
     // Tạo user mới
     public function store(Request $request)
