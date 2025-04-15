@@ -58,28 +58,34 @@ const Login = () => {
     setLoading(true);
     try {
       const response = await login(data.email, data.password);
+  
       if (response.access_token) {
         localStorage.setItem("access_token", response.access_token);
         axios.defaults.headers.common["Authorization"] = `Bearer ${response.access_token}`;
         const userRoles = response.user.roles?.map(role => role.name);
-
+  
         if (userRoles && userRoles.includes("admin")) {
-
           navigate("/admin");
-
         } else {
-
           navigate("/");
-
         }
       }
     } catch (error) {
-      setError("email", { message: "Email hoặc mật khẩu không đúng" });
-      setError("password", { message: "Vui lòng kiểm tra lại" });
+      if (error.response?.status === 429) {
+        // Thông báo khi vượt quá số lần đăng nhập
+        const message = error.response?.data?.message || "Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau vài phút.";
+        setError("email", { message });
+        setError("password", { message: "" });
+      } else {
+        // Lỗi đăng nhập thông thường
+        setError("email", { message: "Email hoặc mật khẩu không đúng" });
+        setError("password", { message: "Vui lòng kiểm tra lại" });
+      }
     } finally {
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
@@ -125,7 +131,7 @@ const Login = () => {
           </button>
         </form>
         <div className="text-center mt-3">
-          <a href="auth/reset-password" className="text-decoration-none text-primary">Quên mật khẩu?</a>
+          <a href="auth/forgot-password" className="text-decoration-none text-primary">Quên mật khẩu?</a>
         </div>
         <div className="text-center mt-2">
           <span>Chưa có tài khoản? </span>

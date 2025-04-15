@@ -16,7 +16,7 @@ class CartController
 
     public function index(Request $request)
     {
-        $this->authorize('viewAny', Cart::class);
+        //   $this->authorize('viewAny', Cart::class);
         try {
             $user = Auth::user();
             $session_id = session()->getId(); // Sử dụng session ID cho khách
@@ -53,33 +53,58 @@ class CartController
             ], 500);
         }
     }
+    public function countCart(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthorized',
+                'data' => 0,
+            ], 401);
+        }
 
+        $count = Cart::where('user_id', $user->id)->count();
+        return response()->json([
+            'message' => 'Thành công',
+            'data' => $count,
+        ], 200);
+    }
+
+    public function show($id)
+    {
+
+    }
     public function store(Request $request)
     {
         $request->validate([
             'sku_id' => 'required|exists:product_skus,id',
             'quantity' => 'required|integer|min:1'
         ]);
-    
+
         try {
             $user = Auth::user();
             $session_id = session()->getId();
             $sku = ProductSku::with('attributeOptions.attribute')->findOrFail($request->sku_id);
-    
+
             if ($sku->stock < $request->quantity) {
                 return ApiResponse::errorResponse(422, "Số lượng không hợp lệ, tồn kho còn {$sku->stock}");
             }
-    
+
+            $flashSalePrice = $sku->product->flashSales->first()?->pivot->discount_price;
+            \Log::info("Giá khuyến mãi", ['flashSalePrice' => $flashSalePrice]);
+            $price = $flashSalePrice ?? $sku->price;
+
+
             $variant_detail = [
                 'sku_id' => $sku->id,
-                'price' => $sku->price,
+                'price' => $price,
                 'stock' => $sku->stock,
                 'attributes' => $sku->attributeOptions->mapWithKeys(function ($option) {
                     return [$option->attribute->name ?? 'unknown' => $option->value ?? 'unknown'];
                 })->toArray(),
                 'product' => $sku->product
             ];
-    
+
             $cartItem = Cart::where('sku_id', $request->sku_id)
                 ->where(function ($query) use ($user, $session_id) {
                     if ($user) {
@@ -88,21 +113,21 @@ class CartController
                         $query->where('session_id', $session_id);
                     }
                 })->first();
-    
+
             if ($cartItem) {
 
                 $newQuantity = $cartItem->quantity + $request->quantity;
-    
+
                 if ($newQuantity > $sku->stock) {
                     return ApiResponse::errorResponse(422, "Số lượng không hợp lệ, chỉ còn {$sku->stock} sản phẩm trong kho.");
                 }
-    
+
                 $cartItem->update([
                     'quantity' => $newQuantity,
                     'variant_detail' => json_encode($variant_detail, JSON_UNESCAPED_UNICODE)
                 ]);
             } else {
-              
+
                 Cart::create([
                     'sku_id' => $request->sku_id,
                     'user_id' => $user ? $user->id : null,
@@ -111,15 +136,13 @@ class CartController
                     'variant_detail' => json_encode($variant_detail, JSON_UNESCAPED_UNICODE)
                 ]);
             }
-    
+
             return ApiResponse::responseSuccess([], 200, 'Thêm giỏ hàng thành công');
         } catch (\Throwable $th) {
             \Log::error("Lỗi giỏ hàng:", [$th->getMessage()]);
             return ApiResponse::errorResponse(500, "Có lỗi xảy ra, vui lòng thử lại.");
         }
     }
-    
-
     public function update(Request $request, string $id)
     {
         $request->validate([
@@ -142,17 +165,16 @@ class CartController
                 ], 200);
                 $sku = $cart->sku;
 
-                }
-
-                $cart->update([
-                    'quantity' => $request->quantity
-                ]);
-                return ApiResponse::responseSuccess('', 200);
-
-                return ApiResponse::responseSuccess('', 200, 'Cập nhật giỏ hàng thành công');
-
             }
-        catch (\Throwable $th) {
+
+            $cart->update([
+                'quantity' => $request->quantity
+            ]);
+            return ApiResponse::responseSuccess('', 200);
+
+            return ApiResponse::responseSuccess('', 200, 'Cập nhật giỏ hàng thành công');
+
+        } catch (\Throwable $th) {
             \Log::error("Lỗi khi cập nhật giỏ hàng:", [$th->getMessage()]);
 
             return ApiResponse::errorResponse(500, $th->getMessage());

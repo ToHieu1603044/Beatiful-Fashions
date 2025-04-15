@@ -14,7 +14,7 @@ return [
     */
 
     'name' => env('APP_NAME', 'Laravel'),
-// 'providers' => [
+    // 'providers' => [
 //    // Illuminate\Filesystem\FilesystemServiceProvider::class,
 //     App\Providers\ElasticsearchServiceProvider::class,
 // ],
@@ -126,8 +126,15 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
-    
+
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
+    // 'providers' => [
+    //     Barryvdh\DomPDF\ServiceProvider::class,
+    // ],
+    // 'aliases' => [
+    //     'PDF' => Barryvdh\DomPDF\Facade::class,
+    // ],
+    'Agent' => Jenssegers\Agent\Facades\Agent::class,
 
 
 ];

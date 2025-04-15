@@ -2,7 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { getCart } from "../../services/homeService";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify"; 
+import { toast } from "react-toastify";
 import axiosInstance from "../../services/axiosInstance";
 import Swal from 'sweetalert2'
 import { set } from "react-hook-form";
@@ -19,14 +19,17 @@ const CheckOut = () => {
     const [selectedWard, setSelectedWard] = useState("");
     const [totalAmount, setTotalAmount] = useState(0);
     const [discountedTotal, setDiscountedTotal] = useState(0);
-        
+    const [products, setProducts] = useState([]);
+    const [priceDiscount, setPriceDiscount] = useState(0);
+    const [isGHNSelected, setIsGHNSelected] = useState(false);
+    const [priceShipping, setPriceShipping] = useState(45000);
     const [formData, setFormData] = useState({
         email: "",
         name: "",
         phone: "",
         address: "",
         discount: "",
-        total_amount: discountedTotal,
+        total_amount: discountedTotal + priceShipping,
         payment_method: "",
         note: "",
         province: "",
@@ -34,12 +37,8 @@ const CheckOut = () => {
         district: "",
         district_name: "",
         ward: ""
+
     });
-    const [products, setProducts] = useState([]);
-    const [priceDiscount, setPriceDiscount] = useState(0);
-    const [priceShipping, setPriceShipping] = useState(45000);
-
-
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -71,34 +70,94 @@ const CheckOut = () => {
         }
     };
 
-    // call api đia chỉ
     useEffect(() => {
         axios
-            .get("http://127.0.0.1:8000/api/provinces")
-            .then((response) => setProvinces(response.data))
-            .catch((error) => console.error("Error fetching provinces:", error));
+            .get("http://127.0.0.1:8000/api/ghn/provinces")
+            .then((res) => setProvinces(res.data))
+            .catch((err) => console.error("Error fetching provinces:", err));
     }, []);
-    
+
     useEffect(() => {
         if (selectedProvince) {
             axios
-                .get(`http://127.0.0.1:8000/api/provinces/${selectedProvince}?depth=2`)
-                .then((response) => setDistricts(response.data.districts))
-                .catch((error) => console.error("Error fetching districts:", error));
+                .post("http://127.0.0.1:8000/api/ghn/districts", {
+                    province_id: selectedProvince,
+                })
+                .then((res) => setDistricts(res.data))
+                .catch((err) => console.error("Error fetching districts:", err));
         }
     }, [selectedProvince]);
-    
+
+
     useEffect(() => {
         if (selectedDistrict) {
             axios
-                .get(`http://127.0.0.1:8000/api/districts/${selectedDistrict}?depth=2`)
-                .then((response) => setWards(response.data.wards))
-                .catch((error) => console.error("Error fetching wards:", error));
+                .post("http://127.0.0.1:8000/api/ghn/wards", {
+                    district_id: selectedDistrict,
+                })
+                .then((res) => setWards(res.data))
+                .catch((err) => console.error("Error fetching wards:", err));
         }
     }, [selectedDistrict]);
-    
+    const calculateShippingFee = async () => {
+        try {
+            // Validate required fields
+            if (!selectedProvince || !selectedDistrict || !selectedWard) {
+                Swal.fire({
+                    title: "Lỗi!",
+                    text: "Vui lòng chọn đầy đủ địa chỉ giao hàng",
+                    icon: "error",
+                    confirmButtonText: "OK",
+                });
+                return;
+            }
+            if (!selectedDistrict || !selectedWard || typeof selectedWard !== 'string') {
+                console.error("Thông tin địa chỉ không hợp lệ");
+                return;
+              }
+              
+            const payload = {
+                from_district_id: 201, 
+                service_id: 53322, 
+                to_district_id: selectedDistrict,
+                to_ward_code: selectedWard,
+                height: 5,  
+                length: 5,
+                width: 5,
+                weight: 1000,
+                insurance_value: discountedTotal
+            };
+
+            const response = await axios.post(
+                "http://127.0.0.1:8000/api/ghn/calculate-fee",
+                payload
+            );
+            console.log("Shipping fee response:", response.data);
+            if (response.data && response.data.data) {
+                const shippingFee = response.data.data.total;
+                setPriceShipping(shippingFee);
+
+                setFormData(prev => ({
+                    ...prev,
+                    total_amount: discountedTotal + shippingFee
+                }));
+
+                toast.success("Đã tính phí vận chuyển thành công!");
+            }
+
+        } catch (error) {
+            console.error("Error calculating shipping fee:", error);
+            toast.error("Lỗi khi tính phí vận chuyển. Vui lòng thử lại!");
+        }
+    };
+    useEffect(() => {
+        if (isGHNSelected && selectedProvince && selectedDistrict && selectedWard) {
+            calculateShippingFee();
+        }
+    }, [selectedProvince, selectedDistrict, selectedWard]);
+
     const calculateTotal = (items: any[]) => {
-        const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const total = items.reduce((sum, item) => sum + (item.price - item.sale_price) * item.quantity, 0);
         console.log("Total amount:", total);
 
         setTotalAmount(total);
@@ -107,9 +166,9 @@ const CheckOut = () => {
 
     const applyDiscount = async (e: React.FormEvent) => {
         e.preventDefault();
-    
+
         console.log("Mã giảm giá gửi đi:", formData.discount);
-    
+
         if (!formData.discount) {
             Swal.fire({
                 title: "Lỗi!",
@@ -119,52 +178,58 @@ const CheckOut = () => {
             });
             return;
         }
-    
+        console.log("Products:", products);
+
         try {
             const response = await axios.post("http://127.0.0.1:8000/api/discounts/apply", {
-                discountCode: formData.discount,  // Đúng key API Laravel mong đợi
+                discountCode: formData.discount,
                 totalAmount: totalAmount,
+                cartData: products
+
             }, {
                 headers: { "Content-Type": "application/json" },
             });
-    
+
             console.log("Response data:", response.data);
-    
+
             const discount = response.data.discountAmount || 0;
             console.log("Discount amount:", discount);
             const newTotal = Math.max(totalAmount - discount, 0);
-    
+
             setDiscountedTotal(newTotal);
             setPriceDiscount(discount);
-    
+
             Swal.fire({
                 title: "Thành công!",
                 text: response.data.message || "Giảm giá áp dụng thành công!",
                 icon: "success",
                 confirmButtonText: "OK",
             });
-    
+
         } catch (error: any) {
             const errorMessage = error.response?.data?.message || "Lỗi khi áp dụng mã giảm giá. Vui lòng thử lại!";
-    
+
             Swal.fire({
                 title: "Lỗi!",
                 text: errorMessage,
                 icon: "error",
                 confirmButtonText: "OK",
             });
-    
+
             console.error("Error applying discount:", error);
         }
     };
-    
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Dữ liệu đã gửi:", JSON.stringify(formData, null, 2));
+        console.log("Dữ liệu đã gửi:", JSON.stringify({ ...formData, priceDiscount }, null, 2));
 
         try {
-
-            const response = await axiosInstance.post('/orders', formData, {
+            const response = await axiosInstance.post('/orders', {
+                ...formData,
+                priceShipping,
+                priceDiscount
+            }, {
                 headers: { 'Content-Type': 'application/json' },
             });
 
@@ -196,6 +261,7 @@ const CheckOut = () => {
             });
         }
     };
+
 
     return (
         <>
@@ -297,22 +363,23 @@ const CheckOut = () => {
                                         <select
                                             value={selectedProvince}
                                             onChange={(e) => {
-                                                const provinceCode = e.target.value;
-                                                const provinceName = provinces.find(p => p.code == provinceCode)?.name || "";
+                                                const provinceId = parseInt(e.target.value);
+                                                const provinceName = provinces.find(p => p.ProvinceID === provinceId)?.ProvinceName || "";
 
-                                                setSelectedProvince(provinceCode);
+                                                setSelectedProvince(provinceId);
                                                 setFormData(prev => ({
                                                     ...prev,
-                                                    province: provinceCode,
+                                                    province: provinceId,
                                                     city: provinceName,
-
                                                 }));
                                             }}
                                             className="form-select"
                                         >
                                             <option value="" disabled>Chọn tỉnh thành</option>
                                             {provinces.map(province => (
-                                                <option key={province.code} value={province.code}>{province.name}</option>
+                                                <option key={province.ProvinceID} value={province.ProvinceID}>
+                                                    {province.ProvinceName}
+                                                </option>
                                             ))}
                                         </select>
 
@@ -322,22 +389,24 @@ const CheckOut = () => {
                                         <select
                                             value={selectedDistrict}
                                             onChange={(e) => {
-                                                const districtCode = e.target.value;
-                                                const districtName = districts.find(d => d.code == districtCode)?.name || "";
+                                                const districtId = parseInt(e.target.value);
+                                                const districtName = districts.find(d => d.DistrictID === districtId)?.DistrictName || "";
 
-                                                setSelectedDistrict(districtCode);
+                                                setSelectedDistrict(districtId);
                                                 setFormData(prev => ({
                                                     ...prev,
-                                                    district: districtCode, // Lưu mã quận/huyện
-                                                    district_name: districtName, // Lưu tên quận/huyện
-                                                    ward: "" // Reset phường/xã khi thay đổi quận/huyện
+                                                    district: districtId,
+                                                    district_name: districtName,
+                                                    ward: ""
                                                 }));
                                             }}
                                             className="form-select"
                                         >
                                             <option value="" disabled>Chọn quận huyện</option>
                                             {districts.map(district => (
-                                                <option key={district.code} value={district.code}>{district.name}</option>
+                                                <option key={district.DistrictID} value={district.DistrictID}>
+                                                    {district.DistrictName}
+                                                </option>
                                             ))}
                                         </select>
 
@@ -347,16 +416,26 @@ const CheckOut = () => {
                                         <select
                                             value={selectedWard}
                                             onChange={(e) => {
-                                                setSelectedWard(e.target.value);
-                                                setFormData({ ...formData, ward: e.target.value });
+                                                const wardCode = e.target.value;
+                                                const wardName = wards.find(w => w.WardCode === wardCode)?.WardName || "";
+
+                                                setSelectedWard(wardCode);
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    ward: wardCode,
+                                                    ward_name: wardName
+                                                }));
                                             }}
                                             className="form-select"
                                         >
-                                            <option value="" disabled selected>Chọn phường xã</option>
+                                            <option value="" disabled>Chọn phường xã</option>
                                             {wards.map(ward => (
-                                                <option key={ward.code} value={ward.name}>{ward.name}</option>
+                                                <option key={ward.WardCode} value={ward.WardCode}>
+                                                    {ward.WardName}
+                                                </option>
                                             ))}
                                         </select>
+
                                     </div>
                                     {/* Địa chỉ */}
                                     <div className="mb-3">
@@ -404,27 +483,28 @@ const CheckOut = () => {
                                 <form action="" className="d-flex">
                                     <input
                                         className="form-check-input me-1"
-                                        type="radio"
+                                        type="checkbox"
                                         name="flexRadioDefault"
                                         id="flexRadioDefault"
-
-                                    // checked: nếu muốn như mẫu thì bỏ cmt(check để tự động chọn mà ko cần ng dùng bấm chọn)
+                                        checked={isGHNSelected}
+                                        onChange={(e) => {
+                                            setIsGHNSelected(e.target.checked);
+                                            if (e.target.checked) {
+                                                calculateShippingFee(); // Tính phí ngay khi checkbox được chọn
+                                            }
+                                        }}
                                     />
                                     <div className="d-flex">
-                                        {" "}
-                                        <p
-                                            style={{
-                                                textTransform: "uppercase",
-                                            }}
-                                        >
-                                            chuyển phát nhanh
-                                        </p>
-                                        <p style={{ marginLeft: "90px" }}>
-                                            45.000đ
-                                        </p>
+                                        <p style={{ textTransform: "uppercase" }}>GHN</p>
+                                        {isGHNSelected && priceShipping && (
+                                            <p style={{ marginLeft: "90px" }}>
+                                                <span>Phí vận chuyển: {priceShipping.toLocaleString()} VNĐ</span>
+                                            </p>
+                                        )}
                                     </div>
                                 </form>
                             </div>
+
                             {/* thanh toán */}
                             <div className="mt-4">
                                 <h2
@@ -584,7 +664,7 @@ const CheckOut = () => {
                                         </p>
                                     ))}
                                 </div>
-                                <p style={{ marginLeft: "60px" }}>{item.price.toLocaleString()}₫</p>
+                                <p style={{ marginLeft: "60px" }}>{(item.price - item.sale_price).toLocaleString()}₫</p>
                             </div>
                         ))}
                     </div>

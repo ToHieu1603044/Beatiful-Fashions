@@ -12,8 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('discounts', function (Blueprint $table) {
-            $table->boolean('can_be_redeemed_with_points')->default(false); 
+            $table->integer('can_be_redeemed_with_points')->nullable()->after('is_redeemable');
         });
+        
     }
 
     /**

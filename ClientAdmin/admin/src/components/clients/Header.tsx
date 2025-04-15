@@ -1,8 +1,10 @@
 import { FaSearch, FaUser, FaShoppingCart } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
-import { getCategories, searchProducts } from "../../services/homeService";
+import { getCart, getCartCount, getCategories, searchProducts } from "../../services/homeService";
 import { Category } from '../../interfaces/Categories';
 import { useNavigate } from 'react-router-dom';
+import { Heart, User } from 'lucide-react';
+import UserInfo from '../UserInfo';
 
 const Header = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -11,7 +13,9 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const navigate = useNavigate();
 
-  const token = localStorage.getItem('accessToken');
+  const token = localStorage.getItem('access_token');
+  console.log(token);
+  console.log(localStorage.getItem("access_token"));
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -37,9 +41,23 @@ const Header = () => {
     if (!searchQuery) return;
     navigate(`/searchs?query=${encodeURIComponent(searchQuery)}`);
   };
-  
-  
-  
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      try {
+        const response = await getCartCount();
+        console.log("Số sản phẩm trong giỏ hàng:", response.data);
+        setCartCount(response.data.data);
+
+
+      } catch (error) {
+        console.error("Lỗi khi lấy số lượng giỏ hàng:", error);
+      }
+    };
+
+    fetchCartCount();
+  }, []); 
 
   return (
     <header className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -58,7 +76,7 @@ const Header = () => {
         </button>
 
         <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav ms-3">
+          <ul className="navbar-nav">
             {categories.map((category) => (
               <li key={category.id} className="nav-item">
                 <a className="nav-link text-white" href={`/category/${category.id}/${category.slug}`}>
@@ -66,38 +84,41 @@ const Header = () => {
                 </a>
               </li>
             ))}
+          </ul>
 
+          {/* Đẩy tìm kiếm, user, giỏ hàng sang bên phải */}
+          <ul className="navbar-nav ms-auto d-flex align-items-center gap-3">
             <li className="nav-item">
-              <a
-                className="nav-link text-white"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsSearchOpen(true);
-                }}
-              >
+              <a className="nav-link text-white" href="#" onClick={(e) => { e.preventDefault(); setIsSearchOpen(true); }}>
                 <FaSearch size={20} />
               </a>
             </li>
-            <li className="nav-item">
-              <a
-                className="nav-link text-white"
-                href="/login"
-                onClick={(e) => {
-                  e.preventDefault();
-                  checkLogin();
-                }}
-              >
-                <FaUser size={20} />
-              </a>
-            </li>
-            <li className="nav-item">
+
+            <li className="nav-item position-relative">
               <a className="nav-link text-white" href="/cart">
                 <FaShoppingCart size={20} />
+                {cartCount > 0 && (
+                  <span
+                    className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                    style={{ fontSize: "12px", padding: "5px 7px" }}
+                  >
+                    {cartCount}
+                  </span>
+                )}
+              </a>
+            </li>
+
+            <li className="nav-item">
+              <UserInfo />
+            </li>
+            <li className="nav-item">
+              <a className="nav-link text-white" href="/whislist">
+                <Heart className="w-5 h-5 text-red-500 mr-2" />
               </a>
             </li>
           </ul>
         </div>
+
       </div>
 
       {/* Modal tìm kiếm */}
@@ -108,19 +129,19 @@ const Header = () => {
               <span>×</span>
             </button>
             <div className="search-form">
-            <input
-  type="text"
-  className="search-input"
-  placeholder="Tìm kiếm sản phẩm..."
-  value={searchQuery}
-  onChange={(e) => setSearchQuery(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
-  }}
-  autoFocus
-/>
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Tìm kiếm sản phẩm..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSearch();
+                  }
+                }}
+                autoFocus
+              />
 
               <button className="search-btn" onClick={handleSearch}>
                 <FaSearch /> Tìm kiếm

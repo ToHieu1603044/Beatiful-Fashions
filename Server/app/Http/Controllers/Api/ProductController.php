@@ -11,8 +11,11 @@ use App\Models\ProductSku;
 use App\Models\Attribute;
 use App\Models\AttributeOption;
 use App\Models\AttributeOptionSku;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
@@ -20,7 +23,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $relations = ['brand', 'category', 'skus.attributeOptions', 'galleries'];
-        $filterableFields = ['name', 'category_id', 'brand_id','active'];
+        $filterableFields = ['name', 'category_id', 'brand_id', 'active'];
 
         $dates = ['create_at'];
 
@@ -106,7 +109,8 @@ class ProductController extends Controller
                     'stock' => $variant['stock'],
                     'sku' => $sku,
                 ]);
-
+                Redis::set("stock:sku:{$productSku->id}", $variant['stock']);
+                Redis::set("sku:stock:{$sku->sku}", $sku->stock);
                 foreach ($sku_values as $option_id) {
                     AttributeOptionSku::create([
                         'sku_id' => $productSku->id,
@@ -116,7 +120,7 @@ class ProductController extends Controller
             }
 
             DB::commit();
-           // Http::post("http://localhost:9200/products/_doc/{$product->id}", $product->toArray());
+            // Http::post("http://localhost:9200/products/_doc/{$product->id}", $product->toArray());
             return response()->json([
                 'message' => 'Sản phẩm đã được tạo thành công!',
                 'product' => $product->load('skus')
@@ -164,7 +168,7 @@ class ProductController extends Controller
     public function update(ProductRequest $request, $id)
     {
         $validated = $request->validated();
-
+   
         DB::beginTransaction();
 
         try {
@@ -264,11 +268,11 @@ class ProductController extends Controller
     }
     public function destroy($id)
     {
-        try{
+        try {
             $product = Product::findOrFail($id);
             $product->delete();
             return ApiResponse::responseSuccess('Xoa thanh cong');
-        }catch(\Exception $e){
+        } catch (\Exception $e) {
             return ApiResponse::errorResponse(500, $e->getMessage());
         }
     }
@@ -300,25 +304,61 @@ class ProductController extends Controller
     {
         try {
             $product = Product::onlyTrashed()->get();
-    
+
             if ($product->isEmpty()) {
                 return ApiResponse::errorResponse(404, 'Không tìm thấy sản phẩm đã xóa.');
             }
-    
-           return ApiResponse::responseObject(ProductResource::collection($product));
-    
+
+            return ApiResponse::responseObject(ProductResource::collection($product));
+
         } catch (\Exception $e) {
             \Log::error("Lỗi: " . $e->getMessage());
-    
+
             return ApiResponse::errorResponse(500, $e->getMessage());
         }
     }
-    
-    
+
+
     public function search(Request $request)
     {
         $query = $request->get('query');
         $products = Product::searchElasticsearch($query);
         return response()->json($products);
     }
+    public function status(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
+
+        $validate = Validator::make($request->all(), [
+            'active' => 'required|boolean'
+        ]);
+
+        if ($validate->fails()) {
+            return ApiResponse::errorResponse(422, $validate->errors());
+        }
+
+        $product->update([
+            'active' => $request->active
+        ]);
+
+        Cache::forget("products_cache");
+
+        Cache::tags(['products_cache'])->flush();
+
+        if (config('cache.default') === 'redis') {
+            $this->clearProductsCache();
+        }
+        Cache::flush();
+        return ApiResponse::responseSuccess('Cập nhật trạng thái thành công');
+    }
+
+    private function clearProductsCache()
+    {
+        $redis = Cache::getRedis();
+        $keys = $redis->keys('products_cache');
+        foreach ($keys as $key) {
+            $redis->del($key);
+        }
+    }
+
 }

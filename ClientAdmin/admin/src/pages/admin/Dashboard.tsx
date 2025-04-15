@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import {
+    LineChart, Line, XAxis, YAxis, Tooltip,
+    ResponsiveContainer, PieChart, Pie, Cell
+} from "recharts";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { fetchDashboardData, fetchRevenueData } from "../../services/homeService";
@@ -16,34 +18,33 @@ const Dashboard = () => {
     const [revenueData, setRevenueData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [timeFilter, setTimeFilter] = useState("daily");
-   const navigate = useNavigate();
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const navigate = useNavigate();
+
     const COLORS = ["#FFBB28", "#00C49F", "#FF8042"];
 
     const fetchDashboard = async () => {
+        setLoading(true);
         try {
-            const response = await fetchDashboardData();
-            setStats(response.stats);
-            setOrders(response.orders);
-            setProducts(response.products);
-            setOrderStatus(response.orderStatus);
+          const response = await fetchDashboardData(startDate, endDate);
+          setStats(response.stats);
+          setOrders(response.orders);
+          setProducts(response.products);
+          setOrderStatus(response.orderStatus);
         } catch (error) {
-            console.error("Lỗi lấy dữ liệu dashboard:", error);
-            if(error.response.status === 403) {
-                navigate("/403");
-            }
-            if(error.response.status === 401) {
-                navigate("/login");
-            }
+          console.error("Lỗi lấy dữ liệu dashboard:", error);
+          if (error.response?.status === 403) navigate("/403");
+          if (error.response?.status === 401) navigate("/login");
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
-
+      };
+    
     const fetchRevenue = async (type) => {
         try {
             const response = await fetchRevenueData(type);
             setRevenueData(response);
-            console.log(response.data)
         } catch (error) {
             console.error("Lỗi lấy dữ liệu doanh thu:", error);
         }
@@ -54,14 +55,14 @@ const Dashboard = () => {
         fetchRevenue(timeFilter);
     }, [timeFilter]);
 
+    const handleFilterProducts = () => {
+        fetchDashboard(); 
+    };
+
     return (
         <div className="container-fluid d-flex">
-
             <main className={`flex-grow-1 bg-light p-4 ${isSidebarOpen ? 'ms-5' : 'ms-2'}`}>
-
                 <h1 className="text-2xl fw-bold mb-3">Dashboard</h1>
-
-                {/* 🔹 Thống kê tổng quan */}
                 <div className="row mb-4">
                     <div className="col-md-3">
                         <div className="card shadow border-0 p-3 text-center bg-white">
@@ -83,19 +84,13 @@ const Dashboard = () => {
                             {loading ? <Skeleton height={30} width={50} /> : <h2 className="text-danger fw-bold">{stats.totalUsers}</h2>}
                         </div>
                     </div>
-                    <div className="col-md-3">
-                        
-                    </div>
 
-                    <div className="row g-3 mb-4">
-                        <div className="col-md-9">
-                            <div className="card shadow border-0 p-3 text-center bg-white">
-                                <h5 className="text-muted">Doanh thu (VNĐ)</h5>
-                                {loading ? <Skeleton height={30} width={100} /> : <h2 className="text-warning fw-bold">{stats.totalRevenue.toLocaleString()}₫</h2>}
-                            </div>
+                    <div className="col-md-3">
+                        <div className="card shadow border-0 p-3 text-center bg-white">
+                            <h5 className="text-muted">Doanh thu (VNĐ)</h5>
+                            {loading ? <Skeleton height={30} width={100} /> : <h2 className="text-warning fw-bold">{stats.totalRevenue.toLocaleString()}₫</h2>}
                         </div>
                     </div>
-
                 </div>
 
                 <div className="row">
@@ -140,8 +135,6 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </div>
-
-                {/* 🔹 Đơn hàng gần đây & Sản phẩm bán chạy */}
                 <div className="row mt-4">
                     <div className="col-md-6">
                         <div className="bg-white p-4 shadow rounded">
@@ -149,7 +142,7 @@ const Dashboard = () => {
                             {loading ? <Skeleton count={3} /> : (
                                 <ul>
                                     {orders.map((order) => (
-                                        <li key={order.id}>{order.name} - ({order.status})- Tôngr tiền: {order.total_amount.toLocaleString()}₫</li>
+                                        <li key={order.id}>{order.name} - ({order.status}) - Tổng tiền: {order.total_amount.toLocaleString()}₫</li>
                                     ))}
                                 </ul>
                             )}
@@ -158,7 +151,17 @@ const Dashboard = () => {
 
                     <div className="col-md-6">
                         <div className="bg-white p-4 shadow rounded">
-                            <h5 className="mb-3">Sản phẩm bán chạy</h5>
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <h5>Sản phẩm bán chạy</h5>
+                            </div>
+
+                            {/* Bộ lọc thời gian */}
+                            <div className="d-flex mb-3 gap-2">
+                                <input type="date" className="form-control" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                                <input type="date" className="form-control" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                                <button onClick={handleFilterProducts} className="btn btn-primary">Lọc</button>
+                            </div>
+
                             {loading ? <Skeleton count={3} /> : (
                                 <ul>
                                     {products.map((product) => (
