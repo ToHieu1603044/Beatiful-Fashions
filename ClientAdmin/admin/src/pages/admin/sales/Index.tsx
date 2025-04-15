@@ -29,7 +29,7 @@ interface FlashSale {
 const Index = () => {
     const handleToggleStatus = async (id: number) => {
         try {
-            await axios.put(`http://127.0.0.1:8000/api/sales/${id}/toggle-status`);
+             await axios.put(`http://127.0.0.1:8000/api/sales/${id}/toggle-status`);
             // Sau khi cập nhật thành công, reload lại danh sách
             const updatedSales = flashSales.map((sale) =>
                 sale.id === id ? { ...sale, status: sale.status === 'active' ? 'inactive' : 'active' } : sale
@@ -48,6 +48,8 @@ const Index = () => {
             setLoading(true);
             try {
                 const response = await axios.get('http://127.0.0.1:8000/api/sales');  // Lay danh sach sales
+                console.log(response.data);
+
                 setFlashSales(response.data);
             } catch (error) {
                 console.error('Lỗi khi lấy dữ liệu khuyến mãi:', error);
@@ -122,7 +124,7 @@ const Index = () => {
                                 {record.products.map((p) => (
                                     <li key={p.id}>
                                         <Text strong>{p.name}</Text> –{' '}
-                                        <Text type="danger">{p.pivot.discount_price.toLocaleString()} VNĐ</Text>
+                                        {/* <Text type="danger">{p.pivot.discount_price.toLocaleString()} VNĐ</Text> */}
                                     </li>
                                 ))}
                             </ul>

@@ -56,15 +56,33 @@ import { getMaintenanceStatus } from "./services/homeService"; // API check bả
 import MaintenancePage from "./pages/client/MaintenancePage"; // Trang hiển thị bảo trì
 import { Spin } from "antd";
 import { useEffect, useState } from "react";
+import BannerSlideForm from "./pages/admin/BannerSlideForm";
+import BannerSlide from "./pages/admin/BannerSlide";
+import CategoriesTrash from "./pages/admin/categories/CategoriesTrash";
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
-  const role = localStorage.getItem("role");
-  const token = localStorage.getItem("access_token"); 
+  const [allowed, setAllowed] = useState<null | boolean>(null);
 
-  if (!token) {
-    return <Navigate to="/403" />;
+  useEffect(() => {
+    const role = localStorage.getItem("role");
+    const token = localStorage.getItem("access_token");
+
+    // Check if there's no token or unauthorized role
+    if (!token || (role !== "admin" && role !== "manager")) {
+      setAllowed(false);
+    } else {
+      setAllowed(true);
+    }
+  }, []);
+
+  if (allowed === null) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 100 }}>
+        <Spin size="large" tip="Đang kiểm tra phân quyền..." />
+      </div>
+    );
   }
 
-  return role === "admin" || role === "manager" ? element : <Navigate to="/403" />;
+  return allowed ? element : <Navigate to="/403" />;
 };
 
 function App() {
@@ -118,10 +136,11 @@ function App() {
         { index: true, element: <Dashboard /> },
         {
           path: "categories",
-          element: <Categories />,
+          element: <ProtectedRoute element={<Categories />} />,
           children: [
-            { path: "create", element: <CategoriesAdd /> },
-            { path: ":id/edit", element: <CategoriesEdit /> },
+            { path: "create", element: <ProtectedRoute element={<CategoriesAdd />} />, },
+            { path: ":id/edit",  element: <ProtectedRoute element={<CategoriesEdit />} />, },
+           
           ],
         },
 
@@ -177,6 +196,9 @@ function App() {
         { path: "discounts", element: <Discount />, },
         { path: "sales", element: <Sales />, },
         { path: "index-sales", element: <Index />, },
+        { path: "slider/create", element: <BannerSlideForm />, },
+        { path: "slider", element: <BannerSlide />, },
+        { path: "categories/trashed", element: <ProtectedRoute element={<CategoriesTrash />} />, },
       ],
     },
     {

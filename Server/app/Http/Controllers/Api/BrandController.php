@@ -23,7 +23,6 @@ class BrandController extends Controller
         return response()->json(['data' => $brands], 200);
     }
 
-    // Thêm thương hiệu mới
     public function store(Request $req)
     {
         $this->authorize('create', Brand::class);
@@ -73,11 +72,35 @@ class BrandController extends Controller
         return response()->json(['message' => 'Xóa thành công'], 200);
     }
 
-    // Lấy thông tin một thương hiệu
     public function show($id)
     {
         $brand = Brand::findOrFail($id);
         return response()->json(['data' => $brand], 200);
+    }
+    public function BrandDelete(Request $request){
+        $this->authorize('viewAny', Brand::class);
+
+        $brands = Brand::onlyTrashed()->get();
+
+        return response()->json($brands);
+    }
+    public function restore($id){
+
+        $this->authorize('restore', Brand::class);
+        $brand = Brand::onlyTrashed()->findOrFail($id);
+
+        $brand->restore();
+
+        return response()->json(['message' => 'Thu hoan thanh cong']);
+    }
+    public function forceDelete($id){
+        $this->authorize('forceDelete', Brand::class);
+
+        $brand = Brand::onlyTrashed()->findOrFail($id);
+
+        $brand->forceDelete();
+
+        return response()->json(['message' => 'Xoa thanh cong']);
     }
 }
 

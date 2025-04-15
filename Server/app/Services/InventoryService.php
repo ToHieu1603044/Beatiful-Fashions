@@ -22,8 +22,6 @@ class InventoryService
     
         return Redis::eval($lua, 1, $key, $quantity);
     }
-    
-
     public static function restoreStock($sku, $quantity)
     {
         return Redis::incrby("sku:stock:$sku", $quantity);
