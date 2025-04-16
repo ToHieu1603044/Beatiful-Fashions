@@ -55,12 +55,17 @@ const Login = () => {
   };
 
   const onSubmit = async (data) => {
+   
+    console.log("Data:", data);
+    
     setLoading(true);
     try {
       const response = await login(data.email, data.password);
-  
+      console.log(response);
+      
       if (response.access_token) {
         localStorage.setItem("access_token", response.access_token);
+        localStorage.setItem("users", JSON.stringify(response.user));
         axios.defaults.headers.common["Authorization"] = `Bearer ${response.access_token}`;
         const userRoles = response.user.roles?.map(role => role.name);
   

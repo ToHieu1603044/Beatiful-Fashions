@@ -1,30 +1,43 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-
 import { Link, useNavigate } from "react-router-dom";
 import { IUsers } from "../../../interfaces/User";
+import {
+  Input,
+  Button,
+  Table,
+  Space,
+  Pagination,
+  message,
+  Popconfirm,
+  Typography,
+  Modal,
+} from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 
+const { Search } = Input;
 
 const Staff = () => {
   const [users, setUsers] = useState<IUsers[]>([]);
-  console.log("users",users);
-  
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<IUsers | null>(null);
   const usersPerPage = 10;
   const navigate = useNavigate();
+  const showUserDetail = (user: IUsers) => {
+    setSelectedUser(user);
+    setIsModalVisible(true);
+  };
 
   const getAll = async () => {
     try {
-      const response = await axios.get("http://127.0.0.1:8000/api/users", {
+      const response = await axios.get("http://127.0.0.1:8000/api/listUsers", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
       });
-      console.log(response.data);
-      
-      setUsers(response.data.filter((user: IUsers) => user.role === "admin"));
+      setUsers(response.data.data.filter((user: IUsers) => user.role.includes("manager")));
     } catch (error) {
       console.log(error);
     }
@@ -35,114 +48,149 @@ const Staff = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure??")) {
-      try {
-        await axios.delete(`http://localhost:3000/users/${id}`);
-        getAll();
-      } catch (error) {
-        console.log(error);
-      }
+    try {
+      await axios.delete(`http://127.0.0.1:8000/api/users/${id}`);
+      message.success("Xóa thành công!");
+      getAll();
+    } catch (error) {
+      console.log(error);
+      message.error("Xóa thất bại!");
     }
   };
 
   const filteredUsers = users.filter(
     (user) =>
-      (user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (roleFilter === "" || user.role === roleFilter)
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const columns = [
+    {
+      title: "STT",
+      dataIndex: "index",
+      key: "index",
+      render: (_: any, __: IUsers, index: number) =>
+        (currentPage - 1) * usersPerPage + index + 1,
+    },
+    {
+      title: "Tên",
+      dataIndex: "name",
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+    },
+    {
+      title: "SĐT",
+      dataIndex: "phone",
+    },
+    {
+      title: "Địa chỉ",
+      dataIndex: "address",
+    },
+    {
+      title: "Tỉnh / Thành phố",
+      dataIndex: "city",
+    },
+    {
+      title: "Quận / Huyện",
+      dataIndex: "district",
+    },
+    {
+      title: "Phường / Xã",
+      dataIndex: "ward",
+    },
+    {
+      title: "Mã Zip",
+      dataIndex: "zipCode",
+    },
+    {
+      title: "Vai trò",
+      dataIndex: "role",
+    },
+    {
+      title: "Hành động",
+      key: "action",
+      render: (_: any, record: IUsers) => (
+        <Space>
+          <Button icon={<EyeOutlined />} onClick={() => showUserDetail(record)} />
+          <Button
+            icon={<EditOutlined />}
+            onClick={() => navigate(`/admin/users/${record.id}/edit`)}
+          />
+          <Popconfirm
+            title="Bạn có chắc muốn xóa?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Button icon={<DeleteOutlined />} danger />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
   return (
     <div className="container mt-4">
-      <h2 className="mb-3">Danh sách Staff</h2>
-      <div className="mb-3 d-flex gap-2 w-75">
-        <input
-          type="text"
-          className="form-control"
+      <Typography.Title level={3}>Danh sách Staff</Typography.Title>
+
+      <Space style={{ marginBottom: 16 }}>
+        <Search
           placeholder="Tìm kiếm theo tên hoặc email..."
-          value={searchTerm}
+          allowClear
           onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ width: 400 }}
         />
-        {/* <select className="form-control w-50" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-          <option value="">Tất cả vai trò</option>
-          <option value="member">Member</option>
-          <option value="admin">Admin</option>
-        </select> */}
-      </div>
+        <Link to="/admin/users/add">
+          <Button type="primary" icon={<PlusOutlined />}>
+            Thêm Staff
+          </Button>
+        </Link>
+      </Space>
 
-      <Link to="/admin/users/add" className="btn btn-primary mb-3" >
-      <i className="fa-solid fa-user-plus"></i> Add Staff
-      </Link>
-      <div className="table-responsive">
-        <table className="table table-bordered table-striped table-sm text-center">
-          <thead className="table-dark">
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Email</th>
-              {/* <th>Email Verified At</th> */}
-              <th>Phone</th>
-              <th>Address</th>
-              <th>City</th>
-              <th>District</th>
-              <th>Ward</th>
-              <th>Zip Code</th>
-              <th>Role</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentUsers.map((item, index) => (
-              <tr key={item.id}>
-                <td>{indexOfFirstUser + index + 1}</td>
-                <td>{item.name}</td>
-                {/* <td>{item.createDate}</td> */}
-                <td>{item.email}</td>
-                {/* <td>{item.emailVerifiedAt}</td> */}
-                <td>{item.phone}</td>
-                <td>{item.address}</td>
-                <td>{item.city}</td>
-                <td>{item.district}</td>
-                <td>{item.ward}</td>
-                <td>{item.zipCode}</td>
-                <td>{item.role}</td>
-                <td className="text-center flex">
-                  <button className="btn btn-warning " >
-                    <i className="fa-solid fa-eye"></i>
-                  </button>
-                  <button className="btn btn-primary mx-2" onClick={() => navigate(`/admin/users/${item.id}/edit`)}>
-                    <i className="fa-solid fa-pen-to-square"></i>
-                  </button>
-                  <button className="btn btn-danger  " onClick={() => handleDelete(item.id)}>
+      <Table
+        dataSource={filteredUsers}
+        columns={columns}
+        rowKey="id"
+        pagination={false}
+        bordered
+      />
 
-                    <i className="fa-solid fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex justify-center mt-4">
+        <Pagination
+          current={currentPage}
+          pageSize={usersPerPage}
+          total={filteredUsers.length}
+          onChange={(page) => setCurrentPage(page)}
+          showSizeChanger={false}
+        />
       </div>
-      <nav>
-        <ul className="pagination justify-content-center">
-          <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-            <button className="page-link" onClick={() => setCurrentPage(currentPage - 1)}>Trước</button>
-          </li>
-          {[...Array(totalPages).keys()].map((number) => (
-            <li key={number} className={`page-item ${currentPage === number + 1 ? "active" : ""}`}>
-              <button className="page-link" onClick={() => setCurrentPage(number + 1)}>{number + 1}</button>
-            </li>
-          ))}
-          <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
-            <button className="page-link" onClick={() => setCurrentPage(currentPage + 1)}>Tiếp</button>
-          </li>
-        </ul>
-      </nav>
+      <Modal
+        title="Chi tiết người dùng"
+        open={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsModalVisible(false)}>
+            Đóng
+          </Button>,
+        ]}
+      >
+        {selectedUser && (
+          <div>
+            <p><strong>Tên:</strong> {selectedUser.name}</p>
+            <p><strong>Email:</strong> {selectedUser.email}</p>
+            <p><strong>SĐT:</strong> {selectedUser.phone}</p>
+            <p><strong>Địa chỉ:</strong> {selectedUser.address}</p>
+            <p><strong>Thành phố:</strong> {selectedUser.city}</p>
+            <p><strong>Quận / Huyện:</strong> {selectedUser.district}</p>
+            <p><strong>Phường / Xã:</strong> {selectedUser.ward}</p>
+            <p><strong>Mã Zip:</strong> {selectedUser.zipCode}</p>
+            <p><strong>Vai trò:</strong> {selectedUser.role}</p>
+          </div>
+        )}
+      </Modal>
+
     </div>
   );
 };

@@ -18,7 +18,9 @@ export interface IUsers {
     district: string;
     ward: string;
     zipCode: number;
-    role: "member" | "admin";
+    password_confirmation:string;
+    active: boolean;
+    role: string;
     createDate: string;
   }
   
