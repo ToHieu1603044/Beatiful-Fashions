@@ -151,9 +151,9 @@ const AddUser = () => {
 
         <div className="mb-3">
           <label className="form-label">Trạng thái</label>
-          <select className="form-select" {...register("active")} defaultValue="true">
-            <option value="true">Hoạt động</option>
-            <option value="false">Bị khóa</option>
+          <select className="form-select" {...register("active")} defaultValue="0">
+            <option value="0">Hoạt động</option>
+            <option value="1">Bị khóa</option>
           </select>
         </div>
 

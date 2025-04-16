@@ -7,6 +7,13 @@ html, body {
   font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
 }
 
+/* Thêm CSS vào file stylesheet của bạn */
+.address-column {
+  max-width: 200px;         /* Đặt độ rộng tối đa */
+  white-space: nowrap;      /* Ngăn dòng mới */
+  overflow: hidden;         /* Ẩn phần vượt quá */
+  text-overflow: ellipsis;  /* Hiển thị dấu ba chấm khi nội dung bị cắt */
+}
 
 .form-check-input:checked {
     background-color: rgb(246, 163, 163);

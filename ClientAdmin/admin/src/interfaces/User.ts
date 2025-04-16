@@ -20,7 +20,7 @@ export interface IUsers {
     zipCode: number;
     password_confirmation:string;
     active: boolean;
-    role: "member | admin";
+    role: string;
     createDate: string;
   }
   
