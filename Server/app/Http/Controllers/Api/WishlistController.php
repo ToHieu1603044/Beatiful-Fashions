@@ -13,9 +13,6 @@ use App\Models\Wishlist;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 
-
-
-
 class WishlistController extends Controller
 {
 

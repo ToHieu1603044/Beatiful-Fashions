@@ -67,7 +67,7 @@ export const deleteProduct = async (id: number) => {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 };
-export const getProductTrash = async (params?: { search?: string; category_id?: string; brand?: string; date?: string; price?: number; mix_price?: number; max_price: number; priceRange?: string }) => {
+export const getProductTrash = async (params?: { page?: number }) => {
   const token = getAuthToken();
   return await axios.get(`${API_URL}/trash`, {
     params,

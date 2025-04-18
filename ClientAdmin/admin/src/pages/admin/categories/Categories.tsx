@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Popconfirm, message, Modal, Input } from "antd";
+import { Table, Button, Popconfirm, message, Modal, Input, Switch } from "antd";
 import { BsEye, BsPencilSquare, BsTrash } from "react-icons/bs";
 import { useNavigate } from "react-router-dom";
-import { getCategories, deleteCategory } from "../../../services/categoryService";
+import { getCategories, deleteCategory, updateCategoryStatus } from "../../../services/categoryService";
 import CategoriesAdd from "./CategoriesAdd";
+import axios from "axios";
+import DeleteButton from "../../../components/DeleteButton ";
 
 
 type CategoryType = {
   id: number;
   name: string;
   slug: string;
+  active: boolean;
   image?: string | null;
   parent_id?: number | null;
   children: CategoryType[];
@@ -47,11 +50,12 @@ const Categories = () => {
     try {
       const response = await getCategories({ search: searchTerm });
       setCategories(response.data);
+      console.log("Dữ liệu ---:", response.data);
     } catch (error) {
-      if(error.response.status === 401){
+      if (error.response.status === 401) {
         navigate("/login");
       }
-      if(error.response.status === 403){
+      if (error.response.status === 403) {
         navigate("/403");
       }
       console.error("Lỗi khi lấy danh mục:", error);
@@ -59,6 +63,19 @@ const Categories = () => {
       setLoading(false);
     }
   };
+  const handleToggleStatus = async (id: number, newStatus: boolean) => {
+    console.log("ID:", id, " New Status:", newStatus); // Log để kiểm tra giá trị
+
+    try {
+      await updateCategoryStatus(id, newStatus);
+      message.success("Cập nhật trạng thái thành công!");
+      fetchCategories(); // reload lại dữ liệu
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái:", error);
+      message.error("Cập nhật trạng thái thất bại.");
+    }
+  };
+
 
   const getParentName = (parentId: number | null) => {
     if (!parentId) return "Không có danh mục cha ";
@@ -77,7 +94,7 @@ const Categories = () => {
     }
   };
 
-  // Hàm này trả về dữ liệu phù hợp cho Ant Design Table
+
   const renderCategories = (categories: CategoryType[], level: number = 0): any[] => {
     return categories.flatMap((category) => [
       {
@@ -85,6 +102,7 @@ const Categories = () => {
         id: category.id,
         name: category.name,
         slug: category.slug,
+        active: category.active,
         image: category.image || "https://placehold.co/50x50",
         parent_id: category.parent_id,
         children: category.children,
@@ -102,9 +120,9 @@ const Categories = () => {
             <Button icon={<BsPencilSquare />} onClick={() => navigate(`/admin/categories/${category.id}/edit`)} size="small" />
           </div>
         ),
-        level: level, // Gán cấp độ cho mỗi danh mục
+        level: level,
       },
-      ...renderCategories(category.children, level + 1), // Lặp đệ quy cho danh mục con và tăng cấp lùi
+      ...renderCategories(category.children, level + 1), 
     ]);
   };
 
@@ -135,6 +153,16 @@ const Categories = () => {
       render: (parentId: number) => getParentName(parentId),
     },
     {
+      title: "Trạng thái",
+      dataIndex: "active",
+      render: (active: any, record: CategoryType) => (
+        <Switch
+          checked={active === 1} 
+          onChange={(checked) => handleToggleStatus(record.id, checked)} 
+        />
+      ),
+    },
+    {
       title: "Hành động",
       render: (text: any, record: CategoryType) => record.actions,
     },
@@ -161,15 +189,20 @@ const Categories = () => {
 
       <Table
         columns={columns}
-        dataSource={renderCategories(categories)} // Dữ liệu truyền vào Table
+        dataSource={renderCategories(categories)}
         rowKey="id"
         loading={loading}
         pagination={true}
-      
+
         childrenColumnName="children"
       />
 
-      <CategoriesAdd visible={isModalVisible} onClose={hideModal} /> 
+      <DeleteButton
+        label="Đã xóa"
+        navigateTo="/admin/categories/trashed"
+      />
+
+      <CategoriesAdd visible={isModalVisible} onClose={hideModal} />
 
       {selectedCategory && (
         <Modal

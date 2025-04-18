@@ -15,7 +15,7 @@ const ResetPassword: React.FC = () => {
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-
+  const [old_password, setOldPassword] = useState<string>("");
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -34,6 +34,7 @@ const ResetPassword: React.FC = () => {
         {
           email,
           token,
+          old_password,
           password,
           password_confirmation: confirmPassword,
         },
@@ -60,6 +61,17 @@ const ResetPassword: React.FC = () => {
         {message && <div className="alert alert-success">{message}</div>}
         {error && <div className="alert alert-danger">{error}</div>}
         <form onSubmit={handleSubmit} className="mt-3">
+        <div className="mb-3">
+            <label className="form-label fw-bold">Mật khẩu cũ</label>
+            <input
+              type="password"
+              className="form-control rounded-3"
+              placeholder="Nhập mật khẩu cũ..."
+              value={old_password}
+              onChange={(e) => setOldPassword(e.target.value)}
+              required
+            />
+          </div>
           <div className="mb-3">
             <label className="form-label fw-bold">Mật khẩu mới</label>
             <input

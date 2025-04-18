@@ -14,16 +14,10 @@ const menuItems = [
   { to: "/admin/attributes", icon: <RiListSettingsLine />, label: "Thuộc Tính" },
   { to: "/admin/orders", icon: <RiShoppingCart2Line />, label: "Đơn Hàng" },
   { to: "/admin/orders/returns", icon: <RiShoppingCart2Line />, label: "Đơn Hàng Hoàn trả" },
-<<<<<<< HEAD
   { to: "/admin/brands", icon: <TbBrandDiscord />, label: "Thương Hiệu" },
   { to: "/admin/roles", icon: <TbShieldLock />, label: "Vai Trò" },
   { to: "/admin/permissions", icon: <TbShieldLock />, label: "Quyền" },
-=======
-  { to: "/admin/brands", icon: <TbBrandDiscord />, label: "Brands" },
-  { to: "/admin/roles", icon: <TbShieldLock />, label: "Roles" },
-  { to: "/admin/permissions", icon: <TbShieldLock />, label: "Permission" },
   { to: "/admin/index-sales", icon: <TbShieldLock />, label: "FlashSales" },
->>>>>>> 1145162 (Hien thi san pham co falshsale o home)
   {to: "/admin/discounts", icon: <RiCoupon3Line />, label: "Giảm Giá"},
   { to: "#", icon: <RiUser3Line />, label: "User", subMenu: [
     { to: "/admin/users/staff", label: "Staff" },

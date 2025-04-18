@@ -13,6 +13,65 @@ const Discount = () => {
     const [form] = Form.useForm();
     const [isRedeemable, setIsRedeemable] = useState(false);
     const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+    const [isEditMode, setIsEditMode] = useState(false);
+const [editingDiscount, setEditingDiscount] = useState(null);
+const handleEditDiscount = (discount) => {
+    setIsEditMode(true);
+    setEditingDiscount(discount);
+
+    form.setFieldsValue({
+        ...discount,
+        start_date: moment(discount.start_date),
+        end_date: moment(discount.end_date),
+        is_redeemable: discount.is_redeemable,
+        product_ids: discount.products?.map(p => p.id) || [],
+    });
+
+    setSelectedProducts(discount.products?.map(p => p.id) || []);
+    setIsRedeemable(discount.is_redeemable);
+    setIsModalVisible(true);
+};
+const handleOk = async () => {
+    try {
+        const data = await form.validateFields();
+        const requestData = {
+            ...data,
+            product_ids: selectedProducts,
+        };
+
+        if (isEditMode && editingDiscount) {
+            const response = await axios.put(`http://127.0.0.1:8000/api/discounts/${editingDiscount.id}`, requestData);
+            if (response.status === 200) {
+                message.success("Cập nhật mã giảm giá thành công!");
+            } else {
+                message.error("Cập nhật thất bại.");
+            }
+        } else {
+            const response = await createDiscount(requestData);
+            if (response.status == 201) {
+                message.success("Tạo mã giảm giá thành công!");
+            } else {
+                message.error("Tạo mã giảm giá thất bại.");
+            }
+        }
+
+        fetchDiscounts();
+        setIsModalVisible(false);
+        form.resetFields();
+        setEditingDiscount(null);
+        setIsEditMode(false);
+    } catch (error) {
+        console.error("Lỗi khi lưu mã giảm giá:", error);
+        message.error("Có lỗi xảy ra khi lưu.");
+    }
+};
+const handleCancel = () => {
+    setIsModalVisible(false);
+    setEditingDiscount(null);
+    setIsEditMode(false);
+    form.resetFields();
+};
+
     const handleDeleteDiscount = async (id) => {
         const confirmDelete = confirm('Bạn có chắc chắn muốn xoá không?');
         if (!confirmDelete) return;
@@ -20,10 +79,10 @@ const Discount = () => {
         try {
             const response = await axios.delete(`http://127.0.0.1:8000/api/discounts/${id}`);
             if (response.status === 200 || response.status === 204) {
-                alert('Xoá thành công');
+                message.success('Xoá thành công!');
                 setDiscounts(prev => prev.filter(discount => discount.id !== id));
             } else {
-                alert('Xoá thất bại');
+                message.error('Xoá thất bại');
             }
         } catch (error) {
             console.error('Lỗi xoá:', error);
@@ -33,7 +92,7 @@ const Discount = () => {
   const handleToggleStatus = async (discounts) => {
       try {
         const newStatus = discounts.active ? 0 : 1; 
-         await axios.put(`http://127.0.0.1:8000/api/discounts/${id}`,newStatus);
+         await axios.put(`http://127.0.0.1:8000/api/discounts/${discounts.id}`,newStatus);
         message.success("Cập nhật trạng thái thành công!");
         fetchProducts(); 
       } catch (error) {
@@ -174,9 +233,6 @@ const Discount = () => {
         setIsModalVisible(true);
     };
 
-    const handleCancel = () => {
-        setIsModalVisible(false);
-    };
     const [products, setProducts] = useState([]);
     const [selectedProducts, setSelectedProducts] = useState([]);
 
@@ -192,29 +248,6 @@ const Discount = () => {
             }
         } catch (error) {
             console.error("Error fetching products:", error);
-        }
-    };
-
-    const handleOk = async () => {
-        try {
-            const data = await form.validateFields();
-            console.log(data);
-            const requestData = {
-                ...data,
-                product_ids: selectedProducts,
-            };
-            const response = await createDiscount(requestData);
-            console.log(response);
-            if (response.status == 201) {
-                message.success("Mã giảm giá đã được tạo thành công!");
-                fetchDiscounts();
-                setIsModalVisible(false);
-            } else {
-                message.error(response.message || "Lỗi khi tạo mã giảm giá.");
-            }
-        } catch (error) {
-            console.error("Error creating discount:", error);
-            message.error("Có lỗi xảy ra khi tạo mã giảm giá.");
         }
     };
 

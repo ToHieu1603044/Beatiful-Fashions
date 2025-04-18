@@ -23,8 +23,7 @@ class AttributeController extends Controller
         ]);
     
         $attribute = Attribute::create($request->only('name'));
-    
-        // Kiểm tra nếu $request->options không rỗng và là mảng
+
         if (!empty($request->options) && is_array($request->options)) {
             foreach ($request->options as $option) {
                 AttributeOption::firstOrCreate([

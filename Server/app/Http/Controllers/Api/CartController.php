@@ -21,20 +21,15 @@ class CartController
             $user = Auth::user();
             $session_id = session()->getId(); // Sử dụng session ID cho khách
 
-            // Bắt đầu truy vấn cart với eager loading
             $cartQuery = Cart::with(['sku.product', 'attributeOptions.attribute']);
 
-            // Nếu người dùng đã đăng nhập, lọc theo user_id, nếu không thì theo session_id
             if ($user) {
                 $cartQuery->where('user_id', $user->id);
             } else {
                 $cartQuery->where('session_id', $session_id);
             }
 
-            // Lấy danh sách cart
             $cart = $cartQuery->get();
-
-            // Kiểm tra xem giỏ hàng có trống không
             if ($cart->isEmpty()) {
                 return response()->json([
                     'message' => 'Giỏ hàng của bạn hiện tại trống.',
@@ -42,11 +37,9 @@ class CartController
                 ], 200);
             }
 
-            // Trả về các item trong giỏ dưới dạng CartResource collection
             return CartResource::collection($cart);
 
         } catch (\Exception $e) {
-            // Xử lý lỗi nếu có
             return response()->json([
                 'message' => 'Có lỗi xảy ra, vui lòng thử lại sau.',
                 'error' => $e->getMessage(),
@@ -92,12 +85,11 @@ class CartController
 
             $flashSalePrice = $sku->product->flashSales->first()?->pivot->discount_price;
             \Log::info("Giá khuyến mãi", ['flashSalePrice' => $flashSalePrice]);
-            $price = $flashSalePrice ?? $sku->price;
-
-
+           
             $variant_detail = [
                 'sku_id' => $sku->id,
-                'price' => $price,
+                'price' => $sku->price,
+                'price_sale' => $flashSalePrice ?? 0,
                 'stock' => $sku->stock,
                 'attributes' => $sku->attributeOptions->mapWithKeys(function ($option) {
                     return [$option->attribute->name ?? 'unknown' => $option->value ?? 'unknown'];
