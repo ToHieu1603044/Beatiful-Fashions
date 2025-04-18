@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\GoogleController;
+use App\Http\Controllers\Api\PostController;
 
 use App\Http\Controllers\SettingController;
 use App\Models\Order;
@@ -283,6 +284,6 @@ Route::get('/maintenance-status', function () {
     ]);
 });
 
-
+Route::apiResource('posts', PostController::class);
 
 ?>
