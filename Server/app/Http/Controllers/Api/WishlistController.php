@@ -6,14 +6,10 @@ use App\Helpers\ApiResponse;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Http\Controllers\Api\Controller;
-use App\Helpers\ApiResponse;
-use App\Http\Resources\ProductResource;
 use App\Traits\ApiDataTrait;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
-
 use App\Models\Wishlist;
-use App\Models\Product;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 
