@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { getDiscounts } from '../../../services/discountsService';
-import { Table, Spin, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message, Card, Checkbox, Row, Col } from "antd";
+import { Table, Spin, Button, Modal, Form, Input, InputNumber, DatePicker, Select, message, Card, Checkbox, Row, Col, Switch } from "antd";
 import moment from 'moment';
 import { createDiscount } from '../../../services/discountsService';
 import { getProducts } from '../../../services/productService';
+import axios from 'axios';
 
 const Discount = () => {
     const [discounts, setDiscounts] = useState([]);
@@ -11,6 +12,37 @@ const Discount = () => {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [form] = Form.useForm();
     const [isRedeemable, setIsRedeemable] = useState(false);
+    const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+    const handleDeleteDiscount = async (id) => {
+        const confirmDelete = confirm('Bạn có chắc chắn muốn xoá không?');
+        if (!confirmDelete) return;
+    
+        try {
+            const response = await axios.delete(`http://127.0.0.1:8000/api/discounts/${id}`);
+            if (response.status === 200 || response.status === 204) {
+                alert('Xoá thành công');
+                setDiscounts(prev => prev.filter(discount => discount.id !== id));
+            } else {
+                alert('Xoá thất bại');
+            }
+        } catch (error) {
+            console.error('Lỗi xoá:', error);
+            alert('Đã xảy ra lỗi khi xoá. Vui lòng thử lại.');
+        }
+    }
+  const handleToggleStatus = async (discounts) => {
+      try {
+        const newStatus = discounts.active ? 0 : 1; 
+         await axios.put(`http://127.0.0.1:8000/api/discounts/${discounts.id}`,newStatus);
+        message.success("Cập nhật trạng thái thành công!");
+        fetchProducts(); 
+      } catch (error) {
+        console.error("Lỗi khi cập nhật trạng thái:", error);
+        message.error("Lỗi khi cập nhật trạng thái!");
+      }
+    };
+
+
     const columns = [
         {
             title: "Tên mã",
@@ -48,54 +80,92 @@ const Discount = () => {
             render: (value) => `${value} VNĐ`,
         },
         {
-            title: "Trạng thái ",
+            title: "Trạng thái",
             dataIndex: "active",
             key: "active",
-            render: (active) => (active ? "Kích hoạt " : "Khóa "),
-        },
+            render: (active, record) => (
+              <Switch
+                checked={active === true || active === 1} 
+                onChange={() => handleToggleStatus(record)}
+              />
+            ),
+          },
         {
             title: "Ngày tạo",
             dataIndex: "start_date",
             key: "start_date",
+            render: (value) => moment(value).format("YYYY-MM-DD HH:mm:ss"),
 
         },
         {
             title: "Ngày hết hạn",
             dataIndex: "end_date",
-            key: "end_date",
+            render: (value) => moment(value).format("YYYY-MM-DD HH:mm:ss"),
 
         },
         {
+            title: "Còn lại",
+            dataIndex: "end_date",
+            render: (value, record) => {
+                if (!value) return "Không có ngày hết hạn";
+        
+                const now = moment();
+                const startDate = moment(record.start_date);
+                const endDate = moment(value);
+        
+                if (startDate.isAfter(now)) {
+                    return "Chưa bắt đầu";  
+                }
+        
+                if (endDate.isBefore(now)) {
+                    return "Đã hết hạn";  
+                }
+        
+                const diff = endDate.diff(now, "days");
+                return `${diff} ngày`;  
+            },
+        },
+        {
+
             title: "Hành động",
             key: "actions",
             render: (record: any) => (
                 <Button.Group>
                     <Button type="primary">Edit</Button>
-                    <Button danger>Delete</Button>
+                    <Button danger onClick={() => handleDeleteDiscount(record.id)}>Delete</Button>
+
                 </Button.Group>
             ),
         },
     ];
 
     useEffect(() => {
-        fetchDiscounts();
+        fetchDiscounts(1);
     }, []);
 
-    const fetchDiscounts = async () => {
-        try {
-            const response = await getDiscounts();
-            if (Array.isArray(response.data.data)) {
-                setDiscounts(response.data.data);
+    const fetchDiscounts = async (page = 1) => {
+        setLoading(true);
 
-                console.log("Discounts fetched successfully:", response.data.data);
+        try {
+            const response = await getDiscounts(page);
+            const { data, current_page, per_page, total } = response?.data;
+
+            if (Array.isArray(data)) {
+                setDiscounts(data);
+                setPagination(prev => ({
+                    ...prev,
+                    current: current_page,
+                    pageSize: per_page,
+                    total
+                }));
             } else {
-                console.error("Expected an array of discounts, but got:", response.data.data);
+                console.error("Dữ liệu API không đúng định dạng:", response.data);
                 setDiscounts([]);
             }
-            setLoading(false);
         } catch (error) {
-            console.error("Error fetching discounts:", error);
+            console.error("Lỗi khi tải danh sách mã giảm giá:", error);
             setDiscounts([]);
+        } finally {
             setLoading(false);
         }
     };
@@ -164,7 +234,14 @@ const Discount = () => {
                         columns={columns}
                         dataSource={discounts}
                         rowKey="id"
-                        pagination={false}
+                        pagination={{
+                            current: pagination.current,
+                            pageSize: pagination.pageSize,
+                            total: pagination.total,
+                            onChange: (page) => {
+                                fetchDiscounts(page);
+                            },
+                        }}
                     />
                 </Card>
             )}
@@ -197,11 +274,16 @@ const Discount = () => {
                                     <Select.Option value="fixed">Cố định</Select.Option>
                                 </Select>
                             </Form.Item>
-
-                            <Form.Item label="Giá trị" name="value" rules={[{ required: true, message: 'Giá trị không được để trống!' }]}>
-                                <InputNumber min={1} max={100} />
+                            <Form.Item
+                                label="Giá trị"
+                                name="value"
+                                rules={[{ required: true, message: 'Giá trị không được để trống!' }]}
+                            >
+                                <InputNumber
+                                    min={1}
+                                    max={form.getFieldValue("discount_type") === "percentage" ? 100 : 10000000} 
+                                />
                             </Form.Item>
-
                             <Form.Item label="Giảm Tối Đa" name="max_discount">
                                 <InputNumber min={0} />
                             </Form.Item>
@@ -253,8 +335,6 @@ const Discount = () => {
                             <Form.Item label="Có thể đổi bằng điểm?" name="is_redeemable" valuePropName="checked">
                                 <Checkbox onChange={(e) => setIsRedeemable(e.target.checked)}>Cho phép đổi điểm</Checkbox>
                             </Form.Item>
-
-                            {/* 🟠 Chỉ hiển thị khi is_redeemable = true */}
                             {isRedeemable && (
                                 <Form.Item label="Số điểm cần để đổi" name="can_be_redeemed_with_points" rules={[{ required: true, message: 'Vui lòng nhập số điểm!' }]}>
                                     <InputNumber min={1} />

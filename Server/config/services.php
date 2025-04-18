@@ -34,5 +34,11 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+'ghn' => [
+    'token' => env('GHN_TOKEN'),
+    'shop_id' => env('GHN_SHOP_ID'),
+],
+
+
 
 ];

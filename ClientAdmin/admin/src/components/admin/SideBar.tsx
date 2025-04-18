@@ -17,6 +17,7 @@ const menuItems = [
   { to: "/admin/brands", icon: <TbBrandDiscord />, label: "Thương Hiệu" },
   { to: "/admin/roles", icon: <TbShieldLock />, label: "Vai Trò" },
   { to: "/admin/permissions", icon: <TbShieldLock />, label: "Quyền" },
+  { to: "/admin/index-sales", icon: <TbShieldLock />, label: "FlashSales" },
   {to: "/admin/discounts", icon: <RiCoupon3Line />, label: "Giảm Giá"},
   { to: "#", icon: <RiUser3Line />, label: "User", subMenu: [
     { to: "/admin/users/staff", label: "Staff" },
