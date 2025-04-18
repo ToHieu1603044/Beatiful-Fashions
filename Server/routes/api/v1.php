@@ -198,6 +198,8 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
     Route::get('/roles', [RolePermissionController::class, 'indexRoles']);
     Route::get('/permissions', [RolePermissionController::class, 'indexPermissions']);
+    Route::post('/orders/{id}/deliver', [OrderController::class, 'markAsDelivered']);
+
 
     // Tạo role & permission
     Route::post('/roles', [RolePermissionController::class, 'createRole'])->middleware('role:admin');
