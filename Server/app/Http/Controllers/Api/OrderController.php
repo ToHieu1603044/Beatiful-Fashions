@@ -725,4 +725,48 @@ class OrderController
         }
     }
 
+    public function markAsDelivered($id)
+{
+    try {
+        $user = auth()->user(); // Lấy user đang đăng nhập
+
+        // 1. Kiểm tra quyền: chỉ shipper mới được phép
+        if ($user->role !== 'shipper') {
+            return response()->json([
+                'message' => 'Chỉ shipper mới có quyền cập nhật trạng thái đơn hàng.',
+                'status' => false
+            ], 403);
+        }
+
+        // 2. Tìm đơn hàng
+        $order = Order::findOrFail($id);
+
+        // 3. Chỉ cập nhật nếu trạng thái là 'shipping'
+        if ($order->status !== 'shipping') {
+            return response()->json([
+                'message' => 'Chỉ có thể cập nhật đơn hàng đang giao.',
+                'status' => false
+            ], 400);
+        }
+
+        // 4. Cập nhật trạng thái
+        $order->status = 'complete';
+        $order->save();
+
+        return response()->json([
+            'message' => 'Đơn hàng đã được cập nhật thành công.',
+            'status' => true
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Lỗi xử lý: ' . $e->getMessage(),
+            'status' => false
+        ], 500);
+    }
+}
+
+
+
+
 }
