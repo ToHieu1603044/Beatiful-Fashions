@@ -7,6 +7,8 @@ import { createProduct } from "../../../services/productService";
 import { axiosInstance } from "../../../services/axiosInstance";
 import DescriptionEditor from "../../../components/admin/DescriptionEditor";
 import { useNavigate } from "react-router-dom";
+import {Button} from 'antd';
+import { Plus } from "lucide-react";
 
 export default function AddProductForm() {
   const [product, setProduct] = useState({
@@ -109,7 +111,11 @@ export default function AddProductForm() {
   };
   const addAttribute = () => {
     if (!selectedAttribute || selectedOptions.length === 0) return;
-
+    const existingAttr = product.attributes.find(attr => attr.name === attributesList.find(a => a.id == selectedAttribute)?.name);
+    if (existingAttr) {
+      Swal.fire("Cảnh báo", "Thuộc tính này đã được thêm!", "warning");
+      return;
+    }
     const attributeName = attributesList.find(attr => attr.id.toString() === selectedAttribute)?.name;
 
     setProduct((prev) => ({
@@ -131,8 +137,69 @@ export default function AddProductForm() {
       return;
     }
 
-    let combinations = [[]];
+    if (product.variant_values.length > 0) {
+      Swal.fire({
+        title: "Xác nhận",
+        text: "Bạn đã sinh biến thể rồi. Có muốn tạo lại không?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Tạo lại",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          generateNewVariants();
+        }
+      });
+    } else {
+      generateNewVariants();
+    }
+  };
+  // const generateVariants = () => {
+  //   if (product.attributes.length === 0) {
+  //     alert("Vui lòng thêm ít nhất một thuộc tính!");
+  //     return;
+  //   }
 
+  //   if (product.variant_values.length > 0) {
+  //     Swal.fire({
+  //       title: "Xác nhận",
+  //       text: "Bạn đã sinh biến thể rồi. Có muốn tạo lại không?",
+  //       icon: "warning",
+  //       showCancelButton: true,
+  //       confirmButtonText: "Tạo lại",
+  //     }).then((result) => {
+  //       if (result.isConfirmed) {
+  //         generateNewVariants();
+  //       }
+  //     });
+  //   } else {
+  //     generateNewVariants();
+  //   }
+  // };
+
+  // const generateNewVariants = () => {
+  //   let combinations = [[]];
+  //   product.attributes.forEach((attr) => {
+  //     let temp = [];
+  //     attr.values.forEach((value) => {
+  //       combinations.forEach((combo) => {
+  //         temp.push([...combo, value]);
+  //       });
+  //     });
+  //     combinations = temp;
+  //   });
+
+  //   const variant_values = combinations.map((comb) => ({
+  //     variant_combination: comb,
+  //     price: 0,
+  //     old_price: 0,
+  //     stock: 0,
+  //   }));
+
+  //   setProduct((prev) => ({ ...prev, variant_values }));
+  // };
+
+  const generateNewVariants = () => {
+    let combinations = [[]];
     product.attributes.forEach((attr) => {
       let temp = [];
       attr.values.forEach((value) => {
@@ -152,12 +219,25 @@ export default function AddProductForm() {
 
     setProduct((prev) => ({ ...prev, variant_values }));
   };
+
   const handleVariantChange = (index, field, value) => {
     setProduct((prev) => {
       const updatedVariants = [...prev.variant_values];
       updatedVariants[index][field] = value;
       return { ...prev, variant_values: updatedVariants };
     });
+  };
+  const handleDeleteVariant = (index: number) => {
+    setProduct((prev) => {
+      const updatedVariants = prev.variant_values.filter((_, i) => i !== index);
+      return { ...prev, variant_values: updatedVariants };
+    });
+  };
+  const handleRemoveAttribute = (attributeName) => {
+    setProduct((prev) => ({
+      ...prev,
+      attributes: prev.attributes.filter(attribute => attribute.name !== attributeName)
+    }));
   };
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -362,22 +442,29 @@ export default function AddProductForm() {
               />
             </div>
 
-            <button className="btn btn-primary mt-2" onClick={addAttribute}>
-              Thêm thuộc tính
-            </button>
+           <Button 
+
+           onClick={addAttribute}>
+             Thêm thuộc tính
+           </Button>
           </div>
 
           <ul className="list-group mb-3">
             {product.attributes.map((attr, index) => (
               <li key={index} className="list-group-item">
                 <strong>{attr.name}:</strong> {attr.values.join(", ")}
+                <Button 
+                 onClick={() => handleRemoveAttribute(attr.name)}
+                 className="btn btn-danger float-end"
+                >Xóa</Button>
               </li>
+
             ))}
           </ul>
 
-          <button className="btn btn-success mt-3" onClick={generateVariants}>
-            Tạo biến thể
-          </button>
+            <Button onClick={generateVariants}>
+              Tạo biến thể
+            </Button>
 
           {product.variant_values.length > 0 && (
             <div className="mt-3">
@@ -391,20 +478,30 @@ export default function AddProductForm() {
                     className="form-control mt-1"
                     placeholder="Giá"
                     type="number"
+                    value={variant.price}
                     onChange={(e) => handleVariantChange(index, "price", e.target.value)}
                   />
                   <input
                     className="form-control mt-1"
                     placeholder="Giá cũ"
                     type="number"
+                    value={variant.old_price}
                     onChange={(e) => handleVariantChange(index, "old_price", e.target.value)}
                   />
                   <input
                     className="form-control mt-1"
                     placeholder="Tồn kho"
                     type="number"
+                    value={variant.stock}
                     onChange={(e) => handleVariantChange(index, "stock", e.target.value)}
                   />
+                  {/* Nút xóa biến thể */}
+                  <button
+                    className="btn btn-danger mt-2"
+                    onClick={() => handleDeleteVariant(index)}
+                  >
+                    Xóa biến thể
+                  </button>
                 </div>
               ))}
             </div>

@@ -50,6 +50,7 @@ Route::get('/categories/web', [CategoryController::class, 'indexWeb']);
 Route::get('/categories/web/{id}/', [CategoryController::class, 'categoryDetail']);
 Route::get('slide-banner', [SlideController::class, 'slides']);
 Route::get('site-setting', [SettingController::class, 'siteName']);
+Route::get('avg-rating/{id}', [ProductController::class, 'getAverageRating']);
 //Discount
 Route::get('/provinces', function () {
     $response = Http::get("https://provinces.open-api.vn/api/p/");
@@ -126,6 +127,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
+    Route::get('discounts/usegeder', [DiscountController::class, 'fetchDiscount']);
     Route::get('discounts', [DiscountController::class, 'index']);
     Route::post('discounts', [DiscountController::class, 'store']);
     Route::put('discounts/{id}', [DiscountController::class, 'update']);
@@ -231,6 +233,9 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::put('banners/{id}', [SlideController::class, 'updateBanner']);
     Route::get('banners/{id}', [SlideController::class, 'showBanner']);
     Route::delete('banners/{id}', [SlideController::class, 'deleteBanner']);
+
+    Route::put('sales/{id}', [FlashSaleController::class, 'update']);
+    Route::delete('sales/{id}', [FlashSaleController::class, 'destroy']);
 
 
 
