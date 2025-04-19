@@ -9,20 +9,18 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+    public function up()
     {
         Schema::table('posts', function (Blueprint $table) {
-            $table->string('titleHead')->after('title')->nullable();
+            $table->dateTime('publishDate')->nullable();
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    
+    public function down()
     {
         Schema::table('posts', function (Blueprint $table) {
-            $table->dropColumn('titleHead');
+            $table->dropColumn('publishDate');
         });
     }
+    
 };

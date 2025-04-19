@@ -29,6 +29,7 @@ class PostController extends Controller
                 'titleHead' => 'required|string|max:255',
                 'description' => 'required|string',
                 'image' => 'nullable|file|image|max:2048',
+                'publishDate' => 'nullable|date',
                 'active' => 'boolean',
             ]);
 
@@ -65,6 +66,7 @@ class PostController extends Controller
                 'titleHead' => 'sometimes|required|string|max:255',
                 'description' => 'sometimes|required|string',
                 'image' => 'nullable|file|image|max:2048',
+                'publishDate' => 'nullable|date',
                 'active' => 'boolean',
             ]);
 
