@@ -183,7 +183,7 @@ const MainContent = () => {
   return (
     <div className="container mt-4">
       <div className="row mb-5 g-4">
-        <Swiper
+        {/* <Swiper
           modules={[Navigation, Pagination, Autoplay]}
           spaceBetween={10}
           slidesPerView={1}
@@ -196,15 +196,42 @@ const MainContent = () => {
           <SwiperSlide>
             <div className="position-relative">
               <video src={videoSrc} autoPlay muted playsInline loop className="w-100" style={{ height: "500px", objectFit: "cover", borderRadius: "10px" }}></video>
-              {/* <div className="position-absolute top-50 start-50 translate-middle text-white text-center"
+              <div className="position-absolute top-50 start-50 translate-middle text-white text-center"
                 style={{ backgroundColor: "rgba(0,0,0,0.5)", padding: "20px", borderRadius: "10px" }}>
                 <h2>Khám phá sản phẩm mới</h2>
                 <h4 className="text-warning">Ưu đãi hấp dẫn hôm nay!</h4>
-              </div> */}
+              </div>
             </div>
           </SwiperSlide>
 
-        </Swiper>
+        </Swiper> */}
+        <div id="carouselExampleIndicators" className="carousel slide" data-bs-ride="carousel" data-bs-interval="2000">
+          <div className="carousel-indicators">
+            <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" className="active" aria-current="true" aria-label="Slide 1"></button>
+            <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1" aria-label="Slide 2"></button>
+            <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2" aria-label="Slide 3"></button>
+          </div>
+          <div className="carousel-inner">
+            <div className="carousel-item active">
+              <img src="https://intphcm.com/data/upload/dung-luong-banner-thoi-trang.jpg" className="d-block w-100" alt="First slide" />
+            </div>
+            <div className="carousel-item">
+              <img src="https://cotton4u.vn/files/news/2025/04/17/851111a46c6ea8ee79e5a465a91aa3c7.webp" className="d-block w-100" alt="Second slide" />
+            </div>
+            <div className="carousel-item">
+              <img className="d-block w-100" src="https://cotton4u.vn/files/news/2025/04/15/63fbae2cbd8adde79d504aafcfe92eee.webp" alt="Third slide" />
+            </div>
+          </div>
+          <button className="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
+            <span className="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span className="visually-hidden">Previous</span>
+          </button>
+          <button className="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="next">
+            <span className="carousel-control-next-icon" aria-hidden="true"></span>
+            <span className="visually-hidden">Next</span>
+          </button>
+        </div>
+
       </div>
       < ImageCollection />
       <h2 className="mb-4 text-center text-uppercase mt-5">--Tất cả sản phẩm--</h2>

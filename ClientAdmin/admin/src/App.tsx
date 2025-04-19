@@ -59,6 +59,10 @@ import { useEffect, useState } from "react";
 import BannerSlideForm from "./pages/admin/BannerSlideForm";
 import BannerSlide from "./pages/admin/BannerSlide";
 import CategoriesTrash from "./pages/admin/categories/CategoriesTrash";
+import ListBaiViet from "./pages/admin/baiviet/ListBaiViet";
+import BaivietForm from "./pages/admin/baiviet/FormBaiViet";
+import BaivietPage from "./pages/client/baiviet/Baiviet";
+import BaivietDetailPage from "./pages/client/baiviet/ChiTietbaChiTiet";
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const [allowed, setAllowed] = useState<null | boolean>(null);
 
@@ -147,7 +151,7 @@ function App() {
         { path: "users", element: <Users />,
         },
         { path: "users/add", element: <AddUser/> },
-        { path: "users/:id/edit", element: <EditUser /> },
+        // { path: "users/:id/edit", element: <EditUser /> },
 
         {
           path: "attributes",
@@ -184,7 +188,7 @@ function App() {
           path: "users/staff", element: <Staff />,
         },
         { path: "users/add", element: <AddUser /> },
-        { path: "users/:id/edit", element: <EditUser /> },
+        // { path: "users/:id/edit", element: <EditUser /> },
         { path: "roles", element: <Roles /> },
         { path: "roles/create", element: <RolesAdd /> },
         { path: "roles/:id/edit", element: <EditRole /> },
@@ -199,6 +203,9 @@ function App() {
         { path: "slider/create", element: <BannerSlideForm />, },
         { path: "slider", element: <BannerSlide />, },
         { path: "categories/trashed", element: <ProtectedRoute element={<CategoriesTrash />} />, },
+        { path:"baiviet",element:<ListBaiViet/>},
+        { path:"baiviet/add",element:<BaivietForm/>},
+        { path:"baiviet/edit/:id",element:<BaivietForm/>},
       ],
     },
     {
@@ -217,7 +224,9 @@ function App() {
         { path: "searchs", element: <SearchProducts /> },
         { path: "orders/return", element: <OrderReturns /> },
         { path: "whishlish", element: <Whishlish /> },
-        {path: "sales", element: <Index />},
+        { path: "sales", element: <Index />},
+        { path: "baiviet", element: <BaivietPage />},
+        { path: "baiviet/:id", element: <BaivietDetailPage />},
         { path: "whislist", element: <Whishlish /> },
       ],
     },
