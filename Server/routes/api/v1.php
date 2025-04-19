@@ -83,11 +83,14 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name('password.reset');
 
+
+ // Google OAuth
+//  Route::middleware(['web'])->get('/auth/google', [GoogleController::class, 'redirectToGoogle']);
+//  Route::middleware(['web'])->get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 Route::middleware(['auth:sanctum'])->group(function () {
 
-    // Google OAuth
-    Route::get('google/login', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
-    Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
+   
+
 
     Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
     Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);

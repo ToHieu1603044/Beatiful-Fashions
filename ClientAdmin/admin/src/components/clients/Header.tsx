@@ -36,12 +36,14 @@ const Header = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
 
+  console.log(token);
+
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const sites = await axios.get('http://127.0.0.1:8000/api/site-setting');
         setSite(sites.data.data);
-
         const response = await getCategories();
         setCategories(response.data);
       } catch (error) {
@@ -181,6 +183,19 @@ const Header = () => {
 
             <li className="nav-item">
               <UserInfo />
+            </li>
+            <li className="nav-item">
+              {localStorage.getItem("access_token") ? (
+                <button
+                  className="btn btn-sm btn-outline-light"
+                  onClick={() => {
+                    localStorage.removeItem("access_token");
+                    window.location.reload();
+                  }}
+                >
+                  Logout
+                </button>
+              ):''}
             </li>
             <li className="nav-item">
               <a className="nav-link text-white" href="/whislist">

@@ -126,8 +126,9 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5174'),
 
-    'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
+    // 'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
     // 'providers' => [
     //     Barryvdh\DomPDF\ServiceProvider::class,
     // ],

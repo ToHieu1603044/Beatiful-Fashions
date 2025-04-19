@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Carbon\Carbon;
 
 class UserResource extends JsonResource
 {
@@ -15,23 +16,24 @@ class UserResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'email' => $this->email,
-            'role' => $this->getRoleNames(),
-            'phone' => $this->phone,
-            'city' => $this->city,
-            'ward' => $this->ward,
-            'district' => $this->district,
-            'address' => $this->address,
-            'zip_code' => $this->zip_code,
-            'active' => $this->active,
-            'last_password_changed_at' => $this->last_password_changed_at
-                ? $this->last_password_changed_at->format('Y-m-d H:i:s')
+            'id'                        => $this->id,
+            'name'                      => $this->name,
+            'email'                     => $this->email,
+            'role'                      => $this->getRoleNames(),
+            'phone'                     => $this->phone,
+            'city'                      => $this->city,
+            'ward'                      => $this->ward,
+            'district'                  => $this->district,
+            'address'                   => $this->address,
+            'zip_code'                  => $this->zip_code,
+            'active'                    => $this->active,
+            // Chuyển chuỗi hoặc DateTime thành Carbon để tránh lỗi format on string
+            'last_password_changed_at'  => $this->last_password_changed_at
+                ? Carbon::parse($this->last_password_changed_at)->format('Y-m-d H:i:s')
                 : null,
 
-            'ranking' => $this->ranking,
-            'points' => $this->points
+            'ranking'                   => $this->ranking,
+            'points'                    => $this->points,
         ];
     }
 }

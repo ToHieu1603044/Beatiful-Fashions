@@ -6,16 +6,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { FcGoogle } from "react-icons/fc";
-
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+const API_BASE_URL = "http://127.0.0.1:8000/api/";
+const AUTH_BASE_URL = "http://127.0.0.1:8000";
 axios.defaults.baseURL = API_BASE_URL;
-
-const token = localStorage.getItem("access_token");
-if (token) {
-  axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-} else {
-  delete axios.defaults.headers.common["Authorization"];
-}
 
 const schema = z.object({
   email: z.string().email({ message: "Email không hợp lệ" }),
@@ -37,38 +30,66 @@ const Login = () => {
   const location = useLocation();
 
   useEffect(() => {
+    // auto kiem tra token
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      navigate('/');
+    } else {
+      delete axios.defaults.headers.common["Authorization"];
+    }
+    // Xử lý Google Login nếu có state từ URL
     const params = new URLSearchParams(location.search);
+    const state = params.get("state");
+
+    if (state) {
+      try {
+        const raw = atob(state);
+        const decoded = JSON.parse(raw);
+        const { token, user, roles } = decoded;
+        localStorage.setItem("access_token", token);
+        localStorage.setItem("users", JSON.stringify(user));
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        const userRoles = roles?.map((r) => r.toLowerCase());
+        if (userRoles?.includes("admin")) {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
+      } catch (err) {
+        console.error("Lỗi giải mã state:", err);
+        navigate("/login-error");
+      }
+    }
+
+    // Nếu có return URL (từ chỗ redirect), lưu lại
     const returnUrl = params.get("ReturnUrl");
     if (returnUrl) {
       sessionStorage.setItem("returnUrl", returnUrl);
     } else {
       sessionStorage.removeItem("returnUrl");
     }
-  }, [location]);
+  }, [location, navigate]);
 
   const login = async (email, password) => {
     return axios.post("/login", { email, password }).then((res) => res.data);
   };
 
   const googleLogin = () => {
-    window.location.href = `${API_BASE_URL}/auth/google`;
+    window.location.href = `${AUTH_BASE_URL}/auth/google`;
   };
 
   const onSubmit = async (data) => {
-   
-    console.log("Data:", data);
-    
     setLoading(true);
     try {
       const response = await login(data.email, data.password);
-      console.log(response);
-      
       if (response.access_token) {
         localStorage.setItem("access_token", response.access_token);
         localStorage.setItem("users", JSON.stringify(response.user));
         axios.defaults.headers.common["Authorization"] = `Bearer ${response.access_token}`;
-        const userRoles = response.user.roles?.map(role => role.name);
-  
+
+        const userRoles = response.user.roles?.map((role) => role.name?.toLowerCase());
+
         if (userRoles && userRoles.includes("admin")) {
           navigate("/admin");
         } else {
@@ -77,12 +98,10 @@ const Login = () => {
       }
     } catch (error) {
       if (error.response?.status === 429) {
-        // Thông báo khi vượt quá số lần đăng nhập
         const message = error.response?.data?.message || "Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau vài phút.";
         setError("email", { message });
         setError("password", { message: "" });
       } else {
-        // Lỗi đăng nhập thông thường
         setError("email", { message: "Email hoặc mật khẩu không đúng" });
         setError("password", { message: "Vui lòng kiểm tra lại" });
       }
@@ -90,11 +109,17 @@ const Login = () => {
       setLoading(false);
     }
   };
-  
 
   return (
     <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
-      <div className="card shadow-lg border-0 p-4 rounded-4" style={{ width: "380px", background: "rgba(255, 255, 255, 0.85)", backdropFilter: "blur(10px)" }}>
+      <div
+        className="card shadow-lg border-0 p-4 rounded-4"
+        style={{
+          width: "380px",
+          background: "rgba(255, 255, 255, 0.85)",
+          backdropFilter: "blur(10px)",
+        }}
+      >
         <div className="text-center mb-4">
           <h2 className="fw-bold text-dark">Đăng nhập</h2>
         </div>
@@ -136,11 +161,15 @@ const Login = () => {
           </button>
         </form>
         <div className="text-center mt-3">
-          <a href="auth/forgot-password" className="text-decoration-none text-primary">Quên mật khẩu?</a>
+          <a href="/auth/forgot-password" className="text-decoration-none text-primary">
+            Quên mật khẩu?
+          </a>
         </div>
         <div className="text-center mt-2">
           <span>Chưa có tài khoản? </span>
-          <a href="/register" className="text-decoration-none text-primary fw-bold">Đăng ký ngay</a>
+          <a href="/register" className="text-decoration-none text-primary fw-bold">
+            Đăng ký ngay
+          </a>
         </div>
       </div>
     </div>
