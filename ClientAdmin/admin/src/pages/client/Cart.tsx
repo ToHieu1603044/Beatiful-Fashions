@@ -43,14 +43,23 @@ const Cart = () => {
         if (newQuantity < 1) return;
 
         try {
-            await updateCart({ quantity: newQuantity }, id);
+            const response = await updateCart({ quantity: newQuantity }, id);
             setProducts((prevProducts) =>
                 prevProducts.map((item) =>
                     item.id === id ? { ...item, quantity: newQuantity } : item
                 )
             );
+            console.log('Resss', response.data);
+            if (response.data.status === "success") {
+                fetchCarts();
+            }
         } catch (error) {
-            console.error("Lỗi khi cập nhật giỏ hàng:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi',
+                text: `Sản phẩm ${product.product.name} vượt quá số lượng trong kho.`,
+            });
+
         }
     };
 
@@ -112,79 +121,99 @@ const Cart = () => {
                         </div>
 
                         <div>
-                            {products.map((item: any) => (
-                                <div key={item.id}>
-                                    <div className="d-flex" style={{ borderBottom: "1px solid #ccc", position: "relative" }}>
-                                        <img
-                                            src={item.product.images ? `http://127.0.0.1:8000/storage/${item.product.images}` : "https://placehold.co/50x50"}
-                                            alt=""
-                                            style={{ width: "190px", height: "230px", objectFit: "contain", margin: "15px 10px 10px" }}
-                                        />
-                                        <div style={{ marginLeft: "-20px", marginTop: "40px", fontSize: "15px", position: "absolute", left: "30%" }}>
-                                            <p>{item.product.name}</p>
-                                            <p className="mt-2">
-                                                {item.attributes.map((attr: any) => (
-                                                    <span key={attr.id}>{attr.attribute}: {attr.value}{" "}{attr.price}</span>
-                                                ))}
-                                            </p>
+                            {products.map((item: any) => {
+                                const isDisabled = !item.product.active || item.product.deleted_at !== null;
 
-                                        </div>
+                                return (
+                                    <div key={item.id}>
+                                        <div className="d-flex" style={{ borderBottom: "1px solid #ccc", position: "relative", opacity: isDisabled ? 0.6 : 1 }}>
+                                            <img
+                                                src={item.product.images ? `http://127.0.0.1:8000/storage/${item.product.images}` : "https://placehold.co/50x50"}
+                                                alt=""
+                                                style={{ width: "190px", height: "230px", objectFit: "contain", margin: "15px 10px 10px" }}
+                                            />
+                                            <div style={{ marginLeft: "-20px", marginTop: "40px", fontSize: "15px", position: "absolute", left: "30%" }}>
+                                                <p>{item.product.name}</p>
+                                                <p className="mt-2">
+                                                    {item.attributes.map((attr: any) => (
+                                                        <span key={attr.id}>{attr.attribute}: {attr.value}{" "}{attr.price}</span>
+                                                    ))}
+                                                </p>
+                                                {isDisabled && (
+                                                    <p style={{ color: "red", fontSize: "13px" }}>
+                                                        Sản phẩm không tồn tại.
+                                                    </p>
+                                                )}
+                                            </div>
 
-                                        <div style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "10px",
-                                            height: "50px",
-                                            padding: "10px",
-                                            border: "1px solid #ccc",
-                                            borderRadius: "30px",
-                                            marginTop: "100px",
-                                            marginLeft: "270px",
-                                        }}>
-                                            <button
-                                                onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                                style={{ padding: "5px 0px 5px 10px", background: "white", border: "none", cursor: item.quantity > 1 ? "pointer" : "not-allowed" }}
-                                                disabled={item.quantity <= 1}
-                                            >
-                                                {"<"}
-                                            </button>
-                                            <span style={{
-                                                minWidth: "30px",
-                                                textAlign: "center",
-                                                border: "1px solid #ccc",
-                                                height: "50px",
+                                            <div style={{
                                                 display: "flex",
                                                 alignItems: "center",
-                                                justifyContent: "center",
-                                                width: "60px",
+                                                gap: "10px",
+                                                height: "50px",
+                                                padding: "10px",
+                                                border: "1px solid #ccc",
+                                                borderRadius: "30px",
+                                                marginTop: "100px",
+                                                marginLeft: "270px",
+                                                opacity: isDisabled ? 0.5 : 1,
+                                                pointerEvents: isDisabled ? "none" : "auto",
                                             }}>
-                                                {item.quantity}
-                                            </span>
-                                            <button
-                                                onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                                style={{ padding: "5px 10px 5px 0px", border: "none", background: "white", cursor: "pointer" }}
+                                                <button
+                                                    onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                                    style={{
+                                                        padding: "5px 0px 5px 10px",
+                                                        background: "white",
+                                                        border: "none",
+                                                        cursor: item.quantity > 1 ? "pointer" : "not-allowed"
+                                                    }}
+                                                    disabled={item.quantity <= 1 || isDisabled}
+                                                >
+                                                    {"<"}
+                                                </button>
+                                                <span style={{
+                                                    minWidth: "30px",
+                                                    textAlign: "center",
+                                                    border: "1px solid #ccc",
+                                                    height: "50px",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    width: "60px",
+                                                }}>
+                                                    {item.quantity}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                                    style={{
+                                                        padding: "5px 10px 5px 0px",
+                                                        border: "none",
+                                                        background: "white",
+                                                        cursor: "pointer"
+                                                    }}
+                                                    disabled={isDisabled}
+                                                >
+                                                    {">"}
+                                                </button>
+                                            </div>
+
+                                            <div style={{ margin: "110px 0px 0px 50px", width: "100px" }}>
+                                                <p>
+                                                    {((item.price - item.sale_price) * item.quantity).toLocaleString()} VNĐ
+                                                </p>
+                                            </div>
+
+                                            <div
+                                                style={{ margin: "110px 0px 0px 10px", cursor: "pointer" }}
+                                                onClick={() => handleRemoveItem(item.id)}
                                             >
-                                                {">"}
-                                            </button>
-                                        </div>
-
-                                        <div style={{ margin: "110px 0px 0px 50px", width: "100px" }}>
-                                            <p>
-                                                {(item.price - item.sale_price) * item.quantity
-                                                    .toLocaleString()} VNĐ
-                                            </p>
-
-                                        </div>
-
-                                        <div
-                                            style={{ margin: "110px 0px 0px 10px", cursor: "pointer" }}
-                                            onClick={() => handleRemoveItem(item.id)}
-                                        >
-                                            <i className="fa-solid fa-trash-can"></i>
+                                                <i className="fa-solid fa-trash-can"></i>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
+
                         </div>
                     </div>
 

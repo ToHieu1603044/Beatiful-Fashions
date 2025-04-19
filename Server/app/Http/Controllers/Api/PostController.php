@@ -26,10 +26,12 @@ class PostController extends Controller
         try {
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
+                'titleHead' => 'required|string|max:255',
                 'description' => 'required|string',
                 'image' => 'nullable|file|image|max:2048',
                 'active' => 'boolean',
             ]);
+
 
             if ($request->hasFile('image')) {
                 $path = $request->file('image')->store('posts', 'public');
@@ -60,10 +62,13 @@ class PostController extends Controller
         try {
             $validated = $request->validate([
                 'title' => 'sometimes|required|string|max:255',
+                'titleHead' => 'sometimes|required|string|max:255',
                 'description' => 'sometimes|required|string',
                 'image' => 'nullable|file|image|max:2048',
                 'active' => 'boolean',
             ]);
+
+
 
             if ($request->hasFile('image')) {
                 // Xoá ảnh cũ nếu có

@@ -1,9 +1,34 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Modal, Table, Select, Button, Descriptions, Divider, Typography, Card, Row, Col } from "antd";
 
 const { Title, Text } = Typography;
 
 const OrderDetailModal = ({ order, visible, onClose, status, setStatus, onConfirmOrder, confirmOrder }) => {
+  const [disabledStatuses, setDisabledStatuses] = useState([]);
+
+  useEffect(() => {
+    // Hàm cập nhật trạng thái hợp lệ dựa trên trạng thái hiện tại
+    const getNextStates = (currentState) => {
+      switch (currentState) {
+        case "pending":
+          return ["processing", "canceled"];  // "pending" sẽ bị khóa khi đang ở trạng thái "processing"
+        case "processing":
+          return ["shipped"];  // "processing" sẽ chuyển sang "shipped"
+        case "shipped":
+          return ["delivered"];  // "shipped" sẽ chuyển sang "delivered"
+        case "delivered":
+          return ["completed"];  // "delivered" sẽ chuyển sang "completed"
+        default:
+          return [];
+      }
+    };
+
+    // Cập nhật trạng thái bị vô hiệu hóa
+    const disabled = getNextStates(status);
+    setDisabledStatuses(disabled);
+
+  }, [status]);
+
   if (!order) return null;
 
   return (
@@ -25,7 +50,7 @@ const OrderDetailModal = ({ order, visible, onClose, status, setStatus, onConfir
             pagination={false}
             bordered
             columns={[
-              { title: "Tên sản phẩm", dataIndex: "product_name",  key: "product_name" },
+              { title: "Tên sản phẩm", dataIndex: "product_name", key: "product_name" },
               { title: "Số lượng", dataIndex: "quantity", key: "quantity" },
               {
                 title: "Giá",
@@ -37,13 +62,11 @@ const OrderDetailModal = ({ order, visible, onClose, status, setStatus, onConfir
                 title: "Product_id",
                 dataIndex: "product_id",
                 key: "product_id",
-    
               },
-
               {
                 title: "Biến thể",
                 key: "variants",
-                render: (item: any) =>
+                render: (item) =>
                   item.variant_details
                     ? Object.entries(item.variant_details)
                       .map(([key, value]) => `${key}: ${value}`)
@@ -79,13 +102,14 @@ const OrderDetailModal = ({ order, visible, onClose, status, setStatus, onConfir
           {/* Cập nhật trạng thái đơn hàng */}
           <Title level={5}>Cập nhật trạng thái đơn hàng</Title>
           <Select value={status} onChange={setStatus} className="w-full">
-            <Select.Option value="pending">Chờ xử lý</Select.Option>
-            <Select.Option value="processing">Đang xử lý</Select.Option>
-            <Select.Option value="shipped">Đã gửi</Select.Option>
-            <Select.Option value="delivered">Đã giao</Select.Option>
-            <Select.Option value="cancelled">Đã hủy</Select.Option>
-            <Select.Option value="completed">Giao hàng thành công</Select.Option>
+            <Select.Option value="pending" disabled={disabledStatuses.includes("pending")}>Chờ xử lý</Select.Option>
+            <Select.Option value="processing" disabled={disabledStatuses.includes("processing")}>Đang xử lý</Select.Option>
+            <Select.Option value="shipped" disabled={disabledStatuses.includes("shipped")}>Đã gửi hàng</Select.Option>
+            <Select.Option value="delivered" disabled={disabledStatuses.includes("delivered")}>Đang giao</Select.Option>
+            <Select.Option value="cancelled" disabled={disabledStatuses.includes("cancelled")}>Đã hủy</Select.Option>
+            <Select.Option value="completed" disabled={disabledStatuses.includes("completed")}>Giao hàng thành công</Select.Option>
           </Select>
+
           <div className="mt-3 flex gap-2">
             <Button onClick={onClose}>Đóng</Button>
             <Button type="primary" onClick={onConfirmOrder}>Xác nhận đơn hàng</Button>

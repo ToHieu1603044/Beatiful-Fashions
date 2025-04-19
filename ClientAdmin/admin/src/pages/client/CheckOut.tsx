@@ -1,6 +1,6 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { getCart } from "../../services/homeService";
+import { fetchDiscountOptions, getCart } from "../../services/homeService";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axiosInstance from "../../services/axiosInstance";
@@ -23,6 +23,9 @@ const CheckOut = () => {
     const [priceDiscount, setPriceDiscount] = useState(0);
     const [isGHNSelected, setIsGHNSelected] = useState(false);
     const [priceShipping, setPriceShipping] = useState(45000);
+    const [showDiscountModal, setShowDiscountModal] = useState(false);
+
+    const [discountOptions, setDiscountOptions] = useState([]);
     const [formData, setFormData] = useState({
         email: "",
         name: "",
@@ -69,6 +72,19 @@ const CheckOut = () => {
             }
         }
     };
+    useEffect(() => {
+        const fetchDiscountOption = async () => {
+            try {
+                const response = await fetchDiscountOptions()
+                setDiscountOptions(response.data);
+                console.log(response.data);
+            } catch (error) {
+                console.error("Error fetching discount options:", error);
+            }
+        }
+        fetchDiscountOption();
+    }, []);
+
 
     useEffect(() => {
         axios
@@ -114,14 +130,14 @@ const CheckOut = () => {
             if (!selectedDistrict || !selectedWard || typeof selectedWard !== 'string') {
                 console.error("Thông tin địa chỉ không hợp lệ");
                 return;
-              }
-              
+            }
+
             const payload = {
-                from_district_id: 201, 
-                service_id: 53322, 
+                from_district_id: 201,
+                service_id: 53322,
                 to_district_id: selectedDistrict,
                 to_ward_code: selectedWard,
-                height: 5,  
+                height: 5,
                 length: 5,
                 width: 5,
                 weight: 1000,
@@ -222,7 +238,7 @@ const CheckOut = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Dữ liệu đã gửi:", JSON.stringify({ ...formData, priceDiscount }, null, 2));
+        console.log("Dữ liệu đã gửi:", JSON.stringify({ ...formData, priceDiscount, priceShipping }, null, 2));
 
         try {
             const response = await axiosInstance.post('/orders', {
@@ -247,7 +263,7 @@ const CheckOut = () => {
                     icon: "success",
                     confirmButtonText: "OK",
                 }).then(() => {
-                    window.location.href = "/orders";
+
                 });
             }
 
@@ -687,16 +703,88 @@ const CheckOut = () => {
                         ))}
                     </div>
                     <div className="py-3 pl-5" style={{ borderBottom: "1px solid #C0C0C0" }}>
-                        <form onSubmit={applyDiscount} className="d-flex">
-                            <input
-                                type="text"
-                                className="form-control me-2"
-                                placeholder="Nhập mã giảm giá"
-                                style={{ height: "50px", width: "250px" }}
-                                onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
-                            />
-                            <button type="submit" className="btn btn-warning mt-2">Áp Dụng</button>
+                        <form onSubmit={applyDiscount} className="d-flex flex-column" style={{ gap: "10px" }}>
+                            {/* Ô nhập mã giảm giá */}
+                            <button
+                                type="button"
+                                className="btn btn-outline-primary"
+                                style={{ height: "50px", width: "250px", textAlign: "left" }}
+                                onClick={() => setShowDiscountModal(true)}
+                            >
+                                {formData.discount ? `Đã chọn: ${formData.discount}` : "Chọn mã giảm giá"}
+                            </button>
+
+
+                            {/* Select mã giảm giá có thể chọn */}
+                            {showDiscountModal && (
+                                <div className="modal d-block" tabIndex={-1} style={{ background: "rgba(0,0,0,0.5)" }}>
+                                    <div className="modal-dialog modal-lg">
+                                        <div className="modal-content">
+                                            <div className="modal-header">
+                                                <h5 className="modal-title">Chọn mã giảm giá</h5>
+                                                <button type="button" className="btn-close" onClick={() => setShowDiscountModal(false)} />
+                                            </div>
+                                            <div className="modal-body">
+                                                {discountOptions.length === 0 ? (
+                                                    <p>Không có mã giảm giá khả dụng.</p>
+                                                ) : (
+                                                    <div className="row">
+                                                        {discountOptions.map((item) => (
+                                                            <div key={item.id} className="col-md-6 mb-3">
+                                                                <div
+                                                                    className="card h-100 shadow-sm"
+                                                                    style={{ cursor: "pointer", border: formData.discount === item.code ? "2px solid #007bff" : "" }}
+                                                                    onClick={() => {
+                                                                        setFormData({ ...formData, discount: item.code });
+                                                                        setShowDiscountModal(false);
+                                                                    }}
+                                                                >
+                                                                    <div className="card-body">
+                                                                        <h5 className="card-title text-primary">{item.name}</h5>
+                                                                        <p className="card-text">
+                                                                            <strong>Mã:</strong> {item.code} <br />
+                                                                            <strong>Giảm:</strong>{" "}
+                                                                            {item.value}
+                                                                            {item.discount_type === "percentage" ? "%" : " VNĐ"}{" "}
+                                                                            {item.max_discount && ` (Tối đa: ${item.max_discount.toLocaleString()}đ)`} <br />
+                                                                            {item.min_order_amount && (
+                                                                                <>
+                                                                                    <strong>Đơn tối thiểu:</strong> {item.min_order_amount.toLocaleString()}đ <br />
+                                                                                </>
+                                                                            )}
+                                                                            <strong>Hiệu lực:</strong> {item.start_date} → {item.end_date} <br />
+                                                                            <strong>Đã dùng:</strong> {item.used_count}/{item.max_uses}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="card-footer text-end">
+                                                                        <button className="btn btn-sm btn-outline-primary">
+                                                                            {formData.discount === item.code ? "Đã chọn" : "Chọn"}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="modal-footer">
+                                                <button type="button" className="btn btn-secondary" onClick={() => setShowDiscountModal(false)}>
+                                                    Đóng
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+
+
+                            {/* Nút áp dụng */}
+                            <button type="submit" className="btn btn-warning mt-2" style={{ width: "250px" }}>
+                                Áp Dụng
+                            </button>
                         </form>
+
                     </div>
                     <div className="py-3 pl-5" style={{ borderBottom: "1px solid #C0C0C0" }}>
                         <div className="d-flex justify-content-between mb-3">

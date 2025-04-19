@@ -4,6 +4,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Requests\ProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Gallery;
+use App\Models\Rating;
 use App\Traits\ApiDataTrait;
 use Illuminate\Http\Request;
 use App\Models\Product;
@@ -36,8 +37,8 @@ class ProductController extends Controller
             $filters = $request->query();
             $page = $request->query('page', 1);  // Lấy số trang nếu có
             $perPage = $request->query('per_page', 10);  // Lấy số bản ghi mỗi trang nếu có
-            $cacheKey = "products_cache";
-    
+            $cacheKey = "products_cache_web";
+
             // Kiểm tra xem cache có tồn tại không
             if (Cache::has($cacheKey)) {
                 \Log::info("Lấy dữ liệu từ cache: $cacheKey");
@@ -46,22 +47,25 @@ class ProductController extends Controller
                 \Log::info("Không có cache, truy vấn database: $cacheKey");
                 // Nếu không có cache, thực hiện truy vấn và lưu vào cache
                 $data = Product::with([
-                    'brand', 'category', 'skus.attributeOptions', 'galleries'
+                    'brand',
+                    'category',
+                    'skus.attributeOptions',
+                    'galleries'
                 ])
-                ->where('active', 1)
-                ->paginate($perPage);
-    
+                    ->where('active', 1)
+                    ->paginate($perPage);
+
                 // Lưu dữ liệu vào cache trong 10 phút (600 giây)
                 Cache::put($cacheKey, $data, 600);
             }
-    
+
             return ApiResponse::responsePage(ProductResource::collection($data));
         } catch (\Exception $e) {
             \Log::error('Error in indexWeb', ['exception' => $e->getMessage()]);
             return ApiResponse::errorResponse();
         }
     }
-    
+
     public function store(ProductRequest $request)
     {
         $validated = $request->validated();
@@ -134,7 +138,7 @@ class ProductController extends Controller
                     'sku' => $sku,
                 ]);
                 Redis::set("stock:sku:{$productSku->id}", $variant['stock']);
-              //  Redis::set("sku:stock:{$sku->sku}", $sku->stock);
+                Redis::set("sku:stock:{$productSku->sku}", $productSku->stock);
                 foreach ($sku_values as $option_id) {
                     AttributeOptionSku::create([
                         'sku_id' => $productSku->id,
@@ -144,6 +148,7 @@ class ProductController extends Controller
             }
 
             DB::commit();
+            Cache::forget('products_cache');
             // Http::post("http://localhost:9200/products/_doc/{$product->id}", $product->toArray());
             return response()->json([
                 'message' => 'Sản phẩm đã được tạo thành công!',
@@ -192,7 +197,7 @@ class ProductController extends Controller
     public function update(ProductRequest $request, $id)
     {
         $validated = $request->validated();
-   
+
         DB::beginTransaction();
 
         try {
@@ -367,6 +372,7 @@ class ProductController extends Controller
         ]);
 
         Cache::forget("products_cache");
+        Cache::forget("products_cache_web");
 
         Cache::tags(['products_cache'])->flush();
 
@@ -385,5 +391,15 @@ class ProductController extends Controller
             $redis->del($key);
         }
     }
+    public function getAverageRating($id)
+    {
+        $average = Rating::where('product_id', $id)->avg('rating');
+
+        return response()->json([
+            'product_id' => $id,
+            'average_rating' => round($average, 1),
+        ]);
+    }
+
 
 }

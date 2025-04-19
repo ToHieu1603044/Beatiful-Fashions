@@ -37,6 +37,7 @@ const Notifications = () => {
             try {
                 const response = await updateNotificationStatus(id, "read");
                 console.log("Log", response);
+                fetchNotifi();
             } catch (error) {
                 console.error(error);
                 setNotificationList(prev =>
@@ -62,7 +63,8 @@ const Notifications = () => {
             console.log("📩 Dữ liệu từ API:", response.data.data);
             if (response.data) {
                 setNotificationList(response.data.data);
-                const unread = notifications.filter((n: Notification) => n.status === "unread").length;
+                const unread = response.data.data.filter((n: Notification) => n.status === "unread").length;
+                setUnreadCount(unread);
             }
         } catch (error) {
             console.error("Lỗi khi lấy thông báo:", error);
@@ -108,7 +110,7 @@ const Notifications = () => {
 
 
             <div className={`offcanvas offcanvas-end ${isOpen ? "show" : ""}`}
-                style={{ width: "260px", visibility: isOpen ? "visible" : "hidden", position: "fixed"  }}>
+                style={{ width: "260px", visibility: isOpen ? "visible" : "hidden", position: "fixed" }}>
 
                 <div className="offcanvas-header border-bottom">
                     <h5 className="offcanvas-title">Thông báo</h5>
@@ -143,7 +145,6 @@ const Notifications = () => {
                                             {/* Time ago */}
                                             <small className="text-muted d-block mt-1">{notif.time_ago}</small>
 
-                                            {/* Message - only shown when expanded */}
                                             {expandedNotification === notif.id && (
                                                 <div className="message-wrapper mt-2">
                                                     <p className="notification-message mb-0">

@@ -31,5 +31,14 @@ class OrderDetail extends Model
     {
         return $this->hasOne(OrderReturn::class, 'order_id');
     }
+    protected $appends = ['is_rating'];
 
+    public function getIsRatingAttribute()
+    {
+        return \App\Models\Rating::where('user_id', auth()->id())
+            ->where('product_id', $this->product_id)
+            ->where('order_detail_id', $this->id) 
+            
+            ->exists();
+    }
 }

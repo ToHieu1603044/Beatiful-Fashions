@@ -14,7 +14,7 @@ import {
   Col,
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
-import { getUserProfile, changePassword, updateSystemSettings } from "../../services/homeService";
+import { getUserProfile, changePassword, updateSystemSettings, getMaintenanceStatus } from "../../services/homeService";
 import type { RcFile } from "antd/es/upload";
 
 const { TabPane } = Tabs;
@@ -30,10 +30,12 @@ const Settings = () => {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
+  const [maintenanceModalVisible, setMaintenanceModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
+        const maintaince = await getMaintenanceStatus()
         const response = await getUserProfile();
         const data = response.data.data;
         form.setFieldsValue(data);

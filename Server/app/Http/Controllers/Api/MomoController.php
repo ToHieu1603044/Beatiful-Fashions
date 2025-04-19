@@ -31,7 +31,7 @@ class MomoController
         switch ($request->resultCode) {
             case 0: // Giao dịch thành công
 
-                $order->update(['status' => 'paid', 'is_paid' => true]);
+                $order->update(['status' => 'pending', 'is_paid' => true]);
                 Cart::where(function ($query) use ($user_id, $session_id) {
                     if ($user_id) {
                         $query->where('user_id', $user_id);
@@ -64,12 +64,9 @@ class MomoController
                 return redirect()->to(env('FRONTEND_URL') . "/order/failed?orderId=$orderId");
 
             default: // Các lỗi khác
-                $order->update(['status' => 'error']);
+                $order->update(['status' => 'canceled']);
 
-                return response()->json([
-                    'message' => 'Có lỗi xảy ra trong quá trình thanh toán!',
-                    'redirect_url' => 'http://localhost:5174/order/error',
-                ], 400);
+              return redirect()->to(env('FRONTEND_URL') . "/order/failed");
         }
     }
 
