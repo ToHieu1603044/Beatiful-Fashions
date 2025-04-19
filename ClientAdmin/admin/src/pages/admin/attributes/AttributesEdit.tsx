@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useOutletContext } from "react-router-dom";
-import { TextField, Button, Box, Typography, Snackbar, Alert, CircularProgress } from "@mui/material";
+import { Form, Input, Button, Spin, Alert, message, Card, Space } from "antd";
+import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import axios from "axios";
 
 const AttributesEdit = () => {
-  const { id } = useParams(); // Lấy ID từ URL
+  const { id } = useParams();
   const navigate = useNavigate();
   const outletContext = useOutletContext();
-  const handleUpdate = outletContext?.handleUpdate || (() => {}); 
-  const [attributes, setAttribute] = useState(null);
+  const handleUpdate = outletContext?.handleUpdate || (() => {});
+  const [attribute, setAttribute] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState(false);
+
+  const [form] = Form.useForm();
 
   useEffect(() => {
     if (!id) {
@@ -22,9 +24,15 @@ const AttributesEdit = () => {
 
     axios.get(`http://127.0.0.1:8000/api/attributes/${id}`)
       .then((response) => {
-        console.log("Fetched data:", response.data);
         if (response.data) {
           setAttribute(response.data);
+
+          const options = response.data.values?.map(v => v.value) || [];
+
+          form.setFieldsValue({
+            name: response.data.name,
+            values: options
+          });
         } else {
           setErrorMessage("Không tìm thấy dữ liệu!");
         }
@@ -36,79 +44,86 @@ const AttributesEdit = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [id]);
+  }, [id, form]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!attributes || !attributes.name.trim()) {
-      setErrorMessage("Tên không được để trống!");
-      return;
-    }
+  const handleSubmit = async (values) => {
+    if (!attribute) return;
 
     try {
       const updatedAttribute = {
-        ...attributes,
-        updated_at: new Date().toISOString(),
+        name: values.name,
+        options: values.values || [],
       };
-
-      await axios.put(`http://127.0.0.1:8000/api/attributes/${id}`, updatedAttribute);
+      console.log("updatedAttribute", updatedAttribute);
       
+      const response = await axios.put(`http://127.0.0.1:8000/api/attributes/${id}`, updatedAttribute);
+      if (response.status== 200) {
+        message.success("Cập nhật thành cong");
+      }
       if (typeof handleUpdate === "function") {
-        handleUpdate(updatedAttribute); // Gọi để cập nhật danh sách
+        handleUpdate(updatedAttribute);
       }
 
-      setSuccessMessage(true);
-      setTimeout(() => {
-        navigate("/admin/attributes"); // Quay về danh sách sau khi cập nhật
-      }, 1500);
+      message.success("Cập nhật thành công!");
       
     } catch (error) {
       console.error("Lỗi khi cập nhật:", error);
-      setErrorMessage("Lỗi khi cập nhật dữ liệu!");
+      message.error("Lỗi khi cập nhật dữ liệu!");
     }
   };
 
-  // Nếu đang tải dữ liệu, hiển thị loading
   if (loading) {
-    return <Box sx={{ textAlign: "center", mt: 4 }}><CircularProgress /></Box>;
+    return <Spin tip="Đang tải..." style={{ display: "flex", justifyContent: "center", marginTop: 50 }} />;
   }
 
-  // Nếu có lỗi, hiển thị thông báo lỗi
   if (errorMessage) {
-    return <Typography variant="h6" color="error" align="center">{errorMessage}</Typography>;
+    return <Alert message={errorMessage} type="error" showIcon style={{ maxWidth: 500, margin: "2rem auto" }} />;
   }
 
   return (
-    <Box sx={{ maxWidth: 400, mx: "auto", mt: 4, p: 2, boxShadow: 3, borderRadius: 2 }}>
-      <Typography variant="h6" gutterBottom>Chỉnh Sửa Thuộc Tính</Typography>
-      <form onSubmit={handleSubmit}>
-        <TextField
-          label="NAME"
-          variant="outlined"
-          fullWidth
-          value={attributes?.name || ""}
-          onChange={(e) => setAttribute({ ...attributes, name: e.target.value })}
-          sx={{ mb: 2 }}
-        />
-        <Button type="submit" variant="contained" color="primary" fullWidth>
-          Cập nhật
-        </Button>
-      </form>
+    <Card title="Chỉnh Sửa Thuộc Tính" style={{ maxWidth: 600, margin: "2rem auto" }}>
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form.Item
+          label="Tên thuộc tính"
+          name="name"
+          rules={[{ required: true, message: "Tên không được để trống!" }]}
+        >
+          <Input placeholder="Nhập tên thuộc tính" />
+        </Form.Item>
 
-      {/* Thông báo thành công */}
-      <Snackbar open={successMessage} autoHideDuration={1500} onClose={() => setSuccessMessage(false)}>
-        <Alert severity="success" onClose={() => setSuccessMessage(false)}>
-          Cập nhật thành công!
-        </Alert>
-      </Snackbar>
+        <Form.List name="values">
+          {(fields, { add, remove }) => (
+            <>
+              <label>Giá trị (options)</label>
+              {fields.map((field, index) => (
+                <Space key={field.key} style={{ display: "flex", marginBottom: 8 }} align="baseline">
+                  <Form.Item
+                    {...field}
+                    name={[field.name]}
+                    rules={[{ required: true, message: "Không được để trống" }]}
+                  >
+                    <Input placeholder={`Option ${index + 1}`} />
+                  </Form.Item>
+                  <MinusCircleOutlined onClick={() => remove(field.name)} />
+                </Space>
+              ))}
 
-      {/* Thông báo lỗi */}
-      <Snackbar open={!!errorMessage} autoHideDuration={3000} onClose={() => setErrorMessage("")}>
-        <Alert severity="error" onClose={() => setErrorMessage("")}>
-          {errorMessage}
-        </Alert>
-      </Snackbar>
-    </Box>
+              <Form.Item>
+                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                  Thêm giá trị
+                </Button>
+              </Form.Item>
+            </>
+          )}
+        </Form.List>
+
+        <Form.Item>
+          <Button type="primary" htmlType="submit" block>
+            Cập nhật
+          </Button>
+        </Form.Item>
+      </Form>
+    </Card>
   );
 };
 
