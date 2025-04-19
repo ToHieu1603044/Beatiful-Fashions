@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\GoogleController;
+use App\Http\Controllers\Api\PostController;
 
 use App\Http\Controllers\SettingController;
 use App\Models\Order;
@@ -199,6 +200,8 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
     Route::get('/roles', [RolePermissionController::class, 'indexRoles']);
     Route::get('/permissions', [RolePermissionController::class, 'indexPermissions']);
+    Route::post('/orders/{id}/deliver', [OrderController::class, 'markAsDelivered']);
+
 
     // Tạo role & permission
     Route::post('/roles', [RolePermissionController::class, 'createRole'])->middleware('role:admin');
@@ -288,6 +291,6 @@ Route::get('/maintenance-status', function () {
     ]);
 });
 
-
+Route::apiResource('posts', PostController::class);
 
 ?>
