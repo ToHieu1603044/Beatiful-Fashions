@@ -21,6 +21,12 @@ const Attributes = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isRootAttributes = location.pathname === "/admin/attributes";
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    options: [] as string[],
+  });
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [attributes, setAttributes] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -49,6 +55,24 @@ const Attributes = () => {
   useEffect(() => {
     fetchAttributes();
   }, []);
+  const handleEdit = async (id: number) => {
+    try {
+      const response = await axios.get(
+        `http://127.0.0.1:8000/api/attributes/${id}`
+      );
+      const data = response.data;
+
+      setEditForm({
+        name: data.name,
+        options: data.values.map((item: any) => item.value),
+      });
+
+      setEditingId(data.id);
+      setEditModalOpen(true);
+    } catch (err) {
+      message.error("Lỗi khi tải thông tin để chỉnh sửa.");
+    }
+  };
 
   const handleDelete = (id: number) => {
     Modal.confirm({
@@ -117,6 +141,9 @@ const Attributes = () => {
           >
             Sửa
           </Button>
+          {/* <Button type="primary" onClick={() => handleEdit(record.id)}>
+  Sửa
+</Button> */}
         </Space>
       ),
     },
@@ -128,7 +155,9 @@ const Attributes = () => {
         <Spin size="large" />
       ) : (
         <>
-          {error && <Alert type="error" message={error} showIcon className="mb-4" />}
+          {error && (
+            <Alert type="error" message={error} showIcon className="mb-4" />
+          )}
           {isRootAttributes && (
             <>
               <div className="d-flex justify-between items-center mb-4">
@@ -160,10 +189,19 @@ const Attributes = () => {
           >
             {selectedAttribute && (
               <>
-                <p><Text strong>ID:</Text> {selectedAttribute.id}</p>
-                <p><Text strong>Tên:</Text> {selectedAttribute.name}</p>
-                <p><Text strong>Ngày tạo:</Text> {selectedAttribute.created_at}</p>
-                <p><Text strong>Ngày cập nhật:</Text> {selectedAttribute.updated_at}</p>
+                <p>
+                  <Text strong>ID:</Text> {selectedAttribute.id}
+                </p>
+                <p>
+                  <Text strong>Tên:</Text> {selectedAttribute.name}
+                </p>
+                <p>
+                  <Text strong>Ngày tạo:</Text> {selectedAttribute.created_at}
+                </p>
+                <p>
+                  <Text strong>Ngày cập nhật:</Text>{" "}
+                  {selectedAttribute.updated_at}
+                </p>
 
                 <Title level={4}>Danh sách giá trị</Title>
                 {selectedAttribute.values.length > 0 ? (
@@ -184,6 +222,87 @@ const Attributes = () => {
                 )}
               </>
             )}
+          </Modal>
+          <Modal
+            title="Chỉnh sửa thuộc tính"
+            open={editModalOpen}
+            onCancel={() => setEditModalOpen(false)}
+            onOk={async () => {
+              try {
+                const token = getAuthToken();
+                await axios.put(
+                  `http://127.0.0.1:8000/api/attributes/${editingId}`,
+                  {
+                    name: editForm.name,
+                    options: editForm.options,
+                  },
+                  {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                  }
+                );
+
+                message.success("Cập nhật thành công!");
+                setEditModalOpen(false);
+                fetchAttributes(); // reload lại bảng
+              } catch (err) {
+                console.error(err);
+                message.error("Lỗi khi cập nhật.");
+              }
+            }}
+            okText="Lưu"
+            cancelText="Hủy"
+          >
+            <div style={{ marginBottom: 16 }}>
+              <label>Tên:</label>
+              <input
+                value={editForm.name}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, name: e.target.value })
+                }
+                className="ant-input"
+              />
+            </div>
+
+            <div>
+              <label>Giá trị (options):</label>
+              {editForm.options.map((opt, idx) => (
+                <div
+                  key={idx}
+                  style={{ display: "flex", marginBottom: 8, gap: 8 }}
+                >
+                  <input
+                    value={opt}
+                    onChange={(e) => {
+                      const newOptions = [...editForm.options];
+                      newOptions[idx] = e.target.value;
+                      setEditForm({ ...editForm, options: newOptions });
+                    }}
+                    className="ant-input"
+                  />
+                  <Button
+                    danger
+                    onClick={() => {
+                      const newOptions = editForm.options.filter(
+                        (_, i) => i !== idx
+                      );
+                      setEditForm({ ...editForm, options: newOptions });
+                    }}
+                  >
+                    X
+                  </Button>
+                </div>
+              ))}
+              <Button
+                onClick={() =>
+                  setEditForm({
+                    ...editForm,
+                    options: [...editForm.options, ""],
+                  })
+                }
+              >
+                + Thêm giá trị
+              </Button>
+            </div>
           </Modal>
 
           <Outlet context={{ handleAdd }} />
