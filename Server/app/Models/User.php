@@ -42,7 +42,8 @@ class User extends Authenticatable
         'role',
         'points',
         'ranking',
-        'last_password_changed_at'
+        'last_password_changed_at',
+        'google_id'
     ];
 
     /**

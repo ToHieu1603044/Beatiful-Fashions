@@ -24,7 +24,7 @@ class GoogleController extends Controller
                 'google_id' => $googleUser->getId(),
             ]);
     
-            $user = User::firstOrCreate(
+            $user = User::FirstOrCreate(
                 ['email' => $googleUser->getEmail()],
                 [
                     'name' => $googleUser->getName(),
@@ -42,7 +42,6 @@ class GoogleController extends Controller
                     'last_password_changed_at' => now(),
                 ]
             );
-    
             // Gán role nếu là user mới
             $user->assignRole('user');
     
