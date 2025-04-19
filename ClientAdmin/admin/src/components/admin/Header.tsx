@@ -14,7 +14,7 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
           <NavLink to="/admin" className="text-muted text-decoration-none">Dashboard</NavLink>
         </li>
         <li className="me-2 text-muted">/</li>
-        <li className="text-dark fw-medium d-flex">Analytics</li>
+        <li className="text-dark fw-medium d-flex"></li>
       </ul>
 
       {/* Đưa thông báo về góc phải */}

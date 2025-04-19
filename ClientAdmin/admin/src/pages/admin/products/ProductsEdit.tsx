@@ -202,6 +202,9 @@ export default function EditProductForm() {
       )
     );
   };
+  const removeVariant = (index) => {
+    setVariants((prevVariants) => prevVariants.filter((_, i) => i !== index));
+  };
 
 
   return (
@@ -294,7 +297,9 @@ export default function EditProductForm() {
             value={variant.stock}
             onChange={(e) => handleVariantChange(index, "stock", e.target.value)}
           />
-
+          <Button type="danger" onClick={() => removeVariant(index)} style={{ marginTop: '10px' }}>
+            Xóa biến thể
+          </Button>
         </div>
       ))}
 

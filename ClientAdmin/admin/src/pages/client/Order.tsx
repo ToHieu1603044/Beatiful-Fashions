@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Tabs, Table, Select, Checkbox, Tag, Spin, Button, Modal, Input } from "antd";
+import { Tabs, Table, Select, Checkbox, Tag, Spin, Button, Modal, Input, Descriptions, Divider, Space, Rate } from "antd";
 import { fetchOrders, returnOrderAPI } from "../../services/homeService";
 import { updateOrderStatus, fetchReturnDetails } from "../../services/orderService";
 import { useNavigate } from "react-router-dom";
 import { render } from "react-dom";
+import { CheckOutlined } from '@ant-design/icons';
 import Swal from 'sweetalert2';
 import axios from "axios";
 const Orders: React.FC = () => {
@@ -21,6 +22,14 @@ const Orders: React.FC = () => {
     const [returnDetails, setReturnDetails] = useState<Record<number, number>>({});
     const [loadingReturnDetails, setLoadingReturnDetails] = useState(false);
     const navigate = useNavigate();
+    const [reviewModalVisible, setReviewModalVisible] = useState(false);
+    const [reviewProduct, setReviewProduct] = useState<any>(null);
+    const [ratingValue, setRatingValue] = useState(5);
+    const [reviewText, setReviewText] = useState("");
+    const [detailId, setDetailId] = useState();
+    const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+
+
     const [reasonModalVisible, setReasonModalVisible] = useState(false);
     const handleTabChange = (key: string) => {
         setActiveTab(key);
@@ -28,6 +37,46 @@ const Orders: React.FC = () => {
             navigate("/orders/return");
         }
     };
+    const handleOpenReviewModal = (productDetail: any) => {
+        setReviewProduct(productDetail);
+        setReviewModalVisible(true);
+    };
+    const handleSubmitReview = async () => {
+
+        const token = localStorage.getItem('access_token');
+
+        try {
+            const res = await axios.post(
+                "http://127.0.0.1:8000/api/ratings",
+                {
+                    product_id: selectedProductId,
+                    rating: ratingValue,
+                    comment: reviewText,
+                    order_detail_id: detailId
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                }
+            );
+            console.log(res.data);
+            if (res.status === 201) {
+                Swal.fire("Thành công", "Đánh giá đã được gửi!", "success");
+                setReviewModalVisible(false);
+                setReviewText("");
+                setRatingValue(5);
+            }
+        } catch (error) {
+            console.error(error);
+            if(error.response.status === 400){
+                Swal.fire("Lỗi", "Bạn đã đánh giá rồi", "error");
+            }
+            Swal.fire("Lỗi", "Không thể gửi đánh giá", "error");
+        }
+    };
+
+
     const showReturnModal = (order: any) => {
         setSelectedOrder(order);
         setSelectedReturnItems([]);
@@ -43,6 +92,7 @@ const Orders: React.FC = () => {
                     icon: 'success',
                 });
             }
+
         } catch (error) {
             console.error(error);
             Swal.fire({
@@ -52,7 +102,7 @@ const Orders: React.FC = () => {
             });
         }
     };
-    
+
     const handleSelectReturnItem = (detail: any, quantity: number) => {
         setSelectedReturnItems(prevItems => {
             const updatedItems = { ...prevItems };
@@ -204,7 +254,7 @@ const Orders: React.FC = () => {
         pending: "Chờ xử lý",
         processing: "Đang xử lý",
         shipped: "Đã vận chuyển",
-        delivered: "Đã giao hàng",
+        delivered: "Đang giao hàng",
         cancelled: "Đã hủy",
         completed: "Hoàn thành"
     };
@@ -253,6 +303,7 @@ const Orders: React.FC = () => {
             key: "product_name",
 
         },
+
         {
             title: "Địa chỉ ",
             key: "address",
@@ -324,25 +375,45 @@ const Orders: React.FC = () => {
                     <Table columns={columns} dataSource={transformedOrders} rowKey="id" pagination={{ pageSize: 10 }} />
                 )}
 
-                <Modal title="Chi tiết đơn hàng" open={modalVisible} onCancel={handleClose} footer={null}>
+                <Modal
+                    title="Chi tiết đơn hàng"
+                    open={modalVisible}
+                    onCancel={handleClose}
+                    footer={[
+                        <Button key="cancel" type="primary" onClick={handleClose}>
+                            Đóng
+                        </Button>,
+                    ]}
+                    width={800}
+                >
                     {selectedOrder && (
                         <div>
-                            <h6>Chi tiết đơn hàng:</h6>
-                            <p><strong>Người đặt:</strong> {selectedOrder.name}</p>
-                            <p><strong>Số điện thoại:</strong> {selectedOrder.phone}</p>
-                            <p><strong>Email:</strong> {selectedOrder.email}</p>
-                            <p><strong>Địa chỉ:</strong> {`${selectedOrder.address}, ${selectedOrder.ward}, ${selectedOrder.city}`}</p>
-                            <p><strong>Tổng tiền:</strong> {selectedOrder.total_amount.toLocaleString()} VND</p>
-                            <p><strong>Phương thức thanh toán:</strong> {selectedOrder.payment_method.toUpperCase()}</p>
+                            {/* Phần 1: Thông tin đơn hàng */}
+                            <Divider orientation="left">Thông tin đơn hàng</Divider>
+                            <Descriptions column={1} bordered size="small">
+                                <Descriptions.Item label="Họ tên">{selectedOrder.name}</Descriptions.Item>
+                                <Descriptions.Item label="Số điện thoại">{selectedOrder.phone}</Descriptions.Item>
+                                <Descriptions.Item label="Email">{selectedOrder.email}</Descriptions.Item>
+                                <Descriptions.Item label="Địa chỉ giao hàng">{`${selectedOrder.address}, ${selectedOrder.ward}, ${selectedOrder.district}, ${selectedOrder.city}`}</Descriptions.Item>
+                                <Descriptions.Item label="Tổng tiền">{selectedOrder.total_amount.toLocaleString()} VND</Descriptions.Item>
+                                <Descriptions.Item label="Phương thức thanh toán">
+                                    <Tag color="blue">{selectedOrder.payment_method?.toUpperCase()}</Tag>
+                                </Descriptions.Item>
+                                <Descriptions.Item label="Trạng thái đơn hàng">
+                                    <Tag color={selectedOrder.tracking_status === 'completed' ? 'green' : 'orange'}>
+                                        {selectedOrder.tracking_status === 'completed' ? 'Hoàn tất' : 'Đang xử lý'}
+                                    </Tag>
+                                </Descriptions.Item>
+                            </Descriptions>
 
-                            <h6>Danh sách sản phẩm:</h6>
+                            {/* Phần 2: Danh sách sản phẩm */}
+                            <Divider orientation="left">Sản phẩm đã mua</Divider>
                             <Table
                                 dataSource={selectedOrder.orderdetails}
                                 rowKey="id"
                                 pagination={false}
                                 columns={[
                                     { title: "Tên sản phẩm", dataIndex: "product_name", key: "product_name" },
-
                                     {
                                         title: "Biến thể",
                                         key: "variants",
@@ -367,25 +438,86 @@ const Orders: React.FC = () => {
                                         render: (item: any) =>
                                             (item.quantity * item.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
                                     },
-                                    {
-                                        title: "Lý do hoàn hàng",
-                                        key: "reason",
-                                        render: (item: any) =>
-                                            selectedProducts.hasOwnProperty(item.id) ? (
-                                                <Input
-                                                    placeholder="Nhập lý do hoàn hàng..."
-                                                    value={selectedProducts[item.id]}
-                                                    onChange={e => handleReasonChange(item.id, e.target.value)}
-                                                />
-                                            ) : (
-                                                "—"
-                                            ),
-                                    },
-
                                 ]}
                             />
+
+                            {/* Phần 3: Đánh giá sản phẩm */}
+                            {selectedOrder.tracking_status === 'completed' && (
+                                <>
+                                    <Divider orientation="left">Đánh giá sản phẩm</Divider>
+                                    <Space direction="vertical" style={{ width: '100%' }}>
+                                        {selectedOrder.orderdetails.map((detail) => (
+                                            <div key={detail.id} className="flex justify-between items-center border p-3 rounded-md bg-gray-50">
+                                                <div>
+                                                    <div className="font-semibold">{detail.product_name}</div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {detail.variant_details
+                                                            ? Object.entries(detail.variant_details).map(([key, value]) => `${key}: ${value}`).join(", ")
+                                                            : "Không có biến thể"}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    {detail.is_rating ? (
+                                                        <Tag icon={<CheckOutlined />} color="success">Đã đánh giá</Tag>
+                                                    ) : (
+                                                        <Button
+                                                            type="primary"
+                                                            onClick={() => {
+                                                                setSelectedProductId(detail.product_id);
+                                                                setDetailId(detail.id);
+                                                                handleOpenReviewModal(detail);
+                                                            }}
+                                                        >
+                                                            Đánh giá
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </Space>
+                                </>
+                            )}
                         </div>
                     )}
+                </Modal>
+
+                <Modal
+                    title="Đánh giá sản phẩm"
+                    open={reviewModalVisible}
+                    onCancel={() => setReviewModalVisible(false)}
+                    onOk={handleSubmitReview}
+                >
+                    <p><strong>{reviewProduct?.product_name}</strong></p>
+                    <p>Đánh giá:</p>
+
+                    {/* Cho phép người dùng chọn sản phẩm để đánh giá nếu có nhiều sản phẩm */}
+                    <Select
+                        value={selectedProductId}
+                        onChange={(value) => setSelectedProductId(value)}
+                        style={{ width: "100%", marginBottom: 10 }}
+                    >
+                        {reviewProduct?.orderdetails?.map((item) => (
+                            <Select.Option key={item.product_id} value={item.product_id}>
+                                {item.product_name} - {item.variant_details ? Object.entries(item.variant_details).map(([key, value]) => `${key}: ${value}`).join(", ") : "Không có biến thể"}
+                            </Select.Option>
+                        ))}
+                    </Select>
+
+                    {/* Rate component for choosing stars */}
+                    <div style={{ marginBottom: 10 }}>
+                        <span>Chọn số sao:</span>
+                        <Rate
+                            value={ratingValue}
+                            onChange={(value) => setRatingValue(value)}
+                        />
+                    </div>
+
+                    <Input.TextArea
+                        rows={4}
+                        placeholder="Nhập đánh giá của bạn..."
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                    />
                 </Modal>
                 <Modal
                     title="Hoàn trả sản phẩm"

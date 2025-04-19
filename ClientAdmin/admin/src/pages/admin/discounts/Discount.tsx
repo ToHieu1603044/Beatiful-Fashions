@@ -14,68 +14,68 @@ const Discount = () => {
     const [isRedeemable, setIsRedeemable] = useState(false);
     const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
     const [isEditMode, setIsEditMode] = useState(false);
-const [editingDiscount, setEditingDiscount] = useState(null);
-const handleEditDiscount = (discount) => {
-    setIsEditMode(true);
-    setEditingDiscount(discount);
+    const [editingDiscount, setEditingDiscount] = useState(null);
+    const handleEditDiscount = (discount) => {
+        setIsEditMode(true);
+        setEditingDiscount(discount);
 
-    form.setFieldsValue({
-        ...discount,
-        start_date: moment(discount.start_date),
-        end_date: moment(discount.end_date),
-        is_redeemable: discount.is_redeemable,
-        product_ids: discount.products?.map(p => p.id) || [],
-    });
+        form.setFieldsValue({
+            ...discount,
+            start_date: moment(discount.start_date),
+            end_date: moment(discount.end_date),
+            is_redeemable: discount.is_redeemable,
+            product_ids: discount.products?.map(p => p.id) || [],
+        });
 
-    setSelectedProducts(discount.products?.map(p => p.id) || []);
-    setIsRedeemable(discount.is_redeemable);
-    setIsModalVisible(true);
-};
-const handleOk = async () => {
-    try {
-        const data = await form.validateFields();
-        const requestData = {
-            ...data,
-            product_ids: selectedProducts,
-        };
+        setSelectedProducts(discount.products?.map(p => p.id) || []);
+        setIsRedeemable(discount.is_redeemable);
+        setIsModalVisible(true);
+    };
+    const handleOk = async () => {
+        try {
+            const data = await form.validateFields();
+            const requestData = {
+                ...data,
+                product_ids: selectedProducts,
+            };
 
-        if (isEditMode && editingDiscount) {
-            const response = await axios.put(`http://127.0.0.1:8000/api/discounts/${editingDiscount.id}`, requestData);
-            if (response.status === 200) {
-                message.success("Cập nhật mã giảm giá thành công!");
+            if (isEditMode && editingDiscount) {
+                const response = await axios.put(`http://127.0.0.1:8000/api/discounts/${editingDiscount.id}`, requestData);
+                if (response.status === 200) {
+                    message.success("Cập nhật mã giảm giá thành công!");
+                } else {
+                    message.error("Cập nhật thất bại.");
+                }
             } else {
-                message.error("Cập nhật thất bại.");
+                const response = await createDiscount(requestData);
+                if (response.status == 201) {
+                    message.success("Tạo mã giảm giá thành công!");
+                } else {
+                    message.error("Tạo mã giảm giá thất bại.");
+                }
             }
-        } else {
-            const response = await createDiscount(requestData);
-            if (response.status == 201) {
-                message.success("Tạo mã giảm giá thành công!");
-            } else {
-                message.error("Tạo mã giảm giá thất bại.");
-            }
+
+            fetchDiscounts();
+            setIsModalVisible(false);
+            form.resetFields();
+            setEditingDiscount(null);
+            setIsEditMode(false);
+        } catch (error) {
+            console.error("Lỗi khi lưu mã giảm giá:", error);
+            message.error("Có lỗi xảy ra khi lưu.");
         }
-
-        fetchDiscounts();
+    };
+    const handleCancel = () => {
         setIsModalVisible(false);
-        form.resetFields();
         setEditingDiscount(null);
         setIsEditMode(false);
-    } catch (error) {
-        console.error("Lỗi khi lưu mã giảm giá:", error);
-        message.error("Có lỗi xảy ra khi lưu.");
-    }
-};
-const handleCancel = () => {
-    setIsModalVisible(false);
-    setEditingDiscount(null);
-    setIsEditMode(false);
-    form.resetFields();
-};
+        form.resetFields();
+    };
 
     const handleDeleteDiscount = async (id) => {
         const confirmDelete = confirm('Bạn có chắc chắn muốn xoá không?');
         if (!confirmDelete) return;
-    
+
         try {
             const response = await axios.delete(`http://127.0.0.1:8000/api/discounts/${id}`);
             if (response.status === 200 || response.status === 204) {
@@ -89,16 +89,16 @@ const handleCancel = () => {
             alert('Đã xảy ra lỗi khi xoá. Vui lòng thử lại.');
         }
     }
-  const handleToggleStatus = async (discounts) => {
-      try {
-        const newStatus = discounts.active ? 0 : 1; 
-         await axios.put(`http://127.0.0.1:8000/api/discounts/${discounts.id}`,newStatus);
-        message.success("Cập nhật trạng thái thành công!");
-        fetchProducts(); 
-      } catch (error) {
-        console.error("Lỗi khi cập nhật trạng thái:", error);
-        message.error("Lỗi khi cập nhật trạng thái!");
-      }
+    const handleToggleStatus = async (discounts) => {
+        try {
+            const newStatus = discounts.active ? 0 : 1;
+            await axios.put(`http://127.0.0.1:8000/api/discounts/${discounts.id}`, newStatus);
+            message.success("Cập nhật trạng thái thành công!");
+            fetchProducts();
+        } catch (error) {
+            console.error("Lỗi khi cập nhật trạng thái:", error);
+            message.error("Lỗi khi cập nhật trạng thái!");
+        }
     };
 
 
@@ -143,12 +143,12 @@ const handleCancel = () => {
             dataIndex: "active",
             key: "active",
             render: (active, record) => (
-              <Switch
-                checked={active === true || active === 1} 
-                onChange={() => handleToggleStatus(record)}
-              />
+                <Switch
+                    checked={active === true || active === 1}
+                    onChange={() => handleToggleStatus(record)}
+                />
             ),
-          },
+        },
         {
             title: "Ngày tạo",
             dataIndex: "start_date",
@@ -156,6 +156,7 @@ const handleCancel = () => {
             render: (value) => moment(value).format("YYYY-MM-DD HH:mm:ss"),
 
         },
+
         {
             title: "Ngày hết hạn",
             dataIndex: "end_date",
@@ -167,21 +168,21 @@ const handleCancel = () => {
             dataIndex: "end_date",
             render: (value, record) => {
                 if (!value) return "Không có ngày hết hạn";
-        
+
                 const now = moment();
                 const startDate = moment(record.start_date);
                 const endDate = moment(value);
-        
+
                 if (startDate.isAfter(now)) {
-                    return "Chưa bắt đầu";  
+                    return "Chưa bắt đầu";
                 }
-        
+
                 if (endDate.isBefore(now)) {
-                    return "Đã hết hạn";  
+                    return "Đã hết hạn";
                 }
-        
+
                 const diff = endDate.diff(now, "days");
-                return `${diff} ngày`;  
+                return `${diff} ngày`;
             },
         },
         {
@@ -314,7 +315,7 @@ const handleCancel = () => {
                             >
                                 <InputNumber
                                     min={1}
-                                    max={form.getFieldValue("discount_type") === "percentage" ? 100 : 10000000} 
+                                    max={form.getFieldValue("discount_type") === "percentage" ? 100 : 10000000}
                                 />
                             </Form.Item>
                             <Form.Item label="Giảm Tối Đa" name="max_discount">
@@ -361,13 +362,36 @@ const handleCancel = () => {
                             </Form.Item>
 
                             <Form.Item label="Cần Ranking Tối Thiểu" name="required_ranking">
-                                <InputNumber min={1} />
+                                <InputNumber
+                                    min={1}
+                                    max={4}
+                                    step={1}
+                                    defaultValue={1}
+                                    formatter={(value) => {
+                                        if (value === 1) return 'Bronze';
+                                        if (value === 2) return 'Silver';
+                                        if (value === 3) return 'Gold';
+                                        if (value === 4) return 'Platinum';
+                                        return value;
+                                    }}
+                                    parser={(value) => {
+                                        if (value === 'Bronze') return 1;
+                                        if (value === 'Silver') return 2;
+                                        if (value === 'Gold') return 3;
+                                        if (value === 'Platinum') return 4;
+                                        return value;
+                                    }}
+                                />
                             </Form.Item>
 
+                            <Form.Item label="Có thể tân thủ?" name="is_first_order" valuePropName="checked">
+                                <Checkbox>Cho mã tân thủ</Checkbox>
+                            </Form.Item>
                             {/* 🟢 Checkbox bật/tắt "Có thể đổi bằng điểm" */}
                             <Form.Item label="Có thể đổi bằng điểm?" name="is_redeemable" valuePropName="checked">
                                 <Checkbox onChange={(e) => setIsRedeemable(e.target.checked)}>Cho phép đổi điểm</Checkbox>
                             </Form.Item>
+                            
                             {isRedeemable && (
                                 <Form.Item label="Số điểm cần để đổi" name="can_be_redeemed_with_points" rules={[{ required: true, message: 'Vui lòng nhập số điểm!' }]}>
                                     <InputNumber min={1} />
