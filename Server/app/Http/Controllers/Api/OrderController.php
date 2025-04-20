@@ -79,168 +79,168 @@ class OrderController
             return ApiResponse::errorResponse(500, $th->getMessage());
         }
     }
-    // public function store(Request $request)
-    // {
-    //     \Log::info($request->all());
-    //     $request->validate([
-    //         'payment_method' => 'required|in:cod,online',
-    //         'name' => 'required|string|max:255',
-    //         'email' => 'nullable|email|max:255',
-    //         'phone' => 'required|string|max:15',
-    //         'city' => 'required|string|max:255',
-    //         'district_name' => 'required|string|max:255',
-    //         'ward_name' => 'required|string|max:255',
-    //         'note' => 'nullable|string|max:500',
-    //         'discount_code' => 'nullable|string|max:50',
-    //         'address' => 'required|string|max:50',
-    //     ]);
+    public function create(Request $request)
+    {
+      
+        $request->validate([
+            'payment_method' => 'required|in:cod,online',
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'required|string|max:15',
+            'city' => 'required|string|max:255',
+            'district_name' => 'required|string|max:255',
+            'ward_name' => 'required|string|max:255',
+            'note' => 'nullable|string|max:500',
+            'discount_code' => 'nullable|string|max:50',
+            'address' => 'required|string|max:50',
+        ]);
 
-    //     try {
-    //         $user = Auth::user();
-    //         $session_id = session()->getId();
+        try {
+            $user = Auth::user();
+            $session_id = session()->getId();
 
-    //         // Lấy giỏ hàng
-    //         $carts = Cart::where(function ($query) use ($user, $session_id) {
-    //             if ($user) {
-    //                 $query->where('user_id', $user->id);
-    //             } else {
-    //                 $query->where('session_id', $session_id);
-    //             }
-    //         })->get();
+            // Lấy giỏ hàng
+            $carts = Cart::where(function ($query) use ($user, $session_id) {
+                if ($user) {
+                    $query->where('user_id', $user->id);
+                } else {
+                    $query->where('session_id', $session_id);
+                }
+            })->get();
 
-    //         if ($carts->isEmpty()) {
-    //             return ApiResponse::errorResponse(400, 'Giỏ hàng trống!');
-    //         }
+            if ($carts->isEmpty()) {
+                return ApiResponse::errorResponse(400, 'Giỏ hàng trống!');
+            }
 
-    //         DB::beginTransaction();
+            DB::beginTransaction();
 
-    //         // Tạo đơn hàng ban đầu
-    //         $order = Order::create([
-    //             'user_id' => $user ? $user->id : null,
-    //             'total_amount' => 0,
-    //             'status' => 'pending',
-    //             'payment_method' => $request->payment_method,
-    //             'is_paid' => false,
-    //             'name' => $request->name,
-    //             'email' => $request->email,
-    //             'phone' => $request->phone,
-    //             'city' => $request->city,
-    //             'address' => $request->address,
-    //             'district' => $request->district_name,
-    //             'ward' => $request->ward_name,
-    //             'note' => $request->note,
-    //         ]);
+            // Tạo đơn hàng ban đầu
+            $order = Order::create([
+                'user_id' => $user ? $user->id : null,
+                'total_amount' => 0,
+                'status' => 'pending',
+                'payment_method' => $request->payment_method,
+                'is_paid' => false,
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'city' => $request->city,
+                'address' => $request->address,
+                'district' => $request->district_name,
+                'ward' => $request->ward_name,
+                'note' => $request->note,
+            ]);
 
-    //         $totalAmount = 0;
-    //         foreach ($carts as $cart) {
-    //             $sku = ProductSku::where('id', $cart->sku_id)->lockForUpdate()->first();
+            $totalAmount = 0;
+            foreach ($carts as $cart) {
+                $sku = ProductSku::where('id', $cart->sku_id)->lockForUpdate()->first();
 
-    //             if (!$sku || $sku->stock < $cart->quantity) {
-    //                 DB::rollBack();
-    //                 return ApiResponse::errorResponse(400, "Sản phẩm '{$cart->sku_id}' không đủ hàng.");
-    //             }
+                if (!$sku || $sku->stock < $cart->quantity) {
+                    DB::rollBack();
+                    return ApiResponse::errorResponse(400, "Sản phẩm '{$cart->sku_id}' không đủ hàng.");
+                }
 
-    //             $flashSalePrice = $sku->product->flashSales->first()?->pivot->discount_price;
-    //             $price = $flashSalePrice ?? $sku->price;
+                $flashSalePrice = $sku->product->flashSales->first()?->pivot->discount_price;
+                $price = $flashSalePrice ?? $sku->price;
 
-    //             $variantDetails = $sku->attributeOptions->pluck('value', 'attribute.name')->toArray();
-    //             $subtotal = $price * $cart->quantity;
+                $variantDetails = $sku->attributeOptions->pluck('value', 'attribute.name')->toArray();
+                $subtotal = $price * $cart->quantity;
 
-    //             OrderDetail::create([
-    //                 'order_id' => $order->id,
-    //                 'sku' => $sku->sku,
-    //                 'product_id' => $sku->product_id,
-    //                 'product_name' => $sku->product->name,
-    //                 'variant_details' => json_encode($variantDetails),
-    //                 'quantity' => $cart->quantity,
-    //                 'price' => $price,
-    //                 'subtotal' => $subtotal,
-    //             ]);
+                OrderDetail::create([
+                    'order_id' => $order->id,
+                    'sku' => $sku->sku,
+                    'product_id' => $sku->product_id,
+                    'product_name' => $sku->product->name,
+                    'variant_details' => json_encode($variantDetails),
+                    'quantity' => $cart->quantity,
+                    'price' => $price,
+                    'subtotal' => $subtotal,
+                ]);
 
-    //             $sku->product->increment('total_sold', $cart->quantity);
+                $sku->product->increment('total_sold', $cart->quantity);
 
-    //             $sku->decrement('stock', $cart->quantity);
+                $sku->decrement('stock', $cart->quantity);
 
-    //             $flashSale = $sku->product->flashSales->first(); 
-    //             \Log::info('Flash Sale: ', ['flashSale' => $flashSale]);
+                $flashSale = $sku->product->flashSales->first(); 
+                \Log::info('Flash Sale: ', ['flashSale' => $flashSale]);
 
-    //             if ($flashSale) {
-    //                 // Lấy sản phẩm trong Flash Sale
-    //                 $flashSaleProduct = $flashSale->products()->where('product_id', $sku->product_id)->first();
+                if ($flashSale) {
+                    // Lấy sản phẩm trong Flash Sale
+                    $flashSaleProduct = $flashSale->products()->where('product_id', $sku->product_id)->first();
 
-    //                 \Log::info('Flash Sale Product: ', ['flashSaleProduct' => $flashSaleProduct]);
+                    \Log::info('Flash Sale Product: ', ['flashSaleProduct' => $flashSaleProduct]);
 
-    //                 if ($flashSaleProduct) {
+                    if ($flashSaleProduct) {
 
-    //                     $quantityInFlashSale = $flashSaleProduct->pivot->quantity; 
-    //                     \Log::info('Số lượng trong Flash Sale: ', ['quantityInFlashSale' => $quantityInFlashSale]);
+                        $quantityInFlashSale = $flashSaleProduct->pivot->quantity; 
+                        \Log::info('Số lượng trong Flash Sale: ', ['quantityInFlashSale' => $quantityInFlashSale]);
 
-    //                     if ($quantityInFlashSale >= $cart->quantity) {
+                        if ($quantityInFlashSale >= $cart->quantity) {
 
-    //                         $flashSaleProduct->pivot->quantity -= $cart->quantity; 
-    //                         $flashSaleProduct->pivot->save(); 
-    //                     } else {
-    //                         DB::rollBack();
-    //                         return ApiResponse::errorResponse(400, 'Không đủ số lượng trong chương trình Flash Sale.');
-    //                     }
-    //                 }
+                            $flashSaleProduct->pivot->quantity -= $cart->quantity; 
+                            $flashSaleProduct->pivot->save(); 
+                        } else {
+                            DB::rollBack();
+                            return ApiResponse::errorResponse(400, 'Không đủ số lượng trong chương trình Flash Sale.');
+                        }
+                    }
 
-    //             }
+                }
 
-    //             $totalAmount += $subtotal;
-    //         }
+                $totalAmount += $subtotal;
+            }
 
-    //         if ($request->has('discount')) {
-    //             $discount = Discount::where('code', $request->discount)
-    //                 ->where('active', true)
-    //                 ->first();
+            if ($request->has('discount')) {
+                $discount = Discount::where('code', $request->discount)
+                    ->where('active', true)
+                    ->first();
 
-    //             if ($discount) {
-    //                 DiscountUsage::create([
-    //                     'user_id' => $user->id,
-    //                     'discount_id' => $discount->id,
-    //                 ]);
-    //                 $discount->increment('used_count');
-    //             }
-    //         }
+                if ($discount) {
+                    DiscountUsage::create([
+                        'user_id' => $user->id,
+                        'discount_id' => $discount->id,
+                    ]);
+                    $discount->increment('used_count');
+                }
+            }
 
-    //         $order->update([
-    //             'total_amount' => $totalAmount ? $totalAmount : $request->total_amount,
-    //             'discount_code' => $request->discount,
-    //             'discount_amount' => $request->priceDiscount,
-    //         ]);
+            $order->update([
+                'total_amount' => $totalAmount ? $totalAmount : $request->total_amount,
+                'discount_code' => $request->discount,
+                'discount_amount' => $request->priceDiscount,
+            ]);
 
-    //         DB::commit();
+            DB::commit();
 
-    //         if ($request->payment_method === 'online') {
-    //             $payUrl = MoMoService::createPayment($order->id, $request->total_amount);
+            if ($request->payment_method === 'online') {
+                $payUrl = MoMoService::createPayment($order->id, $request->total_amount);
 
-    //             if ($payUrl) {
-    //                 return response()->json([
-    //                     'order_id' => $order->id,
-    //                     'payUrl' => $payUrl
-    //                 ]);
-    //             }
+                if ($payUrl) {
+                    return response()->json([
+                        'order_id' => $order->id,
+                        'payUrl' => $payUrl
+                    ]);
+                }
 
-    //             return ApiResponse::errorResponse(500, 'Không thể tạo thanh toán MoMo.');
-    //         }
+                return ApiResponse::errorResponse(500, 'Không thể tạo thanh toán MoMo.');
+            }
 
-    //         // Xóa giỏ hàng
-    //         Cart::where(function ($query) use ($user, $session_id) {
-    //             if ($user) {
-    //                 $query->where('user_id', $user->id);
-    //             } else {
-    //                 $query->where('session_id', $session_id);
-    //             }
-    //         })->delete();
+            // Xóa giỏ hàng
+            Cart::where(function ($query) use ($user, $session_id) {
+                if ($user) {
+                    $query->where('user_id', $user->id);
+                } else {
+                    $query->where('session_id', $session_id);
+                }
+            })->delete();
 
-    //         OrderCreated::dispatch($order);
+            OrderCreated::dispatch($order);
 
-    //         return ApiResponse::responseSuccess($order, 201);
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //     }
-    // }    
+            return ApiResponse::responseSuccess($order, 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+        }
+    }    
     public function store(Request $request)
     {
         \Log::info('request: ', ['request' => $request]);
