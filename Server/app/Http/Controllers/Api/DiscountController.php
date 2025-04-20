@@ -290,9 +290,9 @@ class DiscountController
         //
     }
 
-    public function destroy(string $id)
+    public function destroy($id)
     {
-        $discount = Discount::firstOrFail($id);
+        $discount = Discount::findOrFail($id);
 
         $discount->delete();
 
@@ -303,19 +303,17 @@ class DiscountController
     public function redeemPointsForVoucher(Request $request)
     {
         $request->validate([
-            'discount_id' => 'required|exists:discounts,id', // Mã giảm giá cần đổi
+            'discount_id' => 'required|exists:discounts,id', 
         ]);
 
         $user = Auth::user();
         $discount = Discount::findOrFail($request->discount_id);
 
-        // Kiểm tra xem mã giảm giá này có thể đổi bằng điểm không
         if ($discount->is_redeemable == false) {
             return response()->json(['message' => 'Mã giảm giá này không thể đổi bằng điểm.'], 400);
         }
 
-        // Tính số điểm cần thiết để đổi mã giảm giá
-        $requiredPoints = $discount->value * 5; // Ví dụ, 1% giảm giá = 5 điểm
+        $requiredPoints = $discount->can_be_redeemed_with_points; 
 
         // Kiểm tra nếu người dùng đủ điểm
         if ($user->points < $requiredPoints) {

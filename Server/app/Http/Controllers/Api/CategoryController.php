@@ -39,8 +39,8 @@ class CategoryController extends Controller
     }
     public function indexWeb(Request $request)
     {
-      
-        $query = Category::query();
+
+        $query = Category::query()->where('active', 1);
 
         // Lọc theo tên
         if ($request->has('search') && $request->search) {
@@ -62,26 +62,26 @@ class CategoryController extends Controller
     // public function indexWeb(Request $request)
     // {
     //     $cacheKey = 'categories_' . md5(json_encode($request->all()));
-    
+
     //     $categories = Cache::remember($cacheKey, 600, function () use ($request) {
     //         $query = Category::query();
-    
+
     //         if ($request->has('search') && $request->search) {
     //             $query->where('name', 'like', '%' . $request->search . '%');
     //         }
-    
+
     //         if ($request->has('parent_id') && $request->parent_id !== 'all') {
     //             $query->where('parent_id', $request->parent_id);
     //         }
-    
+
     //         return $query->get();
     //     });
-    
+
     //     $tree = $this->buildCategoryTree($categories);
-    
+
     //     return response()->json($tree);
     // }
-    
+
     private function buildCategoryTree($categories, $parentId = null)
     {
         return $categories->where('parent_id', $parentId)->map(function ($category) use ($categories) {
@@ -90,6 +90,8 @@ class CategoryController extends Controller
                 'name' => $category->name,
                 'slug' => $category->slug,
                 'parent_id' => $category->parent_id,
+                'active' => $category->active,
+                'image' => $category->image,
                 'children' => $this->buildCategoryTree($categories, $category->id),
             ];
         })->values();
@@ -104,12 +106,18 @@ class CategoryController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'parent_id' => 'nullable|exists:categories,id',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('categories', 'public');
+        }
 
         $category = Category::create([
             'name' => $request->name,
             'slug' => \Str::slug($request->name),
-            'image' => null, // Nếu có upload ảnh thì xử lý thêm ở đây
+            'image' => $imagePath,
             'parent_id' => $request->parent_id,
         ]);
 
@@ -118,17 +126,16 @@ class CategoryController extends Controller
 
     public function update(Request $req, $id)
     {
-        $this->authorize('update', Category::class);
 
         $req->validate([
             'name' => 'required|string|max:255',
             'parent_id' => 'nullable|exists:categories,id',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Kiểm tra ảnh hợp lệ
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
         // Tìm danh mục theo id
         $category = Category::findOrFail($id);
-
+        $this->authorize('update', $category);
         // Xử lý hình ảnh nếu có
         $image_url = null;
         if ($req->hasFile('image')) {
@@ -151,14 +158,36 @@ class CategoryController extends Controller
 
         return response()->json(['message' => 'Danh mục đã được cập nhật thành công', 'data' => $category]);
     }
+    public function CategoryDelete(Request $request)
+    {
+
+        $this->authorize('viewAny', Category::class);
+
+        $query = Category::onlyTrashed();
+
+        if ($request->has('search') && $request->search) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        // Lọc theo danh mục cha (nếu parent_id là số, lọc theo danh mục cha, nếu 'all' thì lấy tất cả)
+        if ($request->has('parent_id') && $request->parent_id !== 'all') {
+            $query->where('parent_id', $request->parent_id);
+        }
+
+        $tree = $this->buildCategoryTree($query->get());
+
+        return response()->json($tree);
+    }
     public function show($id)
     {
-        $this->authorize('view', Category::class);
+     
 
         $category = Category::with('children')->find($id);
 
+      //  $this->authorize('view', $category);
+
         if (!$category) {
-            return response()->json(['message' => 'Danh mục không tồn tại'], 404);
+            return response()->json(['message' => 'Danh mục không tồn tạioii'], 404);
         }
 
         return response()->json([
@@ -213,11 +242,11 @@ class CategoryController extends Controller
 
     public function destroy($id)
     {
-       
+
         $category = Category::findOrFail($id);
 
         $this->authorize('delete', $category);
-        
+
         if ($category->children()->count() > 0) {
             return response()->json(['message' => 'Không thể xoá danh mục vì có danh mục con'], 400);
         }
@@ -230,7 +259,37 @@ class CategoryController extends Controller
 
         return response()->json(['message' => 'Danh mục đã được xoá']);
     }
+   
+    public function restore($id)
+    {
 
+        $category = Category::onlyTrashed()->findOrFail($id);
+
+        $this->authorize('restore', $category);
+
+        $category->restore();
+
+        return response()->json(['message' => 'Danh mục đã được khôi phục']);
+    }
+    public function forceDelete($id)
+    {
+    
+        $category = Category::onlyTrashed()->findOrFail($id);
+        if(!$category){
+            return response()->json(['message' => 'Danh mục khong ton tai'], 404);
+        }
+        if($category->children()->count() > 0 || $category->products()->count() > 0){
+            return response()->json(['message' => 'Không thể xóa danh mục vì có danh mục con'], 400);
+        }
+        $this->authorize('forceDelete', $category);
+        if ($category->image && \Storage::exists('public/' . $category->image)) {
+            \Storage::delete('public/' . $category->image);
+        }
+        
+        $category->forceDelete();
+
+        return response()->json(['message' => 'Danh mục đã bị xóa vĩnh viễn']);
+    }
     public function getProductsByCategory(Request $request, $id, $slug = null)
     {
         $query = Product::with([
@@ -239,6 +298,7 @@ class CategoryController extends Controller
             'skus.attributeOptions.attribute',
             'galleries'
         ])->where('category_id', $id)
+            ->where('active', 1)
             ->when($request->price_range, function ($q, $range) {
                 [$min, $max] = array_map('intval', explode('-', $range));
                 $q->whereHas('skus', fn($q) => $q->whereBetween('price', [$min, $max]));
@@ -279,6 +339,23 @@ class CategoryController extends Controller
         }
 
         return ApiResponse::responsePage(ProductResource::collection($products));
-    }   
+    }
+    public function updateStatus(Request $request, $id)
+    {
+        try {
+            $category = Category::findOrFail($id);
+
+
+            $category->active = $request->status;
+
+            $category->save();
+            return response()->json(['message' => 'Trạng thái danh mục đã được cập nhật'], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'message' => $th->getMessage()
+
+            ], 500);
+        }
+    }
 }
 

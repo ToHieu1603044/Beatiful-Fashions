@@ -89,7 +89,7 @@ const Login = () => {
 
   return (
     <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
-      <div className="card shadow-lg border-0 p-4 rounded-4" style={{ width: "380px", background: "rgba(255, 255, 255, 0.85)", backdropFilter: "blur(10px)" }}>
+<div className="card shadow-lg border-0 p-4 rounded-4" style={{ width: "380px", background: "rgba(255, 255, 255, 0.85)", backdropFilter: "blur(10px)" }}>
         <div className="text-center mb-4">
           <h2 className="fw-bold text-dark">Đăng nhập</h2>
         </div>

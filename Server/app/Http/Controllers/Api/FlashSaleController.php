@@ -173,6 +173,7 @@ class FlashSaleController extends Controller
                        return [
                            'id' => $product->id,
                            'name' => $product->name,
+                           'discount_price' => $product->pivot->discount_price,
                        ];
                    }),
                ];
@@ -254,16 +255,15 @@ class FlashSaleController extends Controller
    
            return response()->json(['message' => 'Xoá Flash Sale thành công!']);
        }
-};
 
-    public function sales(Request $request)
-    {
+//     public function sales(Request $request)
+//     {
       
-        $sales = FlashSale::with(['products' => function($query) {
-            $query->select('products.id', 'products.name');
-        }])->get();
+//         $sales = FlashSale::with(['products' => function($query) {
+//             $query->select('products.id', 'products.name');
+//         }])->get();
     
-        return response()->json($sales);
-    }
+//         return response()->json($sales);
+//     }
+// }
 }
-

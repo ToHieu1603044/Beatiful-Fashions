@@ -50,44 +50,59 @@ import OrderReturns from "./pages/client/OrderReturns";
 import SearchProducts from "./pages/client/SearchProducts";
 import Whishlish from "./pages/client/Whishlish";
 
-// Other Pages
-import Authorization from "./pages/403";
-
-import Dieukhoan from "./pages/client/chinhsach/Dieukhoan";
-import GioiThieu from "./pages/client/chinhsach/Gioithieu";
-import HuongDan from "./pages/client/chinhsach/HuongDan";
+import Index from "./pages/admin/sales/Index";
+import Comment from "./pages/admin/comments/Comment";
+import Settings from "./pages/admin/Settings";
+import Comments from "./pages/admin/comments/Comments";
+import Sales from "./pages/admin/sales/Sales";
+import { getMaintenanceStatus } from "./services/homeService"; // API check bảo trì
+import MaintenancePage from "./pages/client/MaintenancePage"; // Trang hiển thị bảo trì
+import { Spin } from "antd";
+import { useEffect, useState } from "react";
+import BannerSlideForm from "./pages/admin/BannerSlideForm";
+import BannerSlide from "./pages/admin/BannerSlide";
+import CategoriesTrash from "./pages/admin/categories/CategoriesTrash";
 import ChinhSachBaoMat from "./pages/client/chinhsach/ChinhSachBaoMat";
 import ChinhSachThanhToan from "./pages/client/chinhsach/ChinhSachThanhToan";
 import ChinhSachVanChuyen from "./pages/client/chinhsach/ChinhSachVanChuyen";
 import ChinhSachDoiHang from "./pages/client/chinhsach/ChinhSachDoiHang";
-
-
-
+import HuongDan from "./pages/client/chinhsach/HuongDan";
+import GioiThieu from "./pages/client/chinhsach/Gioithieu";
+import Dieukhoan from "./pages/client/chinhsach/Dieukhoan";
+import Authorization from "./pages/403";
+import BannerSlideFormUpdate from "./pages/admin/BannerSlideFormUpdate";
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
-  const role = localStorage.getItem("role");
-  const token = localStorage.getItem("access_token");
+  const [allowed, setAllowed] = useState<null | boolean>(null);
 
-  if (!token) {
-    return <Navigate to="/403" />;
+
+  
+
+  if (allowed === null) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 100 }}>
+        <Spin size="large" tip="Đang kiểm tra phân quyền..." />
+      </div>
+    );
   }
 
-  return role === "admin" || role === "manager" ? element : <Navigate to="/403" />;
+  return allowed ? element : <Navigate to="/403" />;
 };
 
 function App() {
   const routes = useRoutes([
     {
       path: "/admin",
-      element: <ProtectedRoute element={<Admin />} />,
+      element: <Admin />,
       children: [
         { index: true, element: <Dashboard /> },
 
         {
           path: "categories",
-          element: <Categories />,
+          element: <ProtectedRoute element={<Categories />} />,
           children: [
-            { path: "create", element: <CategoriesAdd /> },
-            { path: ":id/edit", element: <CategoriesEdit /> },
+            { path: "create", element: <ProtectedRoute element={<CategoriesAdd />} />, },
+            { path: ":id/edit",  element: <ProtectedRoute element={<CategoriesEdit />} />, },
+           
           ],
         },
 
@@ -136,8 +151,16 @@ function App() {
         { path: "permissions/create", element: <PermissionsAdd /> },
         { path: "permissions/:id/edit", element: <PermissionsEdit /> },
 
-        { path: "discounts", element: <Discount /> },
-        // { path: "comments", element: <Comment /> },
+        { path: "settings", element: <Settings />, },
+        { path: "comments", element: <Comments /> },
+        { path: "discounts", element: <Discount />, },
+        { path: "sales", element: <Sales />, },
+        { path: "index-sales", element: <Index />, },
+        { path: "slider/create", element: <BannerSlideForm />, },
+        { path: "slider/edit/:id", element: <BannerSlideFormUpdate />, },
+        { path: "slider", element: <BannerSlide />, },
+        { path: "categories/trashed", element: <ProtectedRoute element={<CategoriesTrash />} />, },
+
       ],
     },
     {

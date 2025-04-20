@@ -200,7 +200,7 @@ const MainContent = () => {
                 style={{ backgroundColor: "rgba(0,0,0,0.5)", padding: "20px", borderRadius: "10px" }}>
                 <h2>Khám phá sản phẩm mới</h2>
                 <h4 className="text-warning">Ưu đãi hấp dẫn hôm nay!</h4>
-              </div> */
+              </div> */}
             </div>
           </SwiperSlide>
 

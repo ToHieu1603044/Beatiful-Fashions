@@ -8,8 +8,8 @@ import Swal from 'sweetalert2'
 import { set } from "react-hook-form";
 
 const CheckOut = () => {
-    const userJson = localStorage.getItem("user");
-    const user = userJson ? JSON.parse(userJson).user : null;
+    const userJson = localStorage.getItem("users");
+    const user = userJson ? JSON.parse(userJson) : null;
     const [bank, setBank] = useState<undefined | number>();
     const [provinces, setProvinces] = useState([]);
     const [districts, setDistricts] = useState([]);
@@ -268,9 +268,9 @@ const CheckOut = () => {
             <div
                 className="w-100 d-flex"
                 style={{
-                    pointerEvents: user ? "none" : "auto",
-                    opacity: user ? 0.6 : 1,
-                    cursor: user ? "not-allowed" : "auto",
+                    pointerEvents: !user ? "none" : "auto",
+                    opacity: !user ? 0.6 : 1,
+                    cursor: !user ? "not-allowed" : "auto",
                 }}
             >
                 {/* left */}
@@ -325,9 +325,9 @@ const CheckOut = () => {
                             <div
                                 className="mt-3"
                                 style={{
-                                    pointerEvents: user ? "none" : "auto",
-                                    opacity: user ? 0.6 : 1,
-                                    cursor: user ? "not-allowed" : "auto",
+                                    pointerEvents: !user ? "none" : "auto",
+                                    opacity: !user ? 0.6 : 1,
+                                    cursor: !user ? "not-allowed" : "auto",
                                 }}
                             >
                                 <form onSubmit={handleSubmit}>
@@ -335,7 +335,13 @@ const CheckOut = () => {
                                     <div className="mb-3">
                                         <input type="text" className="form-control" placeholder="Email"
                                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            style={{ height: "45px" }}
+                                            style={{
+                                                height: "45px",
+                                                pointerEvents: !user ? "none" : "none",
+                                                opacity: !user ? 0.6 : 1,
+                                                cursor: !user ? "not-allowed" : "auto",
+                                            }}
+                                            value={user ? user.email : ""}
                                         />
                                     </div>
                                     {/* họ và tên */}
@@ -345,7 +351,13 @@ const CheckOut = () => {
                                             className="form-control"
                                             placeholder="Họ và tên"
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            style={{ height: "45px" }}
+                                            style={{
+                                                height: "45px",
+                                                pointerEvents: !user ? "none" : "none",
+                                                opacity: !user ? 0.6 : 1,
+                                                cursor: !user ? "not-allowed" : "auto",
+                                            }}
+                                            value={user ? user.name : ""}
                                         />
                                     </div>
                                     {/* số điện thoại */}
@@ -355,7 +367,13 @@ const CheckOut = () => {
                                             className="form-control"
                                             placeholder="Số điện thoại"
                                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                            style={{ height: "45px" }}
+                                            style={{
+                                                height: "45px",
+                                                pointerEvents: !user ? "none" : "none",
+                                                opacity: !user ? 0.6 : 1,
+                                                cursor: !user ? "not-allowed" : "auto",
+                                            }}
+                                            value={user ? user.phone : ""}
                                         />
                                     </div>
                                     {/* tỉnh thành */}

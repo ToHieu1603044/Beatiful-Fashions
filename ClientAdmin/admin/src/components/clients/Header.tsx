@@ -5,6 +5,7 @@ import { Category } from '../../interfaces/Categories';
 import { useNavigate } from 'react-router-dom';
 import { Heart, User } from 'lucide-react';
 import UserInfo from '../UserInfo';
+import axios from 'axios';
 
 const Header = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -12,22 +13,28 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const navigate = useNavigate();
+  const [site, setSite] = useState('');
 
   const token = localStorage.getItem('access_token');
   console.log(token);
   console.log(localStorage.getItem("access_token"));
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
+        const sites = await axios.get('http://127.0.0.1:8000/api/site-setting');
+        setSite(sites.data.data);
+
         const response = await getCategories();
         setCategories(response.data);
       } catch (error) {
-        console.error("Lỗi khi tải danh mục:", error);
+        console.error("Lỗi khi tải dữ liệu:", error);
       }
     };
-    fetchCategories();
+
+    fetchData();
   }, []);
+
 
   const checkLogin = () => {
     if (!token) {
@@ -57,18 +64,19 @@ const Header = () => {
     };
 
     fetchCartCount();
-  }, []); 
+  }, []);
 
   return (
     <header className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
       <div className="container d-flex align-items-center justify-content-start">
         <a className="navbar-brand me-3 text-white" href="/">
           <img
-            src="//bizweb.dktcdn.net/100/347/891/themes/710583/assets/logo.png?1739517244563"
-            alt="logo Lak Shop"
+            src={`http://127.0.0.1:8000/storage/${site.logo}`}
+            alt={site.site_name || "Logo"}
             className="img-fluid"
             style={{ maxWidth: '170px' }}
           />
+
         </a>
 
         <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
