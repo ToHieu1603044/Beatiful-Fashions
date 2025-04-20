@@ -16,37 +16,37 @@ class CartController
 
     public function index(Request $request)
     {
-        //   $this->authorize('viewAny', Cart::class);
         try {
             $user = Auth::user();
-            $session_id = session()->getId(); // Sử dụng session ID cho khách
-
-            // Bắt đầu truy vấn cart với eager loading
-            $cartQuery = Cart::with(['sku.product', 'attributeOptions.attribute']);
-
-            // Nếu người dùng đã đăng nhập, lọc theo user_id, nếu không thì theo session_id
+            $session_id = session()->getId();
+    
+            $cartQuery = Cart::with([
+                'sku.product' => function ($query) {
+                    $query->withTrashed(); // Lấy cả sản phẩm đã xóa mềm
+                },
+                'attributeOptions.attribute',
+                'product' => function ($query) {
+                    $query->withTrashed();
+                }
+            ]);
+    
             if ($user) {
                 $cartQuery->where('user_id', $user->id);
             } else {
                 $cartQuery->where('session_id', $session_id);
             }
-
-            // Lấy danh sách cart
+    
             $cart = $cartQuery->get();
-
-            // Kiểm tra xem giỏ hàng có trống không
+    
             if ($cart->isEmpty()) {
                 return response()->json([
                     'message' => 'Giỏ hàng của bạn hiện tại trống.',
                     'data' => []
                 ], 200);
             }
-
-            // Trả về các item trong giỏ dưới dạng CartResource collection
+    
             return CartResource::collection($cart);
-
         } catch (\Exception $e) {
-            // Xử lý lỗi nếu có
             return response()->json([
                 'message' => 'Có lỗi xảy ra, vui lòng thử lại sau.',
                 'error' => $e->getMessage(),
@@ -84,7 +84,11 @@ class CartController
         try {
             $user = Auth::user();
             $session_id = session()->getId();
-            $sku = ProductSku::with('attributeOptions.attribute')->findOrFail($request->sku_id);
+            $sku = ProductSku::with('attributeOptions.attribute','product')->findOrFail($request->sku_id);
+
+            if ($sku->product->active != 1) {
+                return ApiResponse::errorResponse(422, "Sản phẩm hiện không khả dụng.");
+            }
 
             if ($sku->stock < $request->quantity) {
                 return ApiResponse::errorResponse(422, "Số lượng không hợp lệ, tồn kho còn {$sku->stock}");
@@ -92,12 +96,11 @@ class CartController
 
             $flashSalePrice = $sku->product->flashSales->first()?->pivot->discount_price;
             \Log::info("Giá khuyến mãi", ['flashSalePrice' => $flashSalePrice]);
-            $price = $flashSalePrice ?? $sku->price;
-
-
+           
             $variant_detail = [
                 'sku_id' => $sku->id,
-                'price' => $price,
+                'price' => $sku->price,
+                'price_sale' => $flashSalePrice ?? 0,
                 'stock' => $sku->stock,
                 'attributes' => $sku->attributeOptions->mapWithKeys(function ($option) {
                     return [$option->attribute->name ?? 'unknown' => $option->value ?? 'unknown'];
@@ -162,11 +165,14 @@ class CartController
             if ($cart->sku->stock < $request->quantity) {
                 return response()->json([
                     'message' => 'Số lượng trong kho không đủ'
-                ], 200);
+                ], 400);
                 $sku = $cart->sku;
 
             }
-
+            if ($cart->product->active != 1 || $cart->product->deleted_at !== null) {
+                return ApiResponse::errorResponse(422, "Sản phẩm hiện không khả dụng.");
+            }
+            
             $cart->update([
                 'quantity' => $request->quantity
             ]);

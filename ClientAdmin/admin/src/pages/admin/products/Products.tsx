@@ -5,6 +5,7 @@ import { getCategories } from "../../../services/categoryService";
 import { Table, Button, Input, Select, Modal, Badge, Space, Pagination, Image, Switch, message, Dropdown, Menu } from "antd";
 import { BsEye, BsPencilSquare, BsTrash } from "react-icons/bs";
 import { BsFilter } from "react-icons/bs";
+import DeleteButton from "../../../components/DeleteButton ";
 const { Option } = Select;
 
 const Products = () => {
@@ -164,7 +165,7 @@ const Products = () => {
       key: "active",
       render: (active, record) => (
         <Switch
-          checked={active === true || active === 1} // Chấp nhận cả true/false và 1/0
+          checked={active === true || active === 1} 
           onChange={() => handleToggleStatus(record)}
         />
       ),
@@ -216,6 +217,8 @@ const Products = () => {
             onChange={(page) => fetchProducts(page)}
             className="mt-3"
           />
+
+         <DeleteButton label="Đã xóa" navigateTo="/admin/products/trash"/>
         </>
       )}
 

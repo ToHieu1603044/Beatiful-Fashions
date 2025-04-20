@@ -29,8 +29,7 @@ const CountDown: React.FC = () => {
           setEndTime(new Date(activeSale.end_time)); // Lấy thời gian kết thúc khuyến mãi
         } else {
           // Nếu không có khuyến mãi, đặt thời gian đếm ngược mặc định là 5 phút từ hiện tại
-          const defaultEndTime = new Date(now.getTime() + 5 * 60 * 1000);
-          setEndTime(defaultEndTime);
+          setShowCountdown(false);
         }
       } catch (error) {
         console.error('Lỗi khi lấy flash sale:', error);

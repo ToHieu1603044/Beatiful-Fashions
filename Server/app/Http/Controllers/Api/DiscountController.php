@@ -7,6 +7,7 @@ use App\Helpers\ApiResponse;
 use App\Models\Discount;
 use App\Models\DiscountUsage;
 use App\Models\Notification;
+use App\Models\Order;
 use App\Models\PointRedemption;
 use App\Models\User;
 use Carbon\Carbon;
@@ -17,8 +18,32 @@ use Illuminate\Validation\ValidationException;
 
 class DiscountController
 {
+    public function index(Request $request){
+        try {
+            $discounts = Discount::with('products')
+                ->where('is_redeemable', false)
+                ->paginate(5);
 
+            return response()->json($discounts);
 
+        } catch (\Throwable $th) {
+
+            return response()->json(['message' => $th->getMessage()], 500);
+        }
+    }
+
+    public function fetchDiscount(Request $request)
+    {
+        $discounts = Discount::select('id', 'name', 'code','discount_type', 'value', 'max_discount', 'min_order_amount', 'max_uses', 'start_date', 'end_date', 'is_global', 'is_redeemable', 'can_be_redeemed_with_points')
+            ->where('is_global', 1)
+            ->where('active', 1)
+            ->where('start_date', '<=', Carbon::now())
+            ->where('end_date', '>=', Carbon::now())          
+            ->with(['products:id,name']) 
+            ->get();
+    
+        return response()->json($discounts);
+    }
     public function redeemPoints(Request $request)
     {
         try {
@@ -51,7 +76,7 @@ class DiscountController
 
     public function applyDiscount(Request $request)
     {
-        \Log::info($request->all());
+        //\Log::info($request->all());
 
         $data = [
             'discount_code' => $request->input('discountCode'),
@@ -59,6 +84,7 @@ class DiscountController
         ];
 
         $validator = Validator::make($data, [
+            
             'discount_code' => 'required|string|exists:discounts,code',
             'total_amount' => 'required|numeric|min:0',
         ]);
@@ -69,6 +95,7 @@ class DiscountController
 
         $discountCode = $data['discount_code'];
         $totalAmount = $data['total_amount'];
+
         $user = Auth::user();
 
         $discount = Discount::where('code', $discountCode)
@@ -83,17 +110,22 @@ class DiscountController
         if (!$discount) {
             return response()->json(['message' => 'Mã giảm giá không tồn tại hoặc đã bị vô hiệu hóa.'], 404);
         }
-
+        if ($discount->is_first_order) {
+            $hasOrder = Order::where('user_id', auth()->id())->exists();
+            if ($hasOrder) {
+                return response()->json([
+                    'message' => 'Mã giảm giá này chỉ dành cho khách hàng mới!'
+                ], 403);
+            }
+        }
+    
         $currentDate = now();
         if ($currentDate < $discount->start_date || $currentDate > $discount->end_date) {
             return response()->json(['message' => 'Mã giảm giá không còn hiệu lực.'], 400);
         }
 
-        if ($discount->required_ranking && $user->ranking !== null) {
-            $rankOrder = ['bronze' => 1, 'silver' => 2, 'gold' => 3, 'platinum' => 4];
-            if ($rankOrder[$user->ranking] < $discount->required_ranking) {
-                return response()->json(['message' => 'Bạn không đủ hạng để sử dụng mã giảm giá này.'], 403);
-            }
+        if($discount->required_ranking && $user->ranking < $discount->required_ranking){
+            return response()->json(['message' => 'Bạn không đủ hạng.'], 400);
         }
 
         if ($discount->is_redeemable) {
@@ -126,13 +158,15 @@ class DiscountController
             return response()->json(['message' => 'Đơn hàng của bạn phải tối thiểu ' . number_format($discount->min_order_amount) . ' VNĐ để áp dụng mã giảm giá.'], 400);
         }
 
-        $cartData = $request->input('cartData', []);
+        $cartData = $request->input('cartData');
         $discountedProducts = $discount->products->pluck('id')->toArray();
-
+        \Log::info('Mã giảm giá áp dụng cho các sản phẩm ID:', $discountedProducts);
+        
         $validCartItems = collect($cartData)->filter(function ($item) use ($discountedProducts) {
-            return in_array($item['product']['id'], $discountedProducts);
+            return empty($discountedProducts) || in_array($item['product']['id'], $discountedProducts);
         });
-
+        \Log::info(['validCartItems' => $validCartItems]);
+        
         if ($discount->products->count() > 0 && $validCartItems->isEmpty()) {
             return response()->json([
                 'message' => 'Mã giảm giá không áp dụng cho sản phẩm trong giỏ hàng của bạn.'
@@ -184,6 +218,7 @@ class DiscountController
             'message' => 'Mã giảm giá đã được áp dụng thành công.',
         ]);
     }
+    
 
     public function store(Request $request)
     {
@@ -193,7 +228,7 @@ class DiscountController
                 return response()->json(['message' => 'The discount code field is required.'], 400);
             }
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
+                'name' => 'required|string|max:255|unique:discounts,name',
                 'code' => 'string|max:50|unique:discounts,code',
                 'discount_type' => 'required|in:percentage,fixed',
                 'value' => 'required|numeric|min:1',
@@ -204,7 +239,10 @@ class DiscountController
                 'end_date' => 'required|date|after_or_equal:start_date',
                 'is_global' => 'required|boolean',
                 'required_ranking' => 'nullable|integer|min:1',
-                'is_redeemable' => 'required|boolean',
+                'is_first_order' => 'nullable|boolean',
+                'products.*.id' => 'exists:products,id',
+                'required_ranking' => 'nullable|integer|min:1|max:4',
+                'is_redeemable' => 'nullable|boolean',
                 'can_be_redeemed_with_points' => 'nullable|integer',
             ]);
             $startDate = Carbon::parse($request->start_date);
@@ -278,9 +316,9 @@ class DiscountController
         //
     }
 
-    public function destroy(string $id)
+    public function destroy($id)
     {
-        $discount = Discount::firstOrFail($id);
+        $discount = Discount::findOrFail($id);
 
         $discount->delete();
 
@@ -291,19 +329,17 @@ class DiscountController
     public function redeemPointsForVoucher(Request $request)
     {
         $request->validate([
-            'discount_id' => 'required|exists:discounts,id', // Mã giảm giá cần đổi
+            'discount_id' => 'required|exists:discounts,id', 
         ]);
 
         $user = Auth::user();
         $discount = Discount::findOrFail($request->discount_id);
 
-        // Kiểm tra xem mã giảm giá này có thể đổi bằng điểm không
         if ($discount->is_redeemable == false) {
             return response()->json(['message' => 'Mã giảm giá này không thể đổi bằng điểm.'], 400);
         }
 
-        // Tính số điểm cần thiết để đổi mã giảm giá
-        $requiredPoints = $discount->value * 5; // Ví dụ, 1% giảm giá = 5 điểm
+        $requiredPoints = $discount->can_be_redeemed_with_points; 
 
         // Kiểm tra nếu người dùng đủ điểm
         if ($user->points < $requiredPoints) {

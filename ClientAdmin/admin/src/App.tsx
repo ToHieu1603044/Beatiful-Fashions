@@ -52,18 +52,86 @@ import Comment from "./pages/admin/comments/Comment";
 import Settings from "./pages/admin/Settings";
 import Comments from "./pages/admin/comments/Comments";
 import Sales from "./pages/admin/sales/Sales";
+import { getMaintenanceStatus } from "./services/homeService"; // API check bảo trì
+import MaintenancePage from "./pages/client/MaintenancePage"; // Trang hiển thị bảo trì
+import { Spin } from "antd";
+import { useEffect, useState } from "react";
+import BannerSlideForm from "./pages/admin/BannerSlideForm";
+import BannerSlide from "./pages/admin/BannerSlide";
+import CategoriesTrash from "./pages/admin/categories/CategoriesTrash";
+import ListBaiViet from "./pages/admin/baiviet/ListBaiViet";
+import BaivietForm from "./pages/admin/baiviet/FormBaiViet";
+import BaivietPage from "./pages/client/baiviet/Baiviet";
+import BaivietDetailPage from "./pages/client/baiviet/ChiTietbaChiTiet";
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
-  const role = localStorage.getItem("role");
-  const token = localStorage.getItem("access_token"); 
+  const [allowed, setAllowed] = useState<null | boolean>(null);
 
-  if (!token) {
-    return <Navigate to="/403" />;
+  useEffect(() => {
+    const role = localStorage.getItem("role");
+    const token = localStorage.getItem("access_token");
+
+    // Check if there's no token or unauthorized role
+    if (!token || (role !== "admin" && role !== "manager")) {
+      setAllowed(false);
+    } else {
+      setAllowed(true);
+    }
+  }, []);
+
+  if (allowed === null) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 100 }}>
+        <Spin size="large" tip="Đang kiểm tra phân quyền..." />
+      </div>
+    );
   }
 
-  return role === "admin" || role === "manager" ? element : <Navigate to="/403" />;
+  return allowed ? element : <Navigate to="/403" />;
 };
 
 function App() {
+  const [loading, setLoading] = useState(true);
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState("");
+
+  useEffect(() => {
+    const fetchMaintenance = async () => {
+      try {
+        const res = await getMaintenanceStatus();
+        const { maintenance, maintenance_message } = res.data.data;
+
+        if (maintenance === true || maintenance === "true") {
+          setIsMaintenance(true);
+          setMaintenanceMessage(maintenance_message || "Chúng tôi đang bảo trì hệ thống.");
+        }
+      } catch (error) {
+        console.error("Lỗi khi kiểm tra trạng thái bảo trì:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMaintenance();
+  }, []);
+  if (loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 100 }}>
+        <Spin size="large" tip="Đang kiểm tra trạng thái hệ thống..." />
+      </div>
+    );
+  }
+
+  if (isMaintenance) {
+    const allowPaths = ["/admin", "/login", "/register", "/maintance"];
+    const isAllowPath = allowPaths.some(path =>
+      window.location.pathname.startsWith(path)
+    );
+  
+    if (!isAllowPath) {
+      return <MaintenancePage />;
+    }
+  }
+  
   const routes = useRoutes([
     {
       path: "/admin",
@@ -72,17 +140,18 @@ function App() {
         { index: true, element: <Dashboard /> },
         {
           path: "categories",
-          element: <Categories />,
+          element: <ProtectedRoute element={<Categories />} />,
           children: [
-            { path: "create", element: <CategoriesAdd /> },
-            { path: ":id/edit", element: <CategoriesEdit /> },
+            { path: "create", element: <ProtectedRoute element={<CategoriesAdd />} />, },
+            { path: ":id/edit",  element: <ProtectedRoute element={<CategoriesEdit />} />, },
+           
           ],
         },
 
         { path: "users", element: <Users />,
         },
         { path: "users/add", element: <AddUser/> },
-        { path: "users/:id/edit", element: <EditUser /> },
+        // { path: "users/:id/edit", element: <EditUser /> },
 
         {
           path: "attributes",
@@ -119,7 +188,7 @@ function App() {
           path: "users/staff", element: <Staff />,
         },
         { path: "users/add", element: <AddUser /> },
-        { path: "users/:id/edit", element: <EditUser /> },
+        // { path: "users/:id/edit", element: <EditUser /> },
         { path: "roles", element: <Roles /> },
         { path: "roles/create", element: <RolesAdd /> },
         { path: "roles/:id/edit", element: <EditRole /> },
@@ -130,6 +199,13 @@ function App() {
         { path: "comments", element: <Comments /> },
         { path: "discounts", element: <Discount />, },
         { path: "sales", element: <Sales />, },
+        { path: "index-sales", element: <Index />, },
+        { path: "slider/create", element: <BannerSlideForm />, },
+        { path: "slider", element: <BannerSlide />, },
+        { path: "categories/trashed", element: <ProtectedRoute element={<CategoriesTrash />} />, },
+        { path:"baiviet",element:<ListBaiViet/>},
+        { path:"baiviet/add",element:<BaivietForm/>},
+        { path:"baiviet/edit/:id",element:<BaivietForm/>},
       ],
     },
     {
@@ -148,7 +224,9 @@ function App() {
         { path: "searchs", element: <SearchProducts /> },
         { path: "orders/return", element: <OrderReturns /> },
         { path: "whishlish", element: <Whishlish /> },
-        {path: "sales", element: <Index />},
+        { path: "sales", element: <Index />},
+        { path: "baiviet", element: <BaivietPage />},
+        { path: "baiviet/:id", element: <BaivietDetailPage />},
         { path: "whislist", element: <Whishlish /> },
       ],
     },
@@ -163,7 +241,8 @@ function App() {
     { path: "order/failed", element: <OrderFail /> },
 
     { path: "order/pending", element: <OrderPending /> },
-   
+
+    { path: "/maintance", element: <MaintenancePage /> },
     
   ]);
 

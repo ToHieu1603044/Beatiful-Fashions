@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Redis;
 
 class OrderReturnController
 {
@@ -43,8 +44,6 @@ class OrderReturnController
             $request->merge(['items' => $request->items['items']]);
         }
 
-
-
         $request->validate([
             'items' => 'required|array',
             'items.*.order_detail_id' => 'required|exists:order_details,id',
@@ -69,7 +68,6 @@ class OrderReturnController
         try {
             $orderReturn = OrderReturn::create([
                 'order_id' => $order->id,
-
                 'user_id' => $order->user_id,
                 'reason' => $request->reason,
             ]);
@@ -118,7 +116,6 @@ class OrderReturnController
             ], 500);
         }
     }
-
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
@@ -127,6 +124,7 @@ class OrderReturnController
     
         $orderReturn = OrderReturn::findOrFail($id);
     
+        // Nếu đã completed thì không cho cập nhật nữa
         if ($orderReturn->status === 'completed') {
             return response()->json([
                 'message' => 'Không thể cập nhật đơn hoàn trả đã hoàn tất!',
@@ -134,41 +132,61 @@ class OrderReturnController
             ], 400);
         }
     
+        // Không cho cập nhật ngược trạng thái
+        $statusOrder = [
+            'pending' => 0,
+            'approved' => 1,
+            'rejected' => 1,
+            'received' => 2,
+            'refunded' => 3,
+            'completed' => 4,
+        ];
+    
+        $current = $statusOrder[$orderReturn->status] ?? -1;
+        $next = $statusOrder[$request->status] ?? -1;
+    
+        if ($next < $current) {
+            return response()->json([
+                'message' => 'Không thể cập nhật ngược trạng thái!',
+                'status' => $orderReturn->status
+            ], 400);
+        }
+    
         DB::transaction(function () use ($orderReturn, $request) {
-            // Cập nhật trạng thái đơn hoàn trả
             $orderReturn->update(['status' => $request->status]);
     
-            // Chỉ cập nhật tồn kho khi trạng thái là "refunded"
-            if ($request->status === 'refunded') {
+            // Xử lý tồn kho và bán hàng khi trạng thái là "approved"
+            if ($request->status === 'approved') {
                 $returnDetails = $orderReturn->returnItems;
     
                 foreach ($returnDetails as $returnDetail) {
-                    // Lấy thông tin từ order_details để lấy SKU
                     $orderDetail = DB::table('order_details')
                         ->where('id', $returnDetail->order_detail_id)
                         ->first();
     
-                    if ($orderDetail && $orderDetail->sku) {
-                        // Cập nhật stock trong bảng product_skus
-                        DB::table('product_skus')
-                            ->where('sku', $orderDetail->sku)
-                            ->increment('stock', $returnDetail->quantity);
+                    if ($orderDetail) {
+                        if ($orderDetail->sku) {
+                            DB::table('product_skus')
+                                ->where('sku', $orderDetail->sku)
+                                ->increment('stock', $returnDetail->quantity);
     
-                        // Giảm subtotal trong order_details
-                        DB::table('order_details')
-                            ->where('id', $returnDetail->order_detail_id)
-                            ->decrement('subtotal', $returnDetail->refund_amount);
+                            $redisKey = 'sku:stock:' . $orderDetail->sku;
+                            if (Redis::exists($redisKey)) {
+                                Redis::incrby($redisKey, $returnDetail->quantity);
+                            }
+                        }
     
-                        // Cập nhật trạng thái hoàn trả trong order_details
-                        DB::table('order_details')
-                            ->where('id', $returnDetail->order_detail_id)
-                            ->update(['return_status' => $returnDetail->refund_amount]);
+                        if ($orderDetail->product_id) {
+                            DB::table('products')
+                                ->where('id', $orderDetail->product_id)
+                                ->decrement('total_sold', $returnDetail->quantity);
+                        }
                     }
                 }
             }
         });
     
-        // Gọi sự kiện sau khi transaction hoàn tất
+        // Bắn event nếu đã hoàn tất
         if ($request->status === 'completed') {
             event(new OrderReturnCompleted($orderReturn));
         }
@@ -179,8 +197,7 @@ class OrderReturnController
         ], 200);
     }
     
-
-
+    
     public function updateStatusUser(Request $request, $id)
     {
         $request->validate([
@@ -212,7 +229,10 @@ class OrderReturnController
                 return response()->json(['message' => 'Không thể huy bo don hang'], 400);
             }
 
-            $orderReturn->delete();
+            $orderReturn->update([
+                'status' => 'cancelled',
+                'shipping_status' => 'cancelled'
+            ]);
 
             return response()->json(['message' => 'Huy bo don hang'], 200);
         } catch (\Throwable $th) {

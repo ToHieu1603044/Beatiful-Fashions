@@ -48,11 +48,13 @@ const MainContent = () => {
         getCategories(),
         getProductSales(),
       ]);
-  
+
       setProducts(productsRes.data.data || []);
+      console.log("Danh sách san pham:", productsRes.data.data);
       setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
       setSales(salesRes.data.message || []);
-  
+      console.log("Danh sách khuyen mai:", salesRes.data.message);
+
       const token = localStorage.getItem("access_token");
       if (token) {
         const favoritesRes = await axios.get('http://127.0.0.1:8000/api/favorites', {
@@ -68,32 +70,10 @@ const MainContent = () => {
       console.error("Error loading data:", error);
     }
   };
-  
+
   useEffect(() => {
     fetchData();
   }, []);
-  const fetchData = async () => {
-    try {
-      const [productsRes, categoriesRes] = await Promise.all([
-        getProducts(),
-        getCategories(),
-      ]);
-
-      console.log("Products API response:", productsRes.data);
-      console.log("Categories API response:", categoriesRes.data);
-
-      setProducts(productsRes.data.data || []);
-      setCategories(
-        Array.isArray(categoriesRes.data) ? categoriesRes.data : []
-      );
-    } catch (error) {
-      console.error("Lỗi khi tải dữ liệu:", error);
-      setProducts([]);
-      setCategories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = () => {
     if (!selectedVariant) {
@@ -105,8 +85,50 @@ const MainContent = () => {
   const handleCategoryClick = (id: number, slug: string) => {
     navigate(`/category/${id}/${slug}`);
   };
- 
-  
+  const handleAddToFavorites = async (product) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert("Bạn cần đăng nhập để sử dụng chức năng yêu thích.");
+        return;
+      }
+
+      const res = await axios.post(
+        "http://127.0.0.1:8000/api/toggle-favorite",
+        { product_id: product.id },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (res.data.status === "success") {
+        const isFavorite = res.data.is_favorite;
+
+        setProducts((prev) =>
+          prev.map((item) =>
+            item.id === product.id ? { ...item, isFavorite } : item
+          )
+        );
+
+        setSales((prevSales) =>
+          prevSales.map((item) =>
+            item.id === product.id ? { ...item, isFavorite } : item
+          )
+        );
+        await fetchData();
+        toast.success(res.data.is_favorite ? "Đã thêm vào yêu thích!" : "Đã xóa khỏi yêu thích!");
+      }
+    } catch (error) {
+      if (error.response?.status === 401) {
+        alert("Bạn cần đăng nhập để sử dụng chức năng này.");
+      } else {
+        console.error("Lỗi toggle favorite:", error);
+      }
+    }
+  };
+
   const handleShowModal = (product) => {
     setSelectedProduct(product);
     setSelectedVariant(null);
@@ -161,7 +183,7 @@ const MainContent = () => {
   return (
     <div className="container mt-4">
       <div className="row mb-5 g-4">
-        <Swiper
+        {/* <Swiper
           modules={[Navigation, Pagination, Autoplay]}
           spaceBetween={10}
           slidesPerView={1}
@@ -173,29 +195,43 @@ const MainContent = () => {
         >
           <SwiperSlide>
             <div className="position-relative">
-              <video
-                src={videoSrc}
-                autoPlay
-                muted
-                playsInline
-                loop
-                className="w-100"
-                style={{
-                  height: "500px",
-                  objectFit: "cover",
-                  borderRadius: "10px",
-                }}
-              ></video>
-
-              {/* <div className="position-absolute top-50 start-50 translate-middle text-white text-center"
+              <video src={videoSrc} autoPlay muted playsInline loop className="w-100" style={{ height: "500px", objectFit: "cover", borderRadius: "10px" }}></video>
+              <div className="position-absolute top-50 start-50 translate-middle text-white text-center"
                 style={{ backgroundColor: "rgba(0,0,0,0.5)", padding: "20px", borderRadius: "10px" }}>
                 <h2>Khám phá sản phẩm mới</h2>
                 <h4 className="text-warning">Ưu đãi hấp dẫn hôm nay!</h4>
-              </div> */}
+              </div>
             </div>
           </SwiperSlide>
 
-        </Swiper>
+        </Swiper> */}
+        <div id="carouselExampleIndicators" className="carousel slide" data-bs-ride="carousel" data-bs-interval="2000">
+          <div className="carousel-indicators">
+            <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" className="active" aria-current="true" aria-label="Slide 1"></button>
+            <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1" aria-label="Slide 2"></button>
+            <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2" aria-label="Slide 3"></button>
+          </div>
+          <div className="carousel-inner">
+            <div className="carousel-item active">
+              <img src="https://intphcm.com/data/upload/dung-luong-banner-thoi-trang.jpg" className="d-block w-100" alt="First slide" />
+            </div>
+            <div className="carousel-item">
+              <img src="https://cotton4u.vn/files/news/2025/04/17/851111a46c6ea8ee79e5a465a91aa3c7.webp" className="d-block w-100" alt="Second slide" />
+            </div>
+            <div className="carousel-item">
+              <img className="d-block w-100" src="https://cotton4u.vn/files/news/2025/04/15/63fbae2cbd8adde79d504aafcfe92eee.webp" alt="Third slide" />
+            </div>
+          </div>
+          <button className="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
+            <span className="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span className="visually-hidden">Previous</span>
+          </button>
+          <button className="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="next">
+            <span className="carousel-control-next-icon" aria-hidden="true"></span>
+            <span className="visually-hidden">Next</span>
+          </button>
+        </div>
+
       </div>
       < ImageCollection />
       <h2 className="mb-4 text-center text-uppercase mt-5">--Tất cả sản phẩm--</h2>
@@ -345,7 +381,10 @@ const MainContent = () => {
                     <div className="card-body text-center">
                       <h5 className="card-title text-truncate fw-bold">{sale.name}</h5>
                       <div className="price-container">
-                        <h6 className="text-danger fw-bold mb-1">{sale.price.toLocaleString()} VND</h6>
+                        <h6 className="text-danger fw-bold mb-1">
+                          {(sale.price - sale.sale_price).toLocaleString()} VND
+                        </h6>
+
                         {sale.old_price && (
                           <small className="text-muted text-decoration-line-through">
                             {sale.old_price.toLocaleString()} VND
@@ -373,7 +412,7 @@ const MainContent = () => {
       )}
 
       {sales.length === 0 && (
-        <p className="text-center">Không có sản phẩm nào.</p>
+        <p className="text-center"></p>
       )}
 
       <CountDown />

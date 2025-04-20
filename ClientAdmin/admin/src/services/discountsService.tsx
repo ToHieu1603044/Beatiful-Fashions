@@ -47,3 +47,17 @@ export const deleteCategory = async (id: number) => {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 };
+export const updateSales = async (id: number, data: any) => {
+  const token = getAuthToken();
+  return await axios.put(`http://127.0.0.1:8000/api/sales/${id}`, data, {
+    headers: {
+      ...(
+        data instanceof FormData
+          ? { 'Content-Type': 'multipart/form-data' }
+          : { 'Content-Type': 'application/json' }
+      ),
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+};
+

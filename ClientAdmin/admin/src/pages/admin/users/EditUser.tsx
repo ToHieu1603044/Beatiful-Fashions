@@ -1,217 +1,150 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { IUsers } from "../../../interfaces/User";
+import { Modal, Form, Input, Select, Checkbox, message } from "antd";
+import axios from "axios";
 import { getRoles } from "../../../services/roleService";
+import { IUsers } from "../../../interfaces/User";
 
-const EditUser = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<IUsers>();
+interface Props {
+  visible: boolean;
+  userId: string | null;
+  onCancel: () => void;
+  onUpdate: () => void; // Dùng để reload lại danh sách sau khi cập nhật
+}
 
-  const [formData, setFormData] = useState<IUsers>({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    district: "",
-    ward: "",
-    zip_code: "",
-    password: "",
-    password_confirmation: "",
-    active: true,
-  });
-
+const EditUserForm: React.FC<Props> = ({ visible, userId, onCancel, onUpdate }) => {
+  const [form] = Form.useForm();
   const [roles, setRoles] = useState<{ id: number; name: string }[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const userRole = localStorage.getItem("role");
-    if (!userRole || userRole !== "admin") {
-      alert("Bạn không có quyền truy cập!");
-      navigate("/");
-      return;
-    }
-    
-    const fetchRoles = async () => {
-      try {
-        const response = await getRoles();
-        setRoles(response.data);
-      } catch (error) {
-        console.error("Lỗi khi lấy danh sách roles:", error);
-      }
-    };
-
-    const fetchUser = async () => {
-      try {
-        const token = localStorage.getItem("access_token");
-        if (!token) {
-          alert("Bạn chưa đăng nhập!");
-          return;
-        }
-
-        const response = await axios.get(`http://127.0.0.1:8000/api/users/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const userData = response.data.data;
-        setFormData({
-          name: userData.name || "",
-          email: userData.email || "",
-          phone: userData.phone || "",
-          address: userData.address || "",
-          city: userData.city || "",
-          district: userData.district || "",
-          ward: userData.ward || "",
-          zip_code: userData.zip_code || "",
-          password: "",
-          password_confirmation: "",
-          active: userData.active ?? true,
-        });
-
-        // Load roles of the user correctly
-        setSelectedRoles(Array.isArray(userData.roles) ? userData.roles.map((r: any) => String(r.name).trim()) : []);
-      } catch (error) {
-        console.error("Lỗi khi lấy thông tin người dùng:", error);
-      }
-    };
-
-    fetchRoles();
-    fetchUser();
-  }, [id, navigate]);
-
-  const onSubmit = async (data: IUsers) => {
+  console.log("selectedRoles:", selectedRoles);
+  
+  // Hàm lấy thông tin người dùng
+  const fetchUser = async () => {
+    const token = localStorage.getItem("access_token");
     try {
-      const userData = {
-        ...data,
-        roles: selectedRoles.map((role) => String(role).trim()), // Ensure roles are strings
-      };
-
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        alert("Bạn chưa đăng nhập!");
-        return;
-      }
-
-      await axios.put(`http://127.0.0.1:8000/api/users/${id}`, userData, {
+      const response = await axios.get(`http://127.0.0.1:8000/api/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      const user = response.data.data;
+      console.log("user:", user); 
+      
+      const userRoles = user.role.map((r: any) => r.name);
+      console.log("userRoles:", userRoles); // Kiểm tra giá trị của userRoles
 
-      alert("Cập nhật người dùng thành công!");
-      navigate("/admin/users");
+      // Set giá trị vào form mà không reset
+      form.setFieldsValue({
+        name: user.name,
+        phone: user.phone,
+        address: user.address,
+        city: user.city,
+        district: user.district,
+        ward: user.ward,
+        zip_code: user.zip_code,
+        role: userRoles,
+        active: user.active,
+      });
 
+      setSelectedRoles(userRoles); // Cập nhật selectedRoles
+      console.log("selectedRoles set to:", userRoles); // Kiểm tra giá trị sau khi cập nhật
     } catch (error) {
-      alert("Cập nhật người dùng thất bại!");
-      console.error("Lỗi khi cập nhật user:", error);
+      message.error("Lỗi khi lấy thông tin người dùng");
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prevState => ({
-      ...prevState,
-      [name]: name === "active" ? value === "true" : value,
-    }));
+  // Hàm lấy danh sách các vai trò
+  const fetchRoles = async () => {
+    try {
+      const response = await getRoles();
+      setRoles(response.data);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleRoleChange = (roleName: string) => {
-    setSelectedRoles(prevRoles =>
-      prevRoles.includes(roleName)
-        ? prevRoles.filter(r => r !== roleName)
-        : [...prevRoles, roleName]
-    );
-  };
+  // Gọi fetchUser và fetchRoles khi userId thay đổi và modal visible
+  useEffect(() => {
+    if (userId && visible) {
+      fetchUser();
+      fetchRoles();
+    }
+  }, [userId, visible]);
 
-  // If user is not admin, don't render form
-  if (!isAdmin) return null;
+  // Hàm xử lý khi form được submit
+  const onFinish = async (values: IUsers) => {
+    console.log(values);
+    
+    const token = localStorage.getItem("access_token");
+    try {
+      await axios.put(`http://127.0.0.1:8000/api/users/${userId}`, {
+        ...values,
+        roles: selectedRoles,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      message.success("Cập nhật thành công");
+      onUpdate();  // Reload lại danh sách người dùng
+      onCancel();  // Đóng modal
+    } catch (error) {
+      message.error("Cập nhật thất bại");
+    }
+  };
 
   return (
-    <div className="container mt-4">
-      <h2 className="mb-3">Edit User</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="w-50">
-        <div className="mb-3">
-          <label className="form-label">Name</label>
-          <input type="text" className="form-control" {...register("name")} />
-          {errors.name && <p className="text-danger">Name is required</p>}
-        </div>
+    <Modal
+      open={visible}
+      onCancel={onCancel}
+      onOk={() => form.submit()}
+      title="Chỉnh sửa người dùng"
+      okText="Cập nhật"
+    >
+      <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form.Item name="name" label="Tên">
+          <Input />
+        </Form.Item>
 
-        <div className="mb-3">
-          <label className="form-label">Email</label>
-          <input type="email" className="form-control" {...register("email")} disabled />
-        </div>
+        <Form.Item name="phone" label="Số điện thoại">
+          <Input />
+        </Form.Item>
 
-        <div className="mb-3">
-          <label className="form-label">Phone</label>
-          <input type="text" className="form-control" {...register("phone")} />
-        </div>
+        <Form.Item name="address" label="Địa chỉ">
+          <Input />
+        </Form.Item>
 
-        <div className="mb-3">
-          <label className="form-label">Address</label>
-          <input type="text" className="form-control" {...register("address")} />
-        </div>
+        <Form.Item name="city" label="Thành phố">
+          <Input />
+        </Form.Item>
 
-        <div className="mb-3">
-          <label className="form-label">City</label>
-          <input type="text" className="form-control" {...register("city")} />
-        </div>
+        <Form.Item name="district" label="Quận/Huyện">
+          <Input />
+        </Form.Item>
 
-        <div className="mb-3">
-          <label className="form-label">District</label>
-          <input type="text" className="form-control" {...register("district")} />
-        </div>
+        <Form.Item name="ward" label="Phường/Xã">
+          <Input />
+        </Form.Item>
 
-        <div className="mb-3">
-          <label className="form-label">Ward</label>
-          <input type="text" className="form-control" {...register("ward")} />
-        </div>
+        <Form.Item name="zip_code" label="Mã bưu điện">
+          <Input />
+        </Form.Item>
 
-        <div className="mb-3">
-          <label className="form-label">Zip Code</label>
-          <input type="text" className="form-control" {...register("zip_code")} />
-        </div>
+        <Form.Item name="roles" label="Vai trò">
+          <Checkbox.Group
+            options={roles.map(r => ({ label: r.name, value: r.name }))}
+            onChange={(val) => {
+              setSelectedRoles(val as string[]);
+              console.log("selectedRoles updated to:", val); // Kiểm tra giá trị mới được chọn
+            }}
+            value={selectedRoles} // Đặt giá trị cho Checkbox.Group
+          />
+        </Form.Item>
 
-        <div className="mb-3">
-          <label className="form-label">Roles</label>
-          <div>
-            {roles.map(role => (
-              <label key={role.id} className="me-3">
-                <input
-                  type="checkbox"
-                  value={role.name}
-                  checked={selectedRoles.includes(role.name)}
-                  onChange={() => handleRoleChange(role.name)}
-                />
-                {role.name}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Password</label>
-          <input type="password" className="form-control" {...register("password")} />
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Confirm Password</label>
-          <input type="password" className="form-control" {...register("password_confirmation")} />
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Active</label>
-          <select className="form-select" name="active" value={formData.active ? "true" : "false"} onChange={handleChange}>
-            <option value="true">Active</option>
-            <option value="false">Inactive</option>
-          </select>
-        </div>
-
-        <button type="submit" className="btn btn-success">Update User</button>
-      </form>
-    </div>
+        <Form.Item name="active" label="Trạng thái">
+          <Select>
+            <Select.Option value={true}>Active</Select.Option>
+            <Select.Option value={false}>Inactive</Select.Option>
+          </Select>
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 
-export default EditUser;
+export default EditUserForm;

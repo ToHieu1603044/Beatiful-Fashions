@@ -15,4 +15,8 @@ class Slide extends Model
         'images',
         'order',
     ];
+    protected $casts = [
+        'images' => 'array',
+    ];
+    
 }

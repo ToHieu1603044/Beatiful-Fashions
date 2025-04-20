@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Button, Select, Input, Table } from "antd";
+import { Modal, Button, Select, Input, Table, Tag } from "antd";
 import { updateOrder } from "../../../services/orderService";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -120,66 +120,60 @@ const EditOrderModal = ({ order, visible, onClose }) => {
         <h6>Thông tin khách hàng:</h6>
         <Input
           value={formData.name}
-          onChange={(e) => handleInputChange("name", e.target.value)}
+          disabled
           placeholder="Tên khách hàng"
         />
         <Input
           value={formData.phone}
-          onChange={(e) => handleInputChange("phone", e.target.value)}
+          disabled
           placeholder="Số điện thoại"
         />
         <Input
           value={formData.email}
-          onChange={(e) => handleInputChange("email", e.target.value)}
+          disabled
           placeholder="Email"
         />
 
         <h6>Địa chỉ giao hàng:</h6>
         <Input
           value={formData.city}
-          onChange={(e) => handleInputChange("city", e.target.value)}
+          disabled
           placeholder="Thành phố"
         />
         <Input
           value={formData.district}
-          onChange={(e) => handleInputChange("district", e.target.value)}
+          disabled
           placeholder="Quận/Huyện"
         />
         <Input
           value={formData.ward}
-          onChange={(e) => handleInputChange("ward", e.target.value)}
+          disabled
           placeholder="Phường/Xã"
         />
         <Input
           value={order.address}
-          onChange={(e) => handleInputChange("address", e.target.value)}
+          disabled
           placeholder="Địa chỉ "
         />
 
         <h6>Ghi chú:</h6>
         <Input.TextArea
           value={order.note}
-          onChange={(e) => handleInputChange("note", e.target.value)}
+          disabled
         />
 
         <h6>Trạng thái đơn hàng:</h6>
         <Select
           value={formData.status}
-          onChange={(value) => handleInputChange("status", value)}
+          disabled
           className="w-100"
         >
-          <Select.Option value="pending">Chờ xử lý</Select.Option>
-          <Select.Option value="processing">Đang xử lý</Select.Option>
-          <Select.Option value="shipped">Đã gửi</Select.Option>
-          <Select.Option value="delivered">Đã giao</Select.Option>
-          <Select.Option value="cancelled">Đã hủy</Select.Option>
-          <Select.Option value="completed">Giao hàng thành công</Select.Option>
         </Select>
 
         <h6>Phương thức thanh toán:</h6>
         <Select
           value={formData.payment_method}
-          onChange={(value) => handleInputChange("payment_method", value)}
+          disabled
           className="w-100"
         >
           <Select.Option value="cod">Thanh toán khi nhận hàng</Select.Option>
@@ -188,14 +182,10 @@ const EditOrderModal = ({ order, visible, onClose }) => {
         </Select>
 
         <h6>Đã thanh toán:</h6>
-        <Select
-          value={formData.is_paid}
-          onChange={(value) => handleInputChange("is_paid", value)}
-          className="w-100"
-        >
-          <Select.Option value={true}>Đã thanh toán</Select.Option>
-          <Select.Option value={false}>Chưa thanh toán</Select.Option>
-        </Select>
+        <Tag color={formData.is_paid ? "green" : "red"}>
+          {formData.is_paid ? "Đã thanh toán" : "Chưa thanh toán"}
+        </Tag>
+
 
         <h6>Danh sách sản phẩm:</h6>
         <Table
@@ -270,7 +260,7 @@ const EditOrderModal = ({ order, visible, onClose }) => {
               key: "quantity",
               render: (quantity, record) => (
                 <Input
-          
+
                   type="number"
                   min={1}
                   value={quantity}

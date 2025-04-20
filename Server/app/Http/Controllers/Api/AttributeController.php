@@ -23,8 +23,7 @@ class AttributeController extends Controller
         ]);
     
         $attribute = Attribute::create($request->only('name'));
-    
-        // Kiểm tra nếu $request->options không rỗng và là mảng
+
         if (!empty($request->options) && is_array($request->options)) {
             foreach ($request->options as $option) {
                 AttributeOption::firstOrCreate([
@@ -39,19 +38,35 @@ class AttributeController extends Controller
     
     public function show(Attribute $attribute)
     {
-        return response()->json($attribute->load('options'));
+        return response()->json($attribute->load('values'));
     }
 
     public function update(Request $request, Attribute $attribute)
-    {
-        $request->validate([
-            'name' => 'required|string|unique:attributes,name,' . $attribute->id
-        ]);
+{
+    $request->validate([
+        'name' => 'required|string|unique:attributes,name,' . $attribute->id,
+        'options' => 'nullable|array'
+    ]);
 
-        $attribute->update($request->only('name'));
+    // Cập nhật tên thuộc tính
+    $attribute->update($request->only('name'));
 
-        return response()->json($attribute);
+    // Nếu có options thì xử lý cập nhật lại
+    if ($request->has('options') && is_array($request->options)) {
+        // Xoá toàn bộ option cũ
+        AttributeOption::where('attribute_id', $attribute->id)->delete();
+
+        // Thêm lại các option mới
+        foreach ($request->options as $value) {
+            AttributeOption::create([
+                'attribute_id' => $attribute->id,
+                'value' => $value
+            ]);
+        }
     }
+
+    return response()->json($attribute->load('values'));
+}
 
     public function destroy(Attribute $attribute)
     {

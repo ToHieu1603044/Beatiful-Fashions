@@ -134,6 +134,7 @@ return [
     // 'aliases' => [
     //     'PDF' => Barryvdh\DomPDF\Facade::class,
     // ],
+    'Agent' => Jenssegers\Agent\Facades\Agent::class,
 
 
 ];

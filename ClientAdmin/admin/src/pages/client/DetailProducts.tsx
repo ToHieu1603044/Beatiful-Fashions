@@ -1,10 +1,14 @@
 import React, { useEffect, useState, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { getProductById, storeCart } from "../../services/homeService";
+import { getAvgProduct, getProductById, storeCart } from "../../services/homeService";
 import { Link, useParams } from "react-router-dom";
 import { Send, User } from "lucide-react";
 import Swal from 'sweetalert2'
 import DOMPurify from "dompurify";
+import axios from "axios";
+import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
+import { formatPrice } from '../../utils/formatNumber';
+import { Tag } from "antd";
 const DetailProducts: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     console.log(id);
@@ -15,11 +19,10 @@ const DetailProducts: React.FC = () => {
     const [errorMessage, setErrorMessage] = useState<string>("");
     const [mainImage, setMainImage] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>("description");
+    const [rating, setRating] = useState<number>(0);
 
-    const [popularProducts, setPopularProducts] = useState([]);
     const [comments, setComments] = useState([
-        { id: 1, name: "Nguyễn Văn A", text: "Sản phẩm rất tốt!", avatar: "https://i.pravatar.cc/40?img=1" },
-        { id: 2, name: "Trần Thị B", text: "Chất lượng tuyệt vời!", avatar: "https://i.pravatar.cc/40?img=2" }
+
     ]);
     const [newComment, setNewComment] = useState("");
 
@@ -32,39 +35,84 @@ const DetailProducts: React.FC = () => {
             setNewComment("");
         }
     };
+    const renderStars = (rating: number) => {
+        const fullStars = Math.floor(rating);
+        const halfStar = rating % 1 >= 0.5;
+        const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+
+        const stars = [];
+
+        for (let i = 0; i < fullStars; i++) {
+            stars.push(<FaStar key={`full-${i}`} className="text-yellow-400" />);
+        }
+
+        if (halfStar) {
+            stars.push(<FaStarHalfAlt key="half" className="text-yellow-400" />);
+        }
+
+        for (let i = 0; i < emptyStars; i++) {
+            stars.push(<FaRegStar key={`empty-${i}`} className="text-yellow-400" />);
+        }
+
+        return stars;
+    };
     useEffect(() => {
-        fetchProduct();
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const productResponse = await getProductById(id);
+                const productData = productResponse.data.data.data;
+                setProduct(productData);
+                setMainImage(`http://127.0.0.1:8000/storage/${productData.images}`);
+
+                if (productData.variants?.length > 0) {
+                    const defaultVariant = productData.variants[0];
+                    const defaultAttributes: { [key: string]: string } = {};
+                    defaultVariant.attributes?.forEach((attr: any) => {
+                        defaultAttributes[attr.name] = attr.value;
+                    });
+                    setSelectedAttributes(defaultAttributes);
+                }
+
+                // Sau khi có product.id -> gọi 2 API song song
+                const [ratingRes, commentRes] = await Promise.all([
+                    getAvgProduct(productData.id),
+                    axios.get(`http://127.0.0.1:8000/api/ratings/product/${productData.id}`)
+                ]);
+
+                setRating(ratingRes.data.average_rating);
+                setComments(commentRes.data.data);
+
+            } catch (error: any) {
+                console.error("Lỗi:", error);
+                setErrorMessage(error.message || "Có lỗi xảy ra");
+            }
+            setLoading(false);
+        };
+
+        fetchData();
     }, [id]);
 
-    const fetchProduct = async () => {
-        setLoading(true);
-        try {
-            const response = await getProductById(id);
+    const StarRating = ({ rating }) => {
+        const stars = [];
+        const fullStars = Math.floor(rating); // Số sao đầy
+        const hasHalfStar = rating % 1 >= 0.25 && rating % 1 < 0.75; // Sao nửa nếu từ 0.25 - 0.74
+        const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0); // Số sao rỗng
 
-            console.log("Dữ liệu API---:", response.data);
-            const productData = response.data.data.data;
-            const popular = response.data.data.popular;
-            console.log("kbdw", popular)
-            console.log("Dữ liệu sản phẩm: ", productData);
-            setProduct(productData);
-            setPopularProducts(popular);
-
-            setMainImage(`http://127.0.0.1:8000/storage/${productData.images}`);
-
-            if (productData.variants?.length > 0) {
-                const defaultVariant = productData.variants[0];
-                const defaultAttributes: { [key: string]: string } = {};
-                defaultVariant.attributes?.forEach((attr: any) => {
-                    defaultAttributes[attr.name] = attr.value;
-                });
-                setSelectedAttributes(defaultAttributes);
-            }
-        } catch (error: any) {
-            setErrorMessage(error.message);
+        for (let i = 0; i < fullStars; i++) {
+            stars.push(<FaStar key={`full-${i}`} className="text-warning" />);
         }
-        setLoading(false);
-    };
 
+        if (hasHalfStar) {
+            stars.push(<FaStarHalfAlt key="half" className="text-warning" />);
+        }
+
+        for (let i = 0; i < emptyStars; i++) {
+            stars.push(<FaRegStar key={`empty-${i}`} className="text-warning" />);
+        }
+
+        return <div className="d-flex">{stars}</div>;
+    };
 
     const selectedVariant = useMemo(() => {
         if (!product || !product.variants) return null;
@@ -147,31 +195,6 @@ const DetailProducts: React.FC = () => {
     const handleImageClick = (imageUrl: string) => {
         setMainImage(imageUrl);
     };
-    // const handleShowModal = (product) => {
-    //     setSelectedProduct(product);
-    //     setSelectedVariant(null);
-
-    //     const allAttributes = [...new Set(product.variants.flatMap((variant) => variant.attributes.map((attr) => attr.name)))];
-    //     // Loc tat ca variants va lay ra ten cac thuoc tinh -> dung Set de ne cac truong giong nhau-> chuyen thnanh mang
-
-    //     const initialSelectedAttributes = Object.fromEntries(allAttributes.map((attr) => [attr, null]));
-
-    //     const initialAvailableOptions = {};
-    //     allAttributes.forEach((attrName) => {
-    //         initialAvailableOptions[attrName] = [
-    //             ...new Set(
-    //                 product.variants.flatMap((variant) =>
-    //                     variant.attributes
-    //                         .filter((attr) => attr.name === attrName)
-    //                         .map((attr) => attr.value)
-    //                 )
-    //             ),
-    //         ];
-    //     });
-
-    //     setSelectedAttributes(initialSelectedAttributes);
-    //     //  setAvailableOptions(initialAvailableOptions);
-    // };
 
     return (
         <div className="container mt-5">
@@ -225,9 +248,9 @@ const DetailProducts: React.FC = () => {
                         <div className="col-md-6">
                             <h3 className="fw-bold">Tên sản phẩm: {product.name}</h3>
                             <h4 className="text-danger fw-bold">
-                                Giá: {selectedVariant ? selectedVariant.price : product.price}đ
+                                Giá: {formatPrice(selectedVariant ? selectedVariant.price : product.price)}
                                 {selectedVariant?.old_price && (
-                                    <del className="text-muted ms-2">{selectedVariant.old_price}đ</del>
+                                    <del className="text-muted ms-2">{formatPrice(selectedVariant.old_price)}đ</del>
                                 )}
                             </h4>
                             <p>Đã bán: {product.total_sold}</p>
@@ -240,25 +263,51 @@ const DetailProducts: React.FC = () => {
                                         {[...new Set(product.variants.map((v: any) =>
                                             v.attributes.find((a: any) => a.name === attr.name)?.value
                                         ).filter(Boolean))].map((value, idx) => (
-                                            <button
+                                            <Tag.CheckableTag
                                                 key={idx}
-                                                className={`btn ${selectedAttributes[attr.name] === value ? "btn-primary" : "btn-outline-secondary"}`}
-                                                onClick={() => handleSelectAttribute(attr.name, value)}
+                                                checked={selectedAttributes[attr.name] === value}
+                                                onChange={() => handleSelectAttribute(attr.name, value)}
+                                                style={{
+                                                    padding: "8px 16px",
+                                                    fontSize: "14px",
+                                                    borderRadius: "20px",
+                                                    cursor: "pointer",
+                                                    userSelect: "none"
+                                                }}
                                             >
                                                 {value}
-                                            </button>
+                                            </Tag.CheckableTag>
                                         ))}
                                     </div>
                                 </div>
                             ))}
 
                             <div className="mt-3 d-flex align-items-center gap-2">
-                                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="btn btn-outline-secondary btn-sm">-</button>
+                                <button
+                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                    className="btn btn-outline-secondary btn-sm"
+                                >
+                                    -
+                                </button>
                                 <span className="fw-bold fs-6">{quantity}</span>
-                                <button onClick={() => setQuantity(quantity + 1)} className="btn btn-outline-secondary btn-sm">+</button>
+                                <button
+                                    onClick={() => {
+                                        if (selectedVariant && quantity < selectedVariant.stock) {
+                                            setQuantity(quantity + 1);
+                                        }
+                                    }}
+                                    className="btn btn-outline-secondary btn-sm"
+                                    disabled={selectedVariant ? quantity >= selectedVariant.stock : true}
+                                >
+                                    +
+                                </button>
                             </div>
-                            <p className="mt-2">Tồn kho: <span className="fw-bold">{selectedVariant ? `${selectedVariant.stock} sản phẩm` : `Không xác định`}</span></p>
 
+                            <p className="mt-2">Tồn kho: <span className="fw-bold">{selectedVariant ? `${selectedVariant.stock} sản phẩm` : `Không xác định`}</span></p>
+                            <div className="flex items-center gap-1">
+                                {renderStars(rating)}
+                                <span className="ml-1 text-sm text-gray-600">({rating})</span>
+                            </div>
                             <button className="btn btn-primary btn-lg mt-3 w-100" onClick={handleSubmit}>
                                 THÊM VÀO GIỎ
                             </button>
@@ -299,10 +348,13 @@ const DetailProducts: React.FC = () => {
                                     <div className="mt-3">
                                         {comments.map((comment) => (
                                             <div key={comment.id} className="d-flex align-items-start p-2 border rounded mb-2 bg-light">
-                                                <img src={comment.avatar} alt={comment.name} className="rounded-circle me-2" width="40" height="40" />
-                                                <div>
-                                                    <p className="fw-bold mb-1">{comment.name}</p>
-                                                    <p className="mb-0">{comment.text}</p>
+                                                <div className="d-flex align-items-start mb-3">
+                                                    <img src={comment.avatar} alt={comment.user.name} className="rounded-circle me-2" width="40" height="40" />
+                                                    <div>
+                                                        <p className="fw-bold mb-1">{comment.user.name}</p>
+                                                        <StarRating rating={comment.rating} />
+                                                        <p className="mb-0">{comment.review}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -326,49 +378,10 @@ const DetailProducts: React.FC = () => {
                             )}
                         </div>
                     </div>
-                    {/* SẢN PHẨM LIÊN QUAN */}
-                    {/* <div className="mt-5">
-                        <h3 className="fw-bold">Sản phẩm liên quan</h3>
-                        {popularProducts.length > 0 ? (
-                            <div className="row mt-3">
-                                {popularProducts.map((product: any) => (
-                                    <div key={product.id} className="col-md-3 mb-4">
-                                        <div className="card shadow-sm">
-                                            <Link to={`/products/${product.id}/detail`}>
-                                                <img
-                                                    src={product.images && product.images !== "null"
-                                                        ? `http://127.0.0.1:8000/storage/${product.images}`
-                                                        : "https://placehold.co/200x200?text=No+Image"}
-                                                    className="card-img-top"
-                                                    alt={product.name || "Sản phẩm"}
-                                                    style={{ height: "200px", width: "100%", objectFit: "cover", borderRadius: "8px" }}
-                                                />
-                                            </Link>
-
-                                            <div className="card-body text-center">
-                                                <h6 className="card-title fw-bold">{product.name}</h6>
-                                                <p className="text-danger fw-bold">
-                                                    {product.price}đ
-                                                    {product.old_price && (
-                                                        <del className="text-muted ms-2">{product.old_price}đ</del>
-                                                    )}
-                                                </p>
-                                                <button className="btn btn-primary btn-sm" onClick={() => handleShowModal(product)}>
-                                                    Mua ngay
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-muted">Không có sản phẩm liên quan.</p>
-                        )}
-                    </div> */}
 
                     <br />
-                        <hr />
-                        <br />
+                    <hr />
+                    <br />
                 </>
             )
             }

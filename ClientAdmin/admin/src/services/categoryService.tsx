@@ -13,6 +13,14 @@ export const getCategories = async (params?: { search?: string; parent_id?: numb
   });
 };
 
+export const getCategoriesTrash = async (params?: { search?: string; parent_id?: number }) => {
+  const token = getAuthToken();
+  return await axios.get(`${API_URL}/trash`, {
+    params,
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+};
+
 export const getCategoryById = async (id: number) => {
   const token = getAuthToken();
   return await axios.get(`${API_URL}/${id}`, {
@@ -43,6 +51,12 @@ export const updateCategory = async (id: number, data: FormData) => {
 export const deleteCategory = async (id: number) => {
   const token = getAuthToken();
   return await axios.delete(`${API_URL}/${id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+};
+export const updateCategoryStatus = (id: number, status: boolean) => {
+  const token = getAuthToken();
+  return axios.put(`${API_URL}/update-status-category/${id}`, { status },{
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 };

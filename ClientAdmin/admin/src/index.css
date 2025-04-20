@@ -2,11 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 /* @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap'); */
-
+/* baif viet */
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 html, body {
   font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
 }
+@media print {
+	body {
+		margin: 0 !important;
+	}
+}
 
+.main-container {
+	font-family: 'Lato';
+	width: fit-content;
+	margin-left: auto;
+	margin-right: auto;background-color: red; 
+  margin-left: -0px;
+  margin: 10px 0px;
+}
+
+.ck-content {
+	font-family: 'Lato';
+	line-height: 1.6;
+	word-break: break-word;
+}
+.editor-container{
+  
+}
+.editor-container_classic-editor .editor-container__editor {
+	min-width: 795px;
+	max-width: 795px;
+}
+/* end bai viet */
+
+/* Thêm CSS vào file stylesheet của bạn */
+.address-column {
+  max-width: 200px;         /* Đặt độ rộng tối đa */
+  white-space: nowrap;      /* Ngăn dòng mới */
+  overflow: hidden;         /* Ẩn phần vượt quá */
+  text-overflow: ellipsis;  /* Hiển thị dấu ba chấm khi nội dung bị cắt */
+}
 
 .form-check-input:checked {
     background-color: rgb(246, 163, 163);
@@ -198,7 +234,7 @@ h1 {
     transform: translateY(0);
   }
 }
-// Products.module.css
+/* // Products.module.css */
 .container {
  margin-top: 20px;
 }
@@ -237,6 +273,7 @@ h1 {
  justify-content: flex-start;
  gap: 5px;
 }
+<<<<<<< HEAD
 
  @tailwind base;
  @tailwind components;
@@ -488,3 +525,52 @@ h1 {
  
    
  
+=======
+.image_baiviet_header{
+  position: relative;
+  height: 200px;
+  margin-bottom: 20px;
+  margin-left: 40px;
+}
+.image_baiviet_header img:nth-child(1) {
+  position: absolute;
+  top: 0;
+  left: 30px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+.image_baiviet_header img:nth-child(2) {
+  position: absolute;
+  top: 0;
+  left: 450px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+.image_baiviet_header img:nth-child(3) {
+  position: absolute;
+  top: 45px;
+  left: 400px;
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  z-index: 3;
+  border-radius: 50%;
+}
+.card-title_baiviet{
+    max-width: 200px;         /* Đặt độ rộng tối đa */
+    white-space: nowrap;      /* Ngăn dòng mới */
+    overflow: hidden;         /* Ẩn phần vượt quá */
+    text-overflow: ellipsis;  /* Hiển thị dấu ba chấm khi nội dung bị cắt */
+}
+.text_baiViet {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;             /* Hiển thị tối đa 3 dòng */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+>>>>>>> c1b01cccacc25232cd96df6111056f8d1a5ce92f

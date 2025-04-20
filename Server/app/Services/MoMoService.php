@@ -16,11 +16,11 @@ class MoMoService
     ]);
 
     $endpoint = env('MOMO_ENDPOINT', 'https://test-payment.momo.vn/v2/gateway/api/create');
-    $partnerCode = env('MOMO_PARTNER_CODE');
-    $accessKey = env('MOMO_ACCESS_KEY');
-    $secretKey = env('MOMO_SECRET_KEY');
-    $returnUrl = env('MOMO_RETURN_URL');
-    $notifyUrl = env('MOMO_NOTIFY_URL');
+    $partnerCode = env('MOMO_PARTNER_CODE','MOMOBKUN20180529');
+    $accessKey = env('MOMO_ACCESS_KEY','klm05TvNBzhg7h7j');
+    $secretKey = env('MOMO_SECRET_KEY','at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa');
+    $returnUrl = env('MOMO_RETURN_URL','http://127.0.0.1:8000/api/momo/callback');
+    $notifyUrl = env('MOMO_NOTIFY_URL','https://your-website.com/momo/notify');
 
     // Ép kiểu đúng yêu cầu MoMo
     $orderId = (string) $orderId;
