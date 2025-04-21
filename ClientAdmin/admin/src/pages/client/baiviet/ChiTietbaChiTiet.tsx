@@ -7,10 +7,10 @@ import axios from "axios";
 const BaivietDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   console.log("id", id);
-  
+
   const [baiviet, setBaiviet] = useState<Baiviet | null>(null);
   console.log("baiviet", baiviet);
-  
+
   const [relatedPosts, setRelatedPosts] = useState<Baiviet[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -18,10 +18,10 @@ const BaivietDetailPage = () => {
     const fetchBaiviet = async () => {
       try {
         const { data } = await axios.get(
-          `  http://localhost:3000/baiviet/${id}`
+          `http://127.0.0.1:8000/api/posts/${id}`
         );
-        console.log("data",data);
-        
+        console.log("data", data);
+
         if (data) {
           setBaiviet(data);
         } else {
@@ -37,7 +37,7 @@ const BaivietDetailPage = () => {
     const fetchRelatedPosts = async () => {
       try {
         const { data } = await axios.get(
-          `  http://localhost:3000/baiviet`
+          `http://127.0.0.1:8000/api/posts/`
         );
         // Lọc bỏ bài viết hiện tại
         const filteredPosts = data.filter(
@@ -67,10 +67,7 @@ const BaivietDetailPage = () => {
     return <div className="text-center mt-5">Không có bài viết hiển thị</div>;
   }
 
-  const publishDate = new Date(baiviet.publishDate);
-  const day = publishDate.getDate().toString().padStart(2, "0");
-  const month = publishDate.toLocaleString("en", { month: "short" });
-
+  const created_at = new Date(baiviet.created_at);
   return (
     <div className="container my-5">
       <h1
@@ -81,48 +78,41 @@ const BaivietDetailPage = () => {
       </h1>
       <div className="card mb-4" style={{ border: "none", boxShadow: "none" }}>
         <div className="card-img-container position-relative">
-          <img
-            src={`${baiviet.images}`}
-            className="card-img-top"
-            alt={baiviet.title}
-            style={{ objectFit: "cover" }}
-          />
+
         </div>
-        <div className="card-body">
+        <div className="card-body" style={{
+          display: "block",
+          marginLeft: "auto",
+          marginRight: "auto"
+        }}>
           <div
             style={{ lineHeight: "1.8", marginTop: "10px", marginBottom: "15px" }}
 
             className="baiviet-content"
-            dangerouslySetInnerHTML={{ __html: baiviet.content }}
+            dangerouslySetInnerHTML={{ __html: baiviet.description }}
           />
-          ;
-          <div className="text-center mt-3">
-            <div className="date-box">
-              <div>{day}</div>
-              <div>{month}</div>
-            </div>
-          </div>
+
         </div>
 
         <td className="text-center">
-  <h5
-    className="mb-4 d-flex flex-row-reverse"
-    style={{ fontFamily: "Roboto, sans-serif", fontWeight: "600" }}
-  >
-    {new Date(baiviet.publishDate).toLocaleDateString("vi-VN", {
-      weekday: "long",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    })}{" "}
-    - {" "}
-    {new Date(baiviet.publishDate).toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    })}
-  </h5>
-</td>
+          <h5
+            className="mb-4 d-flex flex-row-reverse"
+            style={{ fontFamily: "Roboto, sans-serif", fontWeight: "600" }}
+          >
+            {new Date(baiviet.created_at).toLocaleDateString("vi-VN", {
+              weekday: "long",
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            })}{" "}
+            - {" "}
+            {new Date(baiviet.created_at).toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+          </h5>
+        </td>
 
 
       </div>
@@ -141,10 +131,13 @@ const BaivietDetailPage = () => {
             >
               <Link to={`/baiviet/${post.id}`}>
                 <img
-                  src={`${post.images}`}
+                  src={`${post.image}`}
                   alt={post.title}
                   className="card-img-top"
                   style={{ height: "180px", objectFit: "cover" }}
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://cdn.tgdd.vn/Files/2016/12/09/923744/khongxacdinh_213x379.jpg';
+                  }}
                 />
               </Link>
               <div className="card-body text-center">
@@ -157,7 +150,7 @@ const BaivietDetailPage = () => {
 
                 <p className="card-text text-muted">
                   Về Zokong | <i className="fa-regular fa-clock p-1"></i>
-                  {new Date(post.publishDate).toLocaleDateString("vi-VN")}
+                  {new Date(post.created_at).toLocaleDateString("vi-VN")}
                 </p>
               </div>
             </div>

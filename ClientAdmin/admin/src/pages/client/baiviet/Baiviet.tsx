@@ -15,15 +15,15 @@ const BaivietPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data } = await axios.get("http://localhost:3000/baiviet");
-        console.log("data.id",data.map((item: Baiviet) => item.id));
+        const { data } = await axios.get("http://127.0.0.1:8000/api/posts");
+        console.log("data.", data);
         setBaivietList(data);
         // if (data && data.length > 0) {
         //     const activeBaiviets = data
         //         .filter((item: Baiviet) => item.isActive === true)
         //         .sort((a: Baiviet, b: Baiviet) => {
-        //             const dateA = new Date(a.publishDate).getTime();
-        //             const dateB = new Date(b.publishDate).getTime();
+        //             const dateA = new Date(a.created_at).getTime();
+        //             const dateB = new Date(b.created_at).getTime();
         //             return dateB - dateA; // Sắp xếp giảm dần theo ngày đăng
         //         });
         //     setBaivietList(activeBaiviets);
@@ -104,22 +104,30 @@ const BaivietPage = () => {
           </div>
           <div className="col-4 " style={{ paddingLeft: "0px" }}>
             <h2 className="" style={{ fontSize: "20px", textTransform: "uppercase", margin: "20px 0px 10px 10px" }}>Bài Viết Nổi Bật </h2>
-            <div className="row " style={{paddingLeft:"20px"}}>
+            <div className="row " style={{ paddingLeft: "20px" }}>
 
-              {currentPosts.slice(0,6).map((baiviet) => {
-                const publishDate = new Date(baiviet.publishDate);
-                const day = publishDate.getDate().toString().padStart(2, "0");
-                const month = publishDate.toLocaleString("en", { month: "short" });
+              {currentPosts.slice(0, 6).map((baiviet) => {
+                const created_at = new Date(baiviet.created_at);
+                const day = created_at.getDate().toString().padStart(2, "0");
+                const month = created_at.toLocaleString("en", { month: "short" });
                 return (
-                  <div className="col-5" style={{width:"230px",padding:"10px 10px"}} key={baiviet.id}>
+                  <div className="col-5" style={{ width: "230px", padding: "10px 10px" }} key={baiviet.id}>
                     <div className="card ">
-                      <img src={baiviet.images} className="card-img-top" alt="..." style={{ height: "200px", objectFit: "cover" }} />
+                      <img
+                        src={baiviet.image}
+                        className="card-img-top"
+                        alt="..."
+                        style={{ height: "200px", objectFit: "cover" }}
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://cdn.tgdd.vn/Files/2016/12/09/923744/khongxacdinh_213x379.jpg';
+                        }}
+                      />
                       <div className="card-body">
                         <Link to={`/baiviet/${baiviet.id}`} className="nav-link">
-                        <h5 className="card-title_baiviet fw-semibold" title={baiviet.title}>{baiviet.title}</h5></Link>
+                          <h5 className="card-title_baiviet fw-semibold" title={baiviet.title}>{baiviet.title}</h5></Link>
                         <div
                           className="card-text text_baiViet"
-                          dangerouslySetInnerHTML={{ __html: baiviet.titleHeader }}
+                          dangerouslySetInnerHTML={{ __html: baiviet.titleHead }}
                         />
                         <p className="card-text">
                           <small className="text-muted">
