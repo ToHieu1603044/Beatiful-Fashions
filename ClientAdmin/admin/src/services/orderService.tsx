@@ -70,5 +70,10 @@ export const getOrderReturnUser = async ()=>{
       headers: getAuthHeader(),
     });
 }
+export const applyPoints = async (data: any) => {
 
+  return await axios.post(`${API_URL}/orders/apply-points`, data, {
+    headers: getAuthHeader(),
+  });
+}
   

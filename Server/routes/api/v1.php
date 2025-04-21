@@ -91,6 +91,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
     Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
+    Route::post('orders/apply-points',[OrderController::class, 'applyPoints']);
     Route::get('/orders/invoice', [PdfController::class, 'index']);
     Route::get('carts/count', [CartController::class, 'countCart']);
     Route::apiResource('carts', CartController::class);

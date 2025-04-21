@@ -15,59 +15,51 @@ class MomoController
     public function callback(Request $request)
     {
         \Log::info('MoMo Callback:', $request->all());
-
-
+    
+        $cartIds = json_decode($request->cartIds);
+        if (!is_array($cartIds) || empty($cartIds)) {
+            \Log::warning("MoMo Callback: cartIds không hợp lệ", [$cartIds]);
+            return response()->json(['message' => 'Dữ liệu cart không hợp lệ.'], 400);
+        }
+    
         $uniqueOrderId = $request->orderId;
         $parts = explode("-", $uniqueOrderId);
         $orderId = end($parts);
-
+    
         $order = Order::find($orderId);
         if (!$order) {
             return response()->json(['message' => 'Không tìm thấy đơn hàng!'], 400);
         }
-        $user_id = $order->user_id; 
+    
+        $userId = $order->user_id;
         $session_id = session()->getId();
-
+    
         switch ($request->resultCode) {
             case 0: // Giao dịch thành công
-
-                $order->update(['status' => 'pending', 'is_paid' => true]);
-                Cart::where(function ($query) use ($user_id, $session_id) {
-                    if ($user_id) {
-                        $query->where('user_id', $user_id);
-                    } else {
-                        $query->where('session_id', $session_id);
-                    }
-                })->delete();
-                
+                $order->update(['status' => 'processing', 'is_paid' => true]);
+    
+                Cart::where(function ($query) use ($userId, $session_id) {
+                    $userId ? $query->where('user_id', $userId) : $query->where('session_id', $session_id);
+                })
+                ->whereIn('id', $cartIds)
+                ->delete();
+    
                 OrderCreated::dispatch($order);
-
+    
                 return redirect()->to(env('FRONTEND_URL') . "/order/success?orderId=$orderId");
-
-            case 7002: // ⏳ Giao dịch đang xử lý
-                Cart::where(function ($query) use ($user_id, $session_id) {
-                    if ($user_id) {
-                        $query->where('user_id', $user_id);
-                    } else {
-                        $query->where('session_id', $session_id);
-                    }
-                })->delete();
+    
+            case 7002:
                 return redirect()->to(env('FRONTEND_URL') . "/order/pending?orderId=$orderId");
-
-
-            case 7003: // Người dùng hủy thanh toán
-            case 9001: // Hết thời gian thanh toán
-            case 9003: // Tài khoản không đủ tiền
-            case 9004: // Lỗi từ ngân hàng
+    
+            case 7003:
+            case 9001:
+            case 9003:
+            case 9004:
+            default:
                 $order->update(['status' => 'canceled']);
-
                 return redirect()->to(env('FRONTEND_URL') . "/order/failed?orderId=$orderId");
-
-            default: // Các lỗi khác
-                $order->update(['status' => 'canceled']);
-
-              return redirect()->to(env('FRONTEND_URL') . "/order/failed");
         }
     }
+    
 
 }

@@ -21,6 +21,7 @@ use App\Services\InventoryService;
 use App\Services\MoMoService;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -31,8 +32,10 @@ use Illuminate\Validation\ValidationException;
 
 class OrderController
 {
+    use AuthorizesRequests;
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Order::class);
         try {
             $query = Order::with('orderDetails.sku')->orderBy('created_at', 'desc');
 
@@ -263,9 +266,10 @@ class OrderController
             $user = Auth::user();
             $session_id = session()->getId();
 
-            $carts = Cart::where(function ($query) use ($user, $session_id) {
-                $user ? $query->where('user_id', $user->id) : $query->where('session_id', $session_id);
-            })->get();
+            $cartIds = collect($request->selectedItems)->pluck('id')->toArray();
+
+            // Lấy tất cả các cart có id tương ứng
+            $carts = Cart::whereIn('id', $cartIds)->get();
 
             if ($carts->isEmpty()) {
                 return ApiResponse::errorResponse(400, 'Giỏ hàng trống!');
@@ -292,25 +296,19 @@ class OrderController
             $totalAmount = 0;
 
             foreach ($carts as $cart) {
-                $sku = ProductSku::with(['product' => function ($query) {
-                    $query->whereNull('deleted_at');
-                    $query->where('active', true);
-                }, 'product.flashSales', 'attributeOptions.attribute'])->find($cart->sku_id);
+                // Lấy thông tin SKU từ variant_detail (nếu cần)
+                $variantDetail = json_decode($cart->variant_detail, true);
+                $skuId = $cart->sku_id;
                 
-                if (
-                    !$sku ||
-                    !$sku->product ||
-                    $sku->product->active == 0 ||
-                    $sku->product->deleted_at !== null
-                ) {
+                // Kiểm tra xem SKU có tồn tại không
+                $sku = ProductSku::with(['product', 'product.flashSales', 'attributeOptions.attribute'])
+                    ->find($skuId);
+            
+                if (!$sku || !$sku->product || $sku->product->active == 0 || $sku->product->deleted_at !== null) {
                     DB::rollBack();
                     return ApiResponse::errorResponse(400, "Sản phẩm không tồn tại hoặc đã bị xóa.");
                 }
-                if (!$sku) {
-                    DB::rollBack();
-                    return ApiResponse::errorResponse(400, "Sản phẩm không tồn tại hoặc đã bị xóa hoặc không hoạt động.");
-                }
-                
+
                 $stockResult = InventoryService::reduceStock($sku->sku, $cart->quantity);
                 if ($stockResult === -1) {
                     DB::rollBack();
@@ -366,6 +364,7 @@ class OrderController
                 ]);
 
                 $sku->product->increment('total_sold', $cart->quantity);
+                
                 $sku->decrement('stock', $cart->quantity);
                 $totalAmount += $subtotal;
             }
@@ -386,7 +385,12 @@ class OrderController
                 'total_amount' => $request->total_amount + $request->priceShipping,
                 'discount_code' => $request->discount,
                 'discount_amount' => $request->priceDiscount ?? 0,
+                'used_points' => $request->used_points
             ]);
+
+            if($request->used_points > 0) {
+                $user->decrement('points', $request->used_points);
+            }
 
             DB::commit();
 
@@ -401,7 +405,10 @@ class OrderController
             // Xoá giỏ hàng
             Cart::where(function ($query) use ($user, $session_id) {
                 $user ? $query->where('user_id', $user->id) : $query->where('session_id', $session_id);
-            })->delete();
+            })
+            ->whereIn('id', $cartIds)
+            ->delete();
+            
             Cache::forget('products_cache');
             OrderCreated::dispatch($order);
 
@@ -428,11 +435,12 @@ class OrderController
     }
     public function update(Request $request, Order $order)
     {
+
         $validated = $request->all();
         \Log::info($validated);
         DB::beginTransaction();
         try {
-
+            $this->authorize('update', $order);
             $order->update(array_filter([
                 'status' => $validated['status'] ?? null,
                 'is_paid' => $validated['is_paid'] ?? null,
@@ -524,7 +532,7 @@ class OrderController
     public function completeOrder($id)
     {
         $order = Order::findOrFail($id);
-
+        $this->authorize('update', $order);
         if ($order->tracking_status === 'completed' && $order->is_paid == 0) {
             $order->update([
                 'is_paid' => 1,
@@ -539,8 +547,9 @@ class OrderController
 
     public function destroy($id)
     {
-        $order = Order::findOrFail($id);
 
+        $order = Order::findOrFail($id);
+        $this->authorize('delete', $order);
         if ($order->shipping_status !== 'pending') {
             return ApiResponse::errorResponse(400, 'Không thể hủy đơn hàng khi đã được xử lý');
         }
@@ -553,31 +562,34 @@ class OrderController
     public function updateStatus(Request $request, $id)
     {
         $order = Order::findOrFail($id);
+
+        $this->authorize('update', $order);
+
         $user = User::find($order->user_id);
-    
+
         if ($order->tracking_status === 'completed') {
             return ApiResponse::errorResponse(400, "Không thể cập nhật đơn hàng đã hoàn thành.");
         }
-    
+
         $request->validate([
             'tracking_status' => 'nullable|string|in:pending,processing,shipped,delivered,cancelled,completed,reback',
             'status' => 'nullable|string|in:pending,completed,cancelled',
             'is_paid' => 'nullable|boolean'
         ]);
-    
+
         DB::beginTransaction();
         try {
             $oldTrackingStatus = $order->tracking_status;
 
             $validTransitions = [
-                'pending'    => ['processing', 'cancelled'],
-                'processing' => ['shipped','cancelled'],
-                'shipped'    => ['delivered'],
-                'delivered'  => ['completed'],
-                'completed'  => [],
-                'cancelled'  => [],
+                'pending' => ['processing', 'cancelled'],
+                'processing' => ['shipped', 'cancelled'],
+                'shipped' => ['delivered'],
+                'delivered' => ['completed'],
+                'completed' => [],
+                'cancelled' => [],
             ];
-    
+
             if ($request->tracking_status && $request->tracking_status !== 'reback') {
                 $newStatus = $request->tracking_status;
                 if ($newStatus !== $oldTrackingStatus) {
@@ -595,18 +607,18 @@ class OrderController
                     return ApiResponse::errorResponse(400, "Không thể hủy đơn hàng đã thanh toán online.");
                 }
                 $order->status = 'cancelled';
-    
+
                 foreach ($order->orderDetails as $detail) {
                     $product = Product::find($detail->product_id);
                     if ($product) {
                         $product->decrement('total_sold', $detail->quantity);
                     }
-    
+
                     if (!empty($detail->sku)) {
                         $sku = ProductSku::where('sku', $detail->sku)->first();
                         if ($sku) {
                             $sku->increment('stock', $detail->quantity);
-    
+
                             $redisKey = 'sku:stock:' . $detail->sku;
                             if (!Redis::exists($redisKey)) {
                                 Redis::set($redisKey, $sku->stock);
@@ -617,39 +629,39 @@ class OrderController
                     }
                 }
             }
-    
+
             // Mua lại đơn hàng đã hủy
             if ($request->tracking_status === 'reback') {
                 $order->tracking_status = 'pending';
                 $order->status = 'pending';
-    
+
                 foreach ($order->orderDetails as $detail) {
                     $product = Product::find($detail->product_id);
                     $sku = ProductSku::where('sku', $detail->sku)->with('product.flashSales')->first();
-    
+
                     if ($product) {
                         $product->increment('total_sold', $detail->quantity);
                     }
-    
+
                     if ($sku) {
                         $now = Carbon::now();
                         $flashSale = $sku->product->flashSales->firstWhere(function ($flashSale) use ($now) {
                             return $flashSale->end_time >= $now;
                         });
-    
+
                         if (!$flashSale) {
                             return ApiResponse::errorResponse(400, "Flash Sale đã kết thúc cho sản phẩm {$sku->sku}, không thể mua lại.");
                         }
-    
+
                         $sku->decrement('stock', $detail->quantity);
-    
+
                         $redisKey = 'sku:stock:' . $detail->sku;
                         if (!Redis::exists($redisKey)) {
                             Redis::set($redisKey, $sku->stock);
                         } else {
                             Redis::decrby($redisKey, $detail->quantity);
                         }
-    
+
                         $flashSaleResult = InventoryService::reduceFlashSaleStock($sku->product_id, $detail->quantity);
                         if ($flashSaleResult !== 0) {
                             return ApiResponse::errorResponse(400, "Không đủ số lượng Flash Sale cho SKU {$sku->sku} để mua lại.");
@@ -657,7 +669,7 @@ class OrderController
                     }
                 }
             }
-    
+
             // Cập nhật tracking_status nếu hợp lệ (không phải reback)
             if (
                 $request->has('tracking_status') &&
@@ -666,13 +678,13 @@ class OrderController
             ) {
                 $order->tracking_status = $request->tracking_status;
             }
-    
+
             if ($request->has('is_paid')) {
                 $order->is_paid = $request->is_paid;
             }
-    
+
             $order->save();
-    
+
             // Ghi log thay đổi trạng thái
             if ($oldTrackingStatus !== $order->tracking_status) {
                 $order->statusHistories()->create([
@@ -681,20 +693,20 @@ class OrderController
                     'changed_by' => auth()->id()
                 ]);
             }
-    
+
             // Tính điểm khi hoàn thành
             if ($user && $order->tracking_status === 'completed' && $oldTrackingStatus !== 'completed' && $order->is_paid === 1) {
                 $points = floor($order->total_amount / 100000) * 10;
                 $user->increment('points', $points);
                 $user->updateRanking();
             }
-    
+
             DB::commit();
             return ApiResponse::responseSuccess($order, 200, "Cập nhật trạng thái thành công.");
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Lỗi cập nhật đơn hàng: ' . $e->getMessage());
-    
+
             return ApiResponse::responseError(500, "Có lỗi xảy ra khi cập nhật đơn hàng.");
         }
     }
@@ -707,7 +719,7 @@ class OrderController
         DB::beginTransaction();
 
         try {
-            if (!$order->tracking_status === 'completed' || $order->is_paid === 0 ) {
+            if (!$order->tracking_status === 'completed' || $order->is_paid === 0) {
                 return ApiResponse::errorResponse(400, 'Không thể hoàn thanh đơn hàng!');
             }
             $order->update([
@@ -730,6 +742,7 @@ class OrderController
     {
         $order = Order::onlyTrashed()->findOrFail($id);
 
+        $this->authorize('restore', $order);
         $order->restore();
 
         return response()->json(['message' => 'Đơn hàng đã được khôi phục!']);
@@ -737,6 +750,9 @@ class OrderController
     public function forceDelete($id)
     {
         $order = Order::onlyTrashed()->findOrFail($id);
+
+        $this->authorize('forceDelete', $order);
+
         $order->forceDelete();
         return response()->json(['message' => 'Đơn hàng đã bị xóa vĩnh viễn!']);
     }
@@ -744,6 +760,9 @@ class OrderController
     {
 
         $orders = Order::onlyTrashed()->with('orderDetails.sku')->orderBy('created_at', 'desc')->paginate(10);
+
+        $this->authorize('viewAny', Order::class);
+
         return ApiResponse::responsePage(OrderResource::collection($orders));
     }
     public function cancelOrder(Request $request, Order $order)
@@ -768,14 +787,14 @@ class OrderController
     {
         $orderDetail = OrderDetail::where('id', $orderDetailId)
             ->with([
-                    'returnDetails' => function ($query) {
-                        $query->with('orderReturn');
-                    },
-                    'order' => function ($query) {
-                        $query->select('id', 'name', 'phone', 'email', 'address', 'district', 'city')
-                            ->with('returnDetails');
-                    }
-                ])
+                'returnDetails' => function ($query) {
+                    $query->with('orderReturn');
+                },
+                'order' => function ($query) {
+                    $query->select('id', 'name', 'phone', 'email', 'address', 'district', 'city')
+                        ->with('returnDetails');
+                }
+            ])
             ->first();
 
         if (!$orderDetail) {
@@ -793,32 +812,34 @@ class OrderController
     public function handleRebuy(Request $request, $id)
     {
         $order = Order::with(['orderDetails', 'orderDetails.sku.product.flashSales'])->find($id);
-    
+
         if (!$order) {
             return ApiResponse::errorResponse(404, "Đơn hàng không tồn tại.");
         }
-    
+
         if ($order->status !== 'cancelled' && $order->tracking_status !== 'cancelled') {
             return ApiResponse::errorResponse(400, "Chỉ có thể mua lại đơn hàng đã bị hủy.");
         }
-    
+
         DB::beginTransaction();
         try {
             $totalAmount = 0;
-    
+
             foreach ($order->orderDetails as $detail) {
                 $product = Product::find($detail->product_id);
                 $sku = ProductSku::where('sku', $detail->sku)
-                    ->with(['product.flashSales' => function ($q) {
-                        $q->where('start_time', '<=', now())
-                          ->where('end_time', '>=', now());
-                    }])
+                    ->with([
+                        'product.flashSales' => function ($q) {
+                            $q->where('start_time', '<=', now())
+                                ->where('end_time', '>=', now());
+                        }
+                    ])
                     ->first();
-    
+
                 if (!$sku) {
                     return ApiResponse::errorResponse(400, "SKU không tồn tại hoặc đã bị xoá.");
                 }
-    
+
                 $price = $sku->price;
                 // Áp dụng giá flash sale nếu có
                 if ($sku->product->flashSales->isNotEmpty()) {
@@ -827,18 +848,18 @@ class OrderController
                         $price = $flashSale->pivot->price ?? $flashSale->price; // giả sử bạn lưu giá Flash Sale tại pivot hoặc bảng flash_sales
                     }
                 }
-    
+
                 // Cập nhật lại giá nếu khác với trước đó
                 if ($detail->price != $price) {
                     $detail->price = $price;
                     $detail->save();
                 }
-    
+
                 $totalAmount += $price * $detail->quantity;
-    
+
                 // Giảm tồn kho
                 $sku->decrement('stock', $detail->quantity);
-    
+
                 // Cập nhật Redis
                 $redisKey = 'sku:stock:' . $detail->sku;
                 if (!Redis::exists($redisKey)) {
@@ -846,23 +867,23 @@ class OrderController
                 } else {
                     Redis::decrby($redisKey, $detail->quantity);
                 }
-    
+
                 // Cộng lại số lượng đã bán
                 if ($product) {
                     $product->increment('total_sold', $detail->quantity);
                 }
             }
-    
+
             // Cập nhật trạng thái và tổng tiền mới
             $order->update([
                 'status' => 'pending',
                 'tracking_status' => 'pending',
                 'total_amount' => $totalAmount
             ]);
-    
+
             // Dispatch lại sự kiện OrderCreated
             OrderCreated::dispatch($order);
-    
+
             DB::commit();
             return ApiResponse::responseSuccess($order, 200, "Mua lại thành công, giá đã được cập nhật theo thời điểm hiện tại.");
         } catch (\Exception $e) {
@@ -871,47 +892,40 @@ class OrderController
             return ApiResponse::errorResponse(500, "Có lỗi xảy ra khi mua lại.");
         }
     }
+
     public function markAsDelivered($id)
     {
         try {
-            $user = auth()->user();
-    
-            // 1. Kiểm tra quyền
+            $user = auth()->user(); // Lấy user đang đăng nhập
+
+            // 1. Kiểm tra quyền: chỉ shipper mới được phép
             if ($user->role !== 'shipper') {
                 return response()->json([
                     'message' => 'Chỉ shipper mới có quyền cập nhật trạng thái đơn hàng.',
                     'status' => false
                 ], 403);
             }
-    
-            // 2. Lấy đơn hàng
+
+            // 2. Tìm đơn hàng
             $order = Order::findOrFail($id);
-    
-            // 3. Kiểm tra trạng thái tracking
-            if ($order->tracking_status !== 'delivered') {
-                return response()->json([
-                    'message' => 'Chỉ đơn hàng có trạng thái tracking là "delivered" mới có thể cập nhật trạng thái hoàn tất.',
-                    'status' => false
-                ], 400);
-            }
-    
-            // 4. Kiểm tra trạng thái đơn hàng hiện tại
+
+            // 3. Chỉ cập nhật nếu trạng thái là 'shipping'
             if ($order->status !== 'shipping') {
                 return response()->json([
-                    'message' => 'Chỉ đơn hàng đang giao (shipping) mới có thể cập nhật thành completed.',
+                    'message' => 'Chỉ có thể cập nhật đơn hàng đang giao.',
                     'status' => false
                 ], 400);
             }
-    
-            // 5. Cập nhật trạng thái
-            $order->status = 'completed';
+
+            // 4. Cập nhật trạng thái
+            $order->status = 'complete';
             $order->save();
-    
+
             return response()->json([
-                'message' => 'Đơn hàng đã được cập nhật sang trạng thái completed.',
+                'message' => 'Đơn hàng đã được cập nhật thành công.',
                 'status' => true
             ], 200);
-    
+
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Lỗi xử lý: ' . $e->getMessage(),
@@ -919,50 +933,40 @@ class OrderController
             ], 500);
         }
     }
+    public function applyPoints(Request $request)
+    {
+        \Log::info($request->all());
+        try {
+            $user = auth()->user();
+            $points = (int) $request->usedPoints;
+            $totalAmount = (int) $request->total_amount;
     
-
-    public function markAsDelivered($id)
-{
-    try {
-        $user = auth()->user(); // Lấy user đang đăng nhập
-
-        // 1. Kiểm tra quyền: chỉ shipper mới được phép
-        if ($user->role !== 'shipper') {
+            if ($user->points < $points) {
+                return response()->json([
+                    'message' => 'Bạn không đủ điểm.',
+                    'status' => false
+                ], 400);
+            }
+    
+            $pointToVnd = 10; // 1 điểm = 10 VNĐ
+            $pointsDiscount = $points * $pointToVnd;
+            $finalAmount = max(0, $totalAmount - $pointsDiscount);
+    
             return response()->json([
-                'message' => 'Chỉ shipper mới có quyền cập nhật trạng thái đơn hàng.',
-                'status' => false
-            ], 403);
-        }
-
-        // 2. Tìm đơn hàng
-        $order = Order::findOrFail($id);
-
-        // 3. Chỉ cập nhật nếu trạng thái là 'shipping'
-        if ($order->status !== 'shipping') {
+                'message' => 'Áp dụng điểm thành công.',
+                'status' => true,
+                'used_points' => $points,
+                'points_discount' => $pointsDiscount,
+                'final_amount' => $finalAmount
+            ]);
+        } catch (\Throwable $th) {
             return response()->json([
-                'message' => 'Chỉ có thể cập nhật đơn hàng đang giao.',
+                'message' => 'Đã xảy ra lỗi khi áp dụng điểm.',
+                'error' => $th->getMessage(),
                 'status' => false
-            ], 400);
+            ], 500);
         }
-
-        // 4. Cập nhật trạng thái
-        $order->status = 'complete';
-        $order->save();
-
-        return response()->json([
-            'message' => 'Đơn hàng đã được cập nhật thành công.',
-            'status' => true
-        ], 200);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'message' => 'Lỗi xử lý: ' . $e->getMessage(),
-            'status' => false
-        ], 500);
     }
-}
-
-
-
+    
 
 }

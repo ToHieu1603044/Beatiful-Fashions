@@ -16,7 +16,10 @@ class ProductResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $flashSalePrice = $this->flashSales->isNotEmpty() ? $this->flashSales->first()->pivot->discount_price : null;
+        $flashSalePrice = $this->flashSales && $this->flashSales->isNotEmpty()
+        ? $this->flashSales->first()->pivot->discount_price
+        : null;
+    
         \Log::info($flashSalePrice);
         $isFavorite = false;
         return [
@@ -36,7 +39,7 @@ class ProductResource extends JsonResource
             'galleries' => $this->galleries,
             'price' => $this->skus->min('price'), 
             'old_price' => $this->skus->max('old_price'), 
-            'sale_price' => $flashSalePrice,
+            'sale_price' => $flashSalePrice|| 0,
             'total_sold' => $this->total_sold,
             'total_rating' => $this->total_rating,
             'description' => $this->description,
