@@ -1,8 +1,35 @@
 import { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { deleteBrands, getBrands } from '../../../services/brandsService';
+import {
+  Table,
+  Input,
+  Button,
+  Modal,
+  Space,
+  Tag,
+  message,
+  Descriptions,
+  Form,
+  Select,
+} from "antd";
+import {
+  ExclamationCircleOutlined,
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
+import {
+  deleteBrands,
+  getBrands,
+  // createBrands,
+  // updateBrands,
+} from "../../../services/brandsService";
 
+const { Option } = Select;
+
+import { deleteBrands, getBrands } from '../../../services/brandsService';
 type BrandsType = {
     id: number;
     name: string;
@@ -17,7 +44,12 @@ const Brands = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const isRootBrands = location.pathname === "/admin/brands";
-
+  const [brands, setBrands] = useState<BrandsType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+    const [status, setStatus] = useState<string>("active");
+  const [selectedBrand, setSelectedBrand] = useState<BrandsType | null>(null);
+  const [viewModalVisible, setViewModalVisible] = useState(false);
     const [brands, setBrands] = useState<BrandsType[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedBrands, setSelectedBrands] = useState<BrandsType | null>(null);
@@ -54,6 +86,204 @@ const Brands = () => {
             console.error("Lỗi khi xóa danh mục:", axiosError);
             alert("Không thể xóa danh mục. Vui lòng thử lại.");
         }
+      },
+    });
+  };
+
+  const handleView = (brand: BrandsType) => {
+    setSelectedBrand(brand);
+    setViewModalVisible(true);
+  };
+
+  const handleEdit = (brand: BrandsType) => {
+    setFormMode("edit");
+    form.setFieldsValue(brand);
+    setSelectedBrand(brand);
+    setEditModalVisible(true);
+  };
+
+  const handleCreate = () => {
+    setFormMode("create");
+    form.resetFields();
+    setSelectedBrand(null);
+    setEditModalVisible(true);
+  };
+
+  const handleFormSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+
+      if (formMode === "create") {
+        await createBrands(values);
+        message.success("Thêm thương hiệu thành công");
+      } else if (formMode === "edit" && selectedBrand) {
+        await updateBrands(selectedBrand.id, values);
+        message.success("Cập nhật thương hiệu thành công");
+      }
+
+      setEditModalVisible(false);
+      fetchBrands();
+    } catch (error) {
+      message.error("Có lỗi xảy ra. Vui lòng thử lại.");
+    }
+  };
+
+  const columns = [
+    {
+      title: "ID",
+      dataIndex: "id",
+    },
+    {
+      title: "Tên",
+      dataIndex: "name",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      render: (status: string) =>
+        status === "active" ? (
+          <Tag color="green">Đang hoạt động</Tag>
+        ) : (
+          <Tag color="red">Ngừng hoạt động</Tag>
+        ),
+    },
+    {
+      title: "Ngày tạo",
+      dataIndex: "created_at",
+    },
+    {
+      title: "Ngày cập nhật",
+      dataIndex: "updated_at",
+    },
+    {
+      title: "Thao tác",
+      render: (_: any, record: BrandsType) => (
+        <Space>
+          <Button icon={<EyeOutlined />} onClick={() => handleView(record)}>
+            Xem
+          </Button> 
+
+          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+            Sửa
+
+          </Button>
+
+          <Button
+
+            icon={<DeleteOutlined />}
+
+            danger
+
+            onClick={() => handleDelete(record.id)}
+          >
+            Xóa
+          </Button>
+
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div className="p-4 container">
+      {isRootBrands && (
+        <>
+          <Space className="mb-4" style={{ justifyContent: "space-between", width: "100%" }}>
+
+            <h2>Danh sách thương hiệu</h2>
+
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              Thêm mới
+              
+            </Button>
+
+          </Space>
+
+          <Input.Search
+
+            placeholder="Tìm kiếm thương hiệu..."
+
+            value={searchTerm}
+
+            onChange={(e) => setSearchTerm(e.target.value)}
+
+            allowClear
+
+            enterButton="Tìm kiếm"
+
+            className="mb-4"
+
+          />
+          <Select>
+            <Select.Option value="0">Đang hoạt động</Select.Option>
+            <Select.Option value="1">Ngừng hoạt động</Select.Option>
+          </Select>
+
+          <Table
+            loading={loading}
+            columns={columns}
+            dataSource={brands}
+            rowKey="id"
+            bordered
+          />
+        </>
+      )}
+
+      {/* Modal xem chi tiết */}
+      <Modal
+        title="Chi tiết thương hiệu"
+        open={viewModalVisible}
+        onCancel={() => setViewModalVisible(false)}
+        footer={<Button onClick={() => setViewModalVisible(false)}>Đóng</Button>}
+      >
+        {selectedBrand && (
+          <Descriptions column={1} bordered size="small">
+            <Descriptions.Item label="ID">{selectedBrand.id}</Descriptions.Item>
+            <Descriptions.Item label="Tên">{selectedBrand.name}</Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              {selectedBrand.status === "active" ? "Đang hoạt động" : "Ngừng hoạt động"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày tạo">{selectedBrand.created_at}</Descriptions.Item>
+            <Descriptions.Item label="Ngày cập nhật">{selectedBrand.updated_at}</Descriptions.Item>
+          </Descriptions>
+        )}
+      </Modal>
+
+      {/* Modal thêm/sửa */}
+      <Modal
+        title={formMode === "create" ? "Thêm thương hiệu" : "Chỉnh sửa thương hiệu"}
+        open={editModalVisible}
+        onCancel={() => setEditModalVisible(false)}
+        onOk={handleFormSubmit}
+        okText={formMode === "create" ? "Thêm" : "Lưu"}
+      >
+        <Form layout="vertical" form={form}>
+          <Form.Item
+            label="Tên thương hiệu"
+            name="name"
+            rules={[{ required: true, message: "Vui lòng nhập tên thương hiệu" }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            label="Trạng thái"
+            name="status"
+            rules={[{ required: true, message: "Chọn trạng thái" }]}
+          >
+            <Select placeholder="Chọn trạng thái">
+              <Option value="active">Đang hoạt động</Option>
+              <Option value="inactive">Ngừng hoạt động</Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Outlet />
+    </div>
+  );
+};
+
+export default Brands;
     };
     const handleShowModal = (brands: BrandsType) => {
         setSelectedBrands(brands);
