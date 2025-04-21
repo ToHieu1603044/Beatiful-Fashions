@@ -106,24 +106,68 @@ class SlideController extends Controller
     }
 
     public function update(Request $request, Slide $slide)
-    {
-        try {
-            $validated = $request->validate([
-                'title' => 'nullable|string|max:255',
-                'description' => 'nullable|string',
-                'images' => 'required|array',
-                'banners' => 'required|array',
-                'banners.*' => 'string',
-                'images.*' => 'string',
-            ]);
+{
+    try {
+        $validated = $request->validate([
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'images' => 'nullable|array|size:5',
+            'images.*' => 'file|image|max:2048',
+            'banners' => 'nullable|array',
+            'banners.*' => 'file|image|max:2048',
+        ]);
 
-            $slide->update($validated);
-
-            return response()->json($slide);
-        } catch (\Exception $e) {
-            return $this->handleException($e);
+        // Cập nhật title và description nếu có
+        if (isset($validated['title'])) {
+            $slide->title = $validated['title'];
         }
+        if (isset($validated['description'])) {
+            $slide->description = $validated['description'];
+        }
+
+        // Xử lý ảnh mới nếu có
+        if ($request->hasFile('images')) {
+            $imagePaths = [];
+            foreach ($request->file('images') as $image) {
+                $path = $image->store('slides', 'public');
+                $imagePaths[] = asset('storage/' . $path);
+            }
+            $slide->images = $imagePaths;
+        }
+
+        $slide->save();
+
+        // Nếu cần cập nhật banners thì xử lý
+        $bannerPaths = [];
+        if ($request->hasFile('banners')) {
+            foreach ($request->file('banners') as $banner) {
+                $path = $banner->store('banners', 'public');
+                $bannerPaths[] = asset('storage/' . $path);
+            }
+
+            // Cập nhật hoặc tạo banner tương ứng với slide
+            $banner = Banner::where('slide_id', $slide->id)->first();
+            if ($banner) {
+                $banner->update([
+                    'banners' => $bannerPaths,
+                ]);
+            } else {
+                $banner = Banner::create([
+                    'slide_id' => $slide->id,
+                    'banners' => $bannerPaths,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'slide' => $slide,
+            'banner' => $banner ?? null,
+        ]);
+
+    } catch (\Exception $e) {
+        return $this->handleException($e);
     }
+}
 
     public function destroy(Slide $slide)
     {
