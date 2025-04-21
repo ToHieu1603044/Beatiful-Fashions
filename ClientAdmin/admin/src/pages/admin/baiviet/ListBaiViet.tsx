@@ -8,7 +8,7 @@ import { Baiviet } from "../../../interfaces/baiviet";
 const ListBaiViet: React.FC = () => {
     const [Baiviets, setBaiviets] = useState<Baiviet[]>([]);
     console.log(Baiviets);
-    
+
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
@@ -20,7 +20,11 @@ const ListBaiViet: React.FC = () => {
     useEffect(() => {
         const fetchBaiviets = async () => {
             try {
-                const response = await axios.get("http://localhost:3000/baiviet");
+                const response = await axios.get("http://127.0.0.1:8000/api/posts", {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                });
+                // console.log(response.data);
+
                 const data = response.data || [];
                 setBaiviets(data);
                 setLoading(false);
@@ -35,7 +39,7 @@ const ListBaiViet: React.FC = () => {
     // lọc danh sách bài viết theo tên bài viết hoặc ngày bài viết
     const filteredBaiviets = Baiviets.filter((item) =>
         item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        new Date(item.publishDate).toLocaleDateString().includes(searchTerm.toLowerCase())
+        new Date(item.created_at).toLocaleDateString().includes(searchTerm.toLowerCase())
     );
     const handleSortChange = (option: string) => {
         setSortOption(option);
@@ -47,9 +51,9 @@ const ListBaiViet: React.FC = () => {
             case "titleDesc":
                 return b.title.localeCompare(a.title);
             case "dateAsc":
-                return new Date(a.publishDate).getTime() - new Date(b.publishDate).getTime();
+                return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
             case "dateDesc":
-                return new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime();
+                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
             default:
                 return 0;
         }
@@ -85,7 +89,7 @@ const ListBaiViet: React.FC = () => {
             });
 
             if (result.isConfirmed) {
-                await axios.delete(`http://localhost:3000/baiviet/${id}`);
+                await axios.delete(`http://127.0.0.1:8000/api/posts/${id}`);
                 // {
                 //     headers: token ? { Authorization: `Bearer ${token}` } : {},
                 // }
@@ -104,45 +108,48 @@ const ListBaiViet: React.FC = () => {
     const indexOfFirstPost = indexOfLastPost - postsPerPage;
     const currentPosts = sortedBaiviets.slice(indexOfFirstPost, indexOfLastPost);
 
-    const columns = [
+    type Column = {
+        title: string;
+        dataIndex?: keyof Baiviet | 'index';
+        render?: (text: any, record?: Baiviet, index?: number) => React.ReactNode;
+    };
+    
+    const columns: Column[] = [
         {
             title: '#',
             dataIndex: 'index',
             render: (_, __, index) => index + 1,
         },
         {
-            title: 'id',
-            dataIndex: 'id',
-           
-        },
-        {
             title: 'Tiêu Đề',
             dataIndex: 'title',
-            render: (title) => <p style={{
-                maxWidth: "400px",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis"
-            }}>{title}</p>,
+            render: (title: string) => (
+                <p style={{
+                    maxWidth: "400px",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis"
+                }}>{title}</p>
+            ),
         },
         {
             title: 'Hình Ảnh',
-            dataIndex: 'images',
-            render: (images) => <img src={images} alt="Hình ảnh" width="50px" />,
+            dataIndex: 'image',
+            render: (image?: string) => image ? <img src={image} alt="Hình ảnh" width="50px" /> : null,
         },
         {
             title: 'Ngày Đăng',
-            dataIndex: 'publishDate',
-            render: (date) => new Date(date).toLocaleDateString(),
+            dataIndex: 'created_at',
+            render: (date: string) => new Date(date).toLocaleDateString(),
         },
         {
             title: 'Trạng Thái',
             dataIndex: 'isActive',
-            render: (isActive) => (isActive ? "Hiển thị" : "Ẩn"),
+            render: (isActive: boolean) => (isActive ? "Hiển thị" : "Ẩn"),
         },
         {
             title: 'Hành Động',
-            render: (_, record) => (
+            render: (_, record: Baiviet) => (
                 <div>
                     <Button onClick={() => handleDelete(record.id)} type="link" danger>
                         <i className="fa-solid fa-trash"></i>
