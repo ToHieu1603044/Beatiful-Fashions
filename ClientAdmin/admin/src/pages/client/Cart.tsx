@@ -1,15 +1,24 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getCart, updateCart, deleteCartItem } from "../../services/homeService";
 import { useNavigate } from "react-router-dom";
+
+import { getCart, updateCart, deleteCartItem } from "../../services/homeService";
 import Swal from 'sweetalert2'
 const Cart = () => {
     const [products, setProducts] = useState([]);
     const navigate = useNavigate();
+    const [selectedItems, setSelectedItems] = useState<number[]>([]);
 
     useEffect(() => {
         fetchCarts();
     }, []);
+    const handleSelectItem = (id: number) => {
+        setSelectedItems((prevSelected) =>
+            prevSelected.includes(id)
+                ? prevSelected.filter(itemId => itemId !== id)
+                : [...prevSelected, id]
+        );
+    };
 
     const fetchCarts = async () => {
         try {
@@ -114,10 +123,10 @@ const Cart = () => {
                 <div className="w-100 d-flex">
                     <div style={{ width: "68%", marginRight: "30px" }}>
                         <div className="d-flex" style={{ padding: "10px 20px", borderTop: "1px solid #ccc", borderBottom: "1px solid #ccc" }}>
-                            <p style={{ marginRight: "400px" }}>Sản phẩm</p>
+                            <p style={{ marginRight: "350px" }}>Sản phẩm</p>
                             <p style={{ marginRight: "140px" }}>Số lượng</p>
                             <p style={{ marginRight: "40px" }}>Tổng tiền</p>
-                            <p>Xóa</p>
+                            <p>Thao tác</p>
                         </div>
 
                         <div>
@@ -130,7 +139,7 @@ const Cart = () => {
                                             <img
                                                 src={item.product.images ? `http://127.0.0.1:8000/storage/${item.product.images}` : "https://placehold.co/50x50"}
                                                 alt=""
-                                                style={{ width: "190px", height: "230px", objectFit: "contain", margin: "15px 10px 10px" }}
+                                                style={{ width: "100px", height: "180px", objectFit: "contain", margin: "15px 10px 10px" }}
                                             />
                                             <div style={{ marginLeft: "-20px", marginTop: "40px", fontSize: "15px", position: "absolute", left: "30%" }}>
                                                 <p>{item.product.name}</p>
@@ -204,11 +213,20 @@ const Cart = () => {
                                             </div>
 
                                             <div
-                                                style={{ margin: "110px 0px 0px 10px", cursor: "pointer" }}
+                                                style={{ margin: "110px 0px 0px -10px", cursor: "pointer" }}
                                                 onClick={() => handleRemoveItem(item.id)}
                                             >
                                                 <i className="fa-solid fa-trash-can"></i>
+                                                
                                             </div>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedItems.includes(item.id)}
+                                                onChange={() => handleSelectItem(item.id)}
+                                                style={{ marginTop: '38px', left: '0px', marginLeft: '15px' }}
+
+                                                disabled={!item.product.active || item.product.deleted_at !== null}
+                                            />
                                         </div>
                                     </div>
                                 );
@@ -228,9 +246,21 @@ const Cart = () => {
                             <tbody style={{ borderTop: "1px solid #ccc", borderBottom: "1px solid #ccc", height: "30px" }}>
                                 <tr>
                                     <td colSpan={2}>
-                                        <Link to="/checkout">
-                                            <button className="btn btn-dark" style={{ width: "150px", padding: "10px", borderRadius: "30px" }}>Thanh Toán</button>
-                                        </Link>
+                                        <button
+                                            className="btn btn-dark"
+                                            style={{ width: "150px", padding: "10px", borderRadius: "30px" }}
+                                            onClick={() =>
+                                                navigate("/checkout", {
+                                                    state: {
+                                                        selectedItems: products.filter(p => selectedItems.includes(p.id)),
+                                                    },
+                                                })
+                                            }
+                                            
+                                        >
+                                            Thanh Toán
+                                        </button>
+
                                     </td>
                                 </tr>
                             </tbody>
