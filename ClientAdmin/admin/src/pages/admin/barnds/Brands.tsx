@@ -182,8 +182,8 @@ import {
 import {
   deleteBrands,
   getBrands,
-  createBrands,
-  updateBrands,
+  // createBrands,
+  // updateBrands,
 } from "../../../services/brandsService";
 
 const { Option } = Select;
@@ -204,7 +204,7 @@ const Brands = () => {
   const [brands, setBrands] = useState<BrandsType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-
+    const [status, setStatus] = useState<string>("active");
   const [selectedBrand, setSelectedBrand] = useState<BrandsType | null>(null);
   const [viewModalVisible, setViewModalVisible] = useState(false);
 
@@ -319,41 +319,63 @@ const Brands = () => {
         <Space>
           <Button icon={<EyeOutlined />} onClick={() => handleView(record)}>
             Xem
-          </Button>
+          </Button> 
+
           <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             Sửa
+
           </Button>
+
           <Button
+
             icon={<DeleteOutlined />}
+
             danger
+
             onClick={() => handleDelete(record.id)}
           >
             Xóa
           </Button>
+
         </Space>
       ),
     },
   ];
 
   return (
-    <div className="p-4">
+    <div className="p-4 container">
       {isRootBrands && (
         <>
           <Space className="mb-4" style={{ justifyContent: "space-between", width: "100%" }}>
+
             <h2>Danh sách thương hiệu</h2>
+
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
               Thêm mới
+              
             </Button>
+
           </Space>
 
           <Input.Search
+
             placeholder="Tìm kiếm thương hiệu..."
+
             value={searchTerm}
+
             onChange={(e) => setSearchTerm(e.target.value)}
+
             allowClear
+
             enterButton="Tìm kiếm"
+
             className="mb-4"
+            
           />
+          <Select>
+            <Select.Option value="active">Đang hoạt động</Select.Option>
+            <Select.Option value="inactive">Ngừng hoạt động</Select.Option>
+          </Select>
 
           <Table
             loading={loading}
