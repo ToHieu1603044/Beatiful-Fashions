@@ -370,11 +370,11 @@ const Brands = () => {
             enterButton="Tìm kiếm"
 
             className="mb-4"
-            
+
           />
           <Select>
-            <Select.Option value="active">Đang hoạt động</Select.Option>
-            <Select.Option value="inactive">Ngừng hoạt động</Select.Option>
+            <Select.Option value="0">Đang hoạt động</Select.Option>
+            <Select.Option value="1">Ngừng hoạt động</Select.Option>
           </Select>
 
           <Table
