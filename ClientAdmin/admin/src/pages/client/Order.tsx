@@ -28,6 +28,7 @@ const Orders: React.FC = () => {
     const [reviewText, setReviewText] = useState("");
     const [detailId, setDetailId] = useState();
     const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+    const [returnReasons, setReturnReasons] = useState<{ [key: string]: string }>({});
 
 
     const [reasonModalVisible, setReasonModalVisible] = useState(false);
@@ -37,6 +38,13 @@ const Orders: React.FC = () => {
             navigate("/orders/return");
         }
     };
+    const setReason = (productId: number, reason: string) => {
+        setReturnReasons(prev => ({
+            ...prev,
+            [productId]: reason
+        }));
+    };
+    
     const handleOpenReviewModal = (productDetail: any) => {
         setReviewProduct(productDetail);
         setReviewModalVisible(true);
@@ -69,7 +77,7 @@ const Orders: React.FC = () => {
             }
         } catch (error) {
             console.error(error);
-            if(error.response.status === 400){
+            if (error.response.status === 400) {
                 Swal.fire("Lỗi", "Bạn đã đánh giá rồi", "error");
             }
             Swal.fire("Lỗi", "Không thể gửi đánh giá", "error");
@@ -133,24 +141,24 @@ const Orders: React.FC = () => {
     const handleReturnOrder = async () => {
         const itemsToRefund = Object.entries(selectedReturnItems).map(([id, quantity]) => ({
             order_detail_id: Number(id),
-
-            quantity: quantity
+            quantity,
+            reason: returnReasons[id] || "" // lấy lý do từ returnReasons
         }));
-
+    
         console.log("Dữ liệu gửi lên API:", JSON.stringify({ items: itemsToRefund }, null, 2));
-
+    
         try {
             const response = await returnOrderAPI(selectedOrder.id, { items: itemsToRefund });
-
+    
             if (response.status === 200) {
                 console.log("Hoàn trả sản phẩm thành công", response.data);
                 setReturnModalVisible(false);
             }
-
         } catch (error) {
             console.error("Lỗi khi hoàn trả sản phẩm:", error.response?.data || error);
         }
     };
+    
     const handleShowModal = (order: Order) => {
         setSelectedOrder(order);
         setStatus(order.shipping_status);
@@ -174,8 +182,6 @@ const Orders: React.FC = () => {
             return updatedItems;
         });
     };
-
-
     const handleSelectChange = (id: number, quantity: number) => {
         setSelectedReturnItems(prevItems => ({
             ...prevItems,
@@ -520,18 +526,17 @@ const Orders: React.FC = () => {
                     />
                 </Modal>
                 <Modal
+                width={1100}
                     title="Hoàn trả sản phẩm"
                     open={returnModalVisible}
                     onCancel={() => setReturnModalVisible(false)}
                     onOk={() => handleReturnOrder()}
                     okText="Xác nhận hoàn"
-                    width={800}
                 >
-
                     {selectedOrder && (
                         <div>
                             <h4>Chọn sản phẩm muốn hoàn:</h4>
-                            <Table
+                            <Table 
                                 columns={[
                                     {
                                         title: "Chọn",
@@ -543,7 +548,6 @@ const Orders: React.FC = () => {
                                             />
                                         )
                                     },
-
                                     {
                                         title: "Sản phẩm", dataIndex: "product_name", key: "product_name"
                                     },
@@ -580,6 +584,19 @@ const Orders: React.FC = () => {
                                                     <Select.Option key={num} value={num}>{num}</Select.Option>
                                                 ))}
                                             </Select>
+                                        )
+                                    },
+                                    {
+                                        title: "Lý do hoàn trả",
+                                        key: "reason",
+                                        render: (_: any, detail: any) => (
+                                            <Input
+                                            style={{ width: 200 }}
+                                            placeholder="Nhập lý do"
+                                            disabled={!selectedReturnItems[detail.id]}
+                                            value={returnReasons[detail.id] || ""}
+                                            onChange={(e) => setReason(detail.id, e.target.value)}
+                                        />                                        
                                         )
                                     },
                                     {

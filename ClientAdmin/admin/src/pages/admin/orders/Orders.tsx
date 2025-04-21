@@ -323,8 +323,8 @@ const Orders: React.FC = () => {
         visible={modalVisible}
         onClose={handleCloseModal}
         status={status}
-        setStatus={setStatus} // Để cập nhật trạng thái
-        onConfirmOrder={handleUpdateStatus} // Cập nhật trạng thái khi xác nhận
+        setStatus={setStatus} 
+        onConfirmOrder={handleUpdateStatus} 
         confirmOrder={handleMarkAsPaid}
       />
 

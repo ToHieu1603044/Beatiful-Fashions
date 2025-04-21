@@ -1,11 +1,11 @@
 import Footer from "../../components/clients/Footer";
 import Header from "../../components/clients/Header";
-import { Outlet, useLocation } from "react-router-dom"; // Import useLocation
+import { Outlet, useLocation } from "react-router-dom"; 
 import MainContent from "../../components/clients/MainContent";
 
 const Clients = () => {
     const location = useLocation();
-    const isHome = location.pathname === "/"; // Kiểm tra có phải trang chủ không
+    const isHome = location.pathname === "/"; 
 
     return (
         <div className="d-flex flex-column min-vh-100">

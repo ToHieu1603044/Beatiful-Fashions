@@ -138,12 +138,13 @@ const Header = () => {
     <header className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
       <div className="container d-flex align-items-center justify-content-start">
         <a className="navbar-brand me-3 text-white" href="/">
-          <img
-            src={`http://127.0.0.1:8000/storage/${site.logo}`}
-            alt={site.site_name || "Logo"}
-            className="img-fluid"
-            style={{ maxWidth: '170px' }}
-          />
+        <img
+  src={"../../../src/assets/logo.png"}
+  alt={site.site_name || "Logo"}
+  className="img-fluid"
+  style={{ width: '50px', height: '50px', objectFit: 'contain' }}
+/>
+
         </a>
 
         <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
