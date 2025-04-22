@@ -20,6 +20,20 @@ const OrderReturn: React.FC = () => {
       { value: "refunded", label: "Đã hoàn tiền" },
       { value: "completed", label: "Hoàn tất" },
   ];
+  const getAvailableStatusOptions = (currentStatus: string) => {
+    const statusFlow: { [key: string]: string[] } = {
+        pending: ["approved", "rejected"],
+        approved: ["received"],
+        received: ["refunded"],
+        refunded: ["completed"],
+        rejected: [],
+        completed: [],
+    };
+
+    const allowed = statusFlow[currentStatus] || [];
+    return statusOptions.filter(option => allowed.includes(option.value));
+};
+
   const updateStatus = async (id: number, newStatus: string) => {
     try {
       const response =  await axios.patch(`http://127.0.0.1:8000/api/order-returns/${id}/status`, { status: newStatus });
@@ -62,18 +76,19 @@ const OrderReturn: React.FC = () => {
         { title: "Tên khách hàng", dataIndex: ["order", "name"], key: "name" },
         { title: "Số điện thoại", dataIndex: ["order", "phone"], key: "phone" },
         {
-          title: "Trạng thái",
-          dataIndex: "status",
-          key: "status",
-          render: (status: string, record: any) => (
-              <Select
-                  value={status}
-                  onChange={(newStatus) => updateStatus(record.id, newStatus)}
-                  style={{ width: 150 }}
-                  options={statusOptions}
-              />
-          ),
-      },
+            title: "Trạng thái",
+            dataIndex: "status",
+            key: "status",
+            render: (status: string, record: any) => (
+                <Select
+                    value={status}
+                    onChange={(newStatus) => updateStatus(record.id, newStatus)}
+                    style={{ width: 150 }}
+                    options={getAvailableStatusOptions(status)}
+                />
+            ),
+          },
+          
         {
             title: "Hành động",
             key: "action",

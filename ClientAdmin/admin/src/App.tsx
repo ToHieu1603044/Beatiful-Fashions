@@ -72,7 +72,7 @@ const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
     const token = localStorage.getItem("access_token");
 
     // Check if there's no token or unauthorized role
-    if (!token || (role !== "admin" && role !== "manager")) {
+    if (!token || (role !== "admin" && role !== "manager" && role !== "content")) {
       setAllowed(false);
     } else {
       setAllowed(true);

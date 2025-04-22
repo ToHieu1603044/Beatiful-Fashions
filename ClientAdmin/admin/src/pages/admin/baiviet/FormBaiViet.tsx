@@ -8,37 +8,34 @@ import "../../../App.css";
 import { CKEditorComponent } from "../../../components/CKEditorComponent";
 import { Baiviet } from "../../../interfaces/baiviet";
 
-
 const BaivietForm = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [description, setDescription] = useState<string>("");
-    const [image, setimage] = useState<string>("");
-    console.log("image", image);
-
+    const [image, setImage] = useState<File | null>(null); // Lưu tệp hình ảnh
     const [loading, setLoading] = useState(false);
     const [imgURL, setImgURL] = useState<string>("");
     const token = localStorage.getItem("access_token");
+    
     const {
         register,
         handleSubmit,
         setValue,
         formState: { errors },
     } = useForm<Baiviet>();
-    // chi tiet bai viet 
+
     useEffect(() => {
         if (id) {
             (async () => {
                 try {
                     setLoading(true);
-                    const { data } = await axios.get(`http://localhost:3000/baiviet/${id}`);
-                    console.log("data", data);
+                    const { data } = await axios.get(`http://127.0.0.1:8000/api/posts/${id}`);
                     setValue("title", data.title);
-                    setValue("titleHeader", data.titleHeader);
-                    setValue("content", data.content);
-                    setValue("images", data.images);
-                    setDescription(data.content);
-                    setImgURL(data.images); // Hiển thị ảnh hiện tại
+                    setValue("titleHead", data.titleHead);
+                    setValue("description", data.description);
+                    setValue("image", data.image);
+                    setDescription(data.description);
+                    setImgURL(data.image); // Hiển thị ảnh hiện tại
                 } catch {
                     Swal.fire("Lỗi", "Không tải được bài viết", "error");
                 } finally {
@@ -47,45 +44,15 @@ const BaivietForm = () => {
             })();
         }
     }, [id, setValue]);
-    // =====================================
-    // Hàm upload file lên Cloudinary
-    // const uploadFile = async (file: File) => {
-    //     const CLOUD_NAME = "db1hqzmrb";
-    //     const PRESET_NAME = "datn_upload";
-    //     const FOLDER_NAME = "datn";
-    //     const api = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
-    //     const formData = new FormData();
-    //     formData.append("upload_preset", PRESET_NAME);
-    //     formData.append("folder", FOLDER_NAME);
-    //     formData.append("file", file);
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setImage(file); // Lưu tệp thay vì URL
+        }
+    };
 
-    //     const response = await axios.post(api, formData, {
-    //         headers: { "Content-Type": "multipart/form-data"},
-    //     });
-    //     return response.data.secure_url;
-    // };
-    // Xử lý khi người dùng chọn file ảnh
-    // const handleImgChange = async (
-    //     event: React.ChangeEvent<HTMLInputElement>
-    // ) => {
-    //     const files = event.target.files;
-    //     if (files && files.length > 0) {
-    //         try {
-    //             // setLoading(true);
-    //             const url = await uploadFile(files[0]); // Upload ảnh lên Cloudinary
-    //             setImgURL(url); // Lưu URL ảnh để hiển thị
-    //             setValue("images", url); // Gán giá trị URL ảnh vào form
-    //             Swal.fire("Thành công", "Ảnh đã được tải lên", "success");
-    //          } catch (error:any) {
-    //                 console.error("Upload error:", error.response ? error.response.data : error);
-    //                 Swal.fire("Lỗi", "Không thể tải ảnh lên", "error");
-    //             }
-    //     }
-    // };
-    // ===================================
     const handleSubmitForm = async (data: any) => {
-        console.log("data", data);
         if (!description.trim()) {
             Swal.fire({
                 icon: "error",
@@ -95,7 +62,6 @@ const BaivietForm = () => {
             return;
         }
 
-        // Hiển thị hộp thoại xác nhận
         const result = await Swal.fire({
             title: id ? "Xác nhận cập nhật" : "Xác nhận tạo mới",
             text: id
@@ -108,23 +74,37 @@ const BaivietForm = () => {
         });
 
         if (!result.isConfirmed) {
-            return; // Người dùng hủy xác nhận
+            return; // Người dùng hủy
         }
 
         try {
             setLoading(true);
-            const payload = { ...data, content: description, images: image };
-            console.log("payload", payload);
+            const payload = { ...data, description: description, isActive: true };
+            const formData = new FormData();
+
+            // Thêm dữ liệu vào FormData
+            Object.keys(payload).forEach(key => {
+                formData.append(key, payload[key]);
+            });
+            if (image) {
+                formData.append('image', image); // Thêm tệp ảnh
+            }
+
             if (id) {
-                await axios.put(`http://localhost:3000/baiviet/${id}`, payload, {
-                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                await axios.put(`http://127.0.0.1:8000/api/posts/${id}`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
                 });
                 Swal.fire("Thành công", "Bài viết đã được cập nhật", "success");
             } else {
-                await axios.post("http://localhost:3000/baiviet", payload);
-                // {
-                //     headers: token ? { Authorization: `Bearer ${token}` } : {},
-                // }
+                await axios.post("http://127.0.0.1:8000/api/posts", formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                });
                 Swal.fire("Thành công", "Bài viết mới đã được tạo", "success");
             }
             navigate("/admin/baiviet");
@@ -141,16 +121,7 @@ const BaivietForm = () => {
             setLoading(false);
         }
     };
-    const handleImageChange = (e: any) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setimage(reader.result as string); // Thiết lập URL hoặc chuỗi base64
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+
     if (loading) return <p>Đang tải...</p>;
 
     return (
@@ -163,26 +134,22 @@ const BaivietForm = () => {
                         type="text"
                         className="form-control"
                         {...register("title")}
-                        style={{width:"800px"}}
+                        style={{ width: "800px" }}
                     />
                     {errors.title?.message && (
-                        <p className="text-danger">
-                            {errors.title.message.toString()}
-                        </p>
+                        <p className="text-danger">{errors.title.message.toString()}</p>
                     )}
                 </div>
                 <div className="mb-3">
-                    <label>Tiêu đề</label>
+                    <label>Tiêu đề phụ</label>
                     <input
                         type="text"
                         className="form-control"
-                        {...register("titleHeader")}
-                        style={{width:"800px"}}
+                        {...register("titleHead")}
+                        style={{ width: "800px" }}
                     />
-                    {errors.titleHeader?.message && (
-                        <p className="text-danger">
-                            {errors.titleHeader.message.toString()}
-                        </p>
+                    {errors.titleHead?.message && (
+                        <p className="text-danger">{errors.titleHead.message.toString()}</p>
                     )}
                 </div>
 
@@ -201,7 +168,7 @@ const BaivietForm = () => {
                         className="form-control"
                         accept="image/*"
                         onChange={handleImageChange}
-                        style={{width:"800px"}}
+                        style={{ width: "800px" }}
                     />
                     {id ? <img src={imgURL} alt="" style={{ width: "100px" }} /> : ""}
                 </div>

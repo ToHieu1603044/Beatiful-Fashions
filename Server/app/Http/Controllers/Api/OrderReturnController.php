@@ -121,9 +121,9 @@ class OrderReturnController
         $request->validate([
             'status' => 'required|in:pending,approved,rejected,received,refunded,completed',
         ]);
-    
+
         $orderReturn = OrderReturn::findOrFail($id);
-    
+
         // Nếu đã completed thì không cho cập nhật nữa
         if ($orderReturn->status === 'completed') {
             return response()->json([
@@ -131,7 +131,7 @@ class OrderReturnController
                 'status' => $orderReturn->status
             ], 400);
         }
-    
+
         // Không cho cập nhật ngược trạng thái
         $statusOrder = [
             'pending' => 0,
@@ -141,41 +141,41 @@ class OrderReturnController
             'refunded' => 3,
             'completed' => 4,
         ];
-    
+
         $current = $statusOrder[$orderReturn->status] ?? -1;
         $next = $statusOrder[$request->status] ?? -1;
-    
+
         if ($next < $current) {
             return response()->json([
                 'message' => 'Không thể cập nhật ngược trạng thái!',
                 'status' => $orderReturn->status
             ], 400);
         }
-    
+
         DB::transaction(function () use ($orderReturn, $request) {
             $orderReturn->update(['status' => $request->status]);
-    
+
             // Xử lý tồn kho và bán hàng khi trạng thái là "approved"
             if ($request->status === 'approved') {
                 $returnDetails = $orderReturn->returnItems;
-    
+
                 foreach ($returnDetails as $returnDetail) {
                     $orderDetail = DB::table('order_details')
                         ->where('id', $returnDetail->order_detail_id)
                         ->first();
-    
+
                     if ($orderDetail) {
                         if ($orderDetail->sku) {
                             DB::table('product_skus')
                                 ->where('sku', $orderDetail->sku)
                                 ->increment('stock', $returnDetail->quantity);
-    
+
                             $redisKey = 'sku:stock:' . $orderDetail->sku;
                             if (Redis::exists($redisKey)) {
                                 Redis::incrby($redisKey, $returnDetail->quantity);
                             }
                         }
-    
+
                         if ($orderDetail->product_id) {
                             DB::table('products')
                                 ->where('id', $orderDetail->product_id)
@@ -185,8 +185,71 @@ class OrderReturnController
                 }
             }
         });
+
+        if ($request->status === 'completed') {
+            event(new OrderReturnCompleted($orderReturn));
+
+            $order = $orderReturn->order;
+
+            if ($order && $order->user) {
+                $user = $order->user;
+
+                $totalRefundAmount = $orderReturn->returnItems->sum('refund_amount');
+
+                $points = floor($totalRefundAmount / 1000) * 10;
+
+                $user->increment('points', $points);
+            }
+        }
+
+
+        return response()->json([
+            'message' => 'Cập nhật trạng thái thành công!',
+            'status' => $orderReturn->status
+        ], 200);
+    }
+
+    public function updateStatusUser(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:shipping,completed',
+        ]);
     
-        // Bắn event nếu đã hoàn tất
+        $orderReturn = OrderReturn::with('returnItems.orderDetail')->findOrFail($id);
+    
+        // Không cho cập nhật nếu đã là completed
+        if ($orderReturn->status === 'completed') {
+            return response()->json(['message' => 'Đơn hoàn đã hoàn tất, không thể cập nhật trạng thái!'], 400);
+        }
+    
+        // Xử lý trạng thái ngược
+        $statusOrder = [
+            'pending' => 0,
+            'approved' => 1,
+            'shipping' => 2,
+            'completed' => 3,
+        ];
+    
+        $currentStatus = $statusOrder[$orderReturn->status] ?? -1;
+        $newStatus = $statusOrder[$request->status] ?? -1;
+    
+        // Kiểm tra nếu trạng thái mới nhỏ hơn trạng thái hiện tại (ngược lại)
+        if ($newStatus < $currentStatus) {
+            return response()->json(['message' => 'Không thể cập nhật ngược trạng thái!'], 400);
+        }
+    
+        // Cập nhật trạng thái
+        $orderReturn->update(['status' => $request->status]);
+    
+        // Cập nhật trạng thái từng order_detail liên quan
+        foreach ($orderReturn->returnItems as $returnItem) {
+            $orderDetail = $returnItem->orderDetail;
+            if ($orderDetail) {
+                $orderDetail->update(['return_status' => $request->status]);
+            }
+        }
+    
+        // Nếu trạng thái là completed => phát sự kiện
         if ($request->status === 'completed') {
             event(new OrderReturnCompleted($orderReturn));
         }
@@ -197,29 +260,6 @@ class OrderReturnController
         ], 200);
     }
     
-    
-    public function updateStatusUser(Request $request, $id)
-    {
-        $request->validate([
-            'status' => 'required|in:shipping,completed',
-        ]);
-
-        $orderReturn = OrderReturn::findOrFail($id);
-        $orderReturn->update(['status' => $request->status]);
-
-        foreach ($orderReturn->returnItems as $returnItem) {
-            $orderDetail = $returnItem->orderDetail;
-            if ($orderDetail) {
-                $orderDetail->update(['return_status' => $request->status]);
-            }
-        }
-        if ($orderReturn->status === 'completed') {
-            event(new OrderReturnCompleted($orderReturn));
-        }
-      
-
-        return response()->json(['message' => 'Cập nhật trạng thái thành công!', 'status' => $orderReturn->status], 200);
-    }
     public function cancelOrderReturn(Request $request, $id)
     {
         try {

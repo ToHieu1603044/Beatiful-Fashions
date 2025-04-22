@@ -9,10 +9,10 @@
 export interface Baiviet {
     id: string; // ID bài viết
     title: string; // Tiêu đề bài viết
-    titleHeader: string;//phan dau bai viet
-    content: string; // Nội dung bài viết, dạng mảng các block
-    // images?: string; // Mảng URL ảnh (nếu có)
-    images?: string; // Mảng URL ảnh (nếu có)
+    titleHead: string;//phan dau bai viet
+    description: string; // Nội dung bài viết, dạng mảng các block
+    image?: string; // Mảng URL ảnh (nếu có)
     isActive: boolean; // Trạng thái kích hoạt
-    publishDate: Date; // Ngày đăng
+    created_at: Date; // Thoi gian tạo bai viet
+
 }

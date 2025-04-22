@@ -28,7 +28,8 @@ class Order extends Model
         'payment_method',
         'note',
         'discount_amount',
-        'discount_code'
+        'discount_code',
+        'used_points'
     ];
     protected $casts = [
         'variant_details' => 'array',
