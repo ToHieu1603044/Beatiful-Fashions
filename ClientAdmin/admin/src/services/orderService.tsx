@@ -17,6 +17,12 @@ export const getOrders = async (params: { is_paid?: boolean; tracking_status?: s
       headers: getAuthHeader(),
     });
   };
+  export const getSlide = async () => {
+    const token = localStorage.getItem("access_token");
+    return await axios.get(`${API_URL}/slides`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+  };
 
 export const getOrder = async (id:number) =>{ // lay ra mot don hang theo id
     try {

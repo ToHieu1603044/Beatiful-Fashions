@@ -17,7 +17,10 @@ class RatingController extends Controller
     public function index(Request $request)
     {
         // Khởi tạo truy vấn với quan hệ user và product (nếu cần)
-        $query = Rating::with(['user', 'product']);
+        $query = Rating::with(['user', 'product', 'replies.user'])
+            ->withCount('replies')
+            ->whereNull('parent_id')
+            ->orderBy('created_at', 'desc');
 
         // Lọc theo rating (nếu có truyền, ví dụ ?rating=4)
         if ($request->has('rating')) {
@@ -56,6 +59,24 @@ class RatingController extends Controller
             'data' => $ratings
         ]);
     }
+    public function reply(Request $request, $id)
+    {
+        $request->validate([
+            'content' => 'required|string',
+        ]);
+
+        $rating = Rating::findOrFail($id);
+
+        $reply = Rating::create([
+            'user_id' => auth()->id(), // admin hoặc seller
+            'product_id' => $rating->product_id,
+            'review' => $request->content,
+            'parent_id' => $rating->id,
+            'rating' => null, // vì là reply, không cần điểm số
+        ]);
+
+        return response()->json($reply);
+    }
 
     public function store(Request $request)
     {
@@ -72,14 +93,14 @@ class RatingController extends Controller
             ->join('order_details', 'orders.id', '=', 'order_details.order_id')
             ->where('orders.user_id', $user->id)
             ->where('order_details.product_id', $request->product_id)
-            ->where('orders.status', 'completed') 
+            ->where('orders.status', 'completed')
             ->exists();
         $isRating = \DB::table('ratings')
             ->where('user_id', $user->id)
             ->where('product_id', $request->product_id)
             ->where('order_detail_id', $request->order_detail_id)
             ->exists();
-        if($isRating){
+        if ($isRating) {
             return response()->json(['message' => 'Bạn đã đánh giá sản phẩm này rồi'], 400);
         }
 

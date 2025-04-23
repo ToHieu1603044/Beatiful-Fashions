@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Button, message, Row, Col, Tag } from 'antd';
 import axios from 'axios';
+import { getSlide } from '../../services/orderService';
 
 interface Slide {
   id: number;
@@ -15,7 +16,7 @@ const BannerSlide: React.FC = () => {
 
   const fetchSlides = async () => {
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/slides');
+      const response = await getSlide();
       setSlides(response.data);
     } catch (error) {
       console.error(error);

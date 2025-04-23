@@ -15,11 +15,22 @@ class BrandController extends Controller
 {
 
     use AuthorizesRequests;
-    public function index()
+    public function index(Request $request)
     {
         $this->authorize('viewAny', Brand::class);
 
-        $brands = Brand::all();
+        $data = Brand::query();
+
+        if($request->has('name')) {
+            $data->where('name', 'like', '%' . $request->name . '%');
+        }
+
+        if($request->has('status')) {
+            $data->where('status', $request->status);
+        }
+
+        $brands = $data->get();
+        
         return response()->json(['data' => $brands], 200);
     }
 

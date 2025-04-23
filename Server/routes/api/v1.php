@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\OrderReturnController;
 use App\Http\Controllers\Api\PdfController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProductSkuController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
@@ -89,8 +90,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('google/login', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
     Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
 
-    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
-    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
+    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy'])->middleware('throttle:2,5');
+    //Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
     Route::post('orders/apply-points',[OrderController::class, 'applyPoints']);
     Route::get('/orders/invoice', [PdfController::class, 'index']);
     Route::get('carts/count', [CartController::class, 'countCart']);
@@ -128,6 +129,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
+    Route::get('/products/sku', [ProductSkuController::class, 'index']);
+    Route::post('/ratings/{id}/reply', [RatingController::class, 'reply']);
+
     Route::get('discounts/usegeder', [DiscountController::class, 'fetchDiscount']);
     Route::get('discounts', [DiscountController::class, 'index']);
     Route::post('discounts', [DiscountController::class, 'store']);
@@ -139,7 +143,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/revenue', [DashboardController::class, 'revenueStats']);
 
-    Route::apiResource('slides', SlideController::class); //Slide
+    Route::apiResource('slides', SlideController::class); 
     // User
     Route::get('/users', [UserController::class, 'index']);
 

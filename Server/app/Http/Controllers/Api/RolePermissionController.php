@@ -112,8 +112,12 @@ class RolePermissionController extends Controller
 
     public function deleteRole(Role $role)
     {
-       
+        $this->authorize('delete', $role);
+        if($role->name === 'admin'){
+            return response()->json(['message' => 'Cannot delete admin role'], 403);
+        }
         $role->delete();
+
     
         return response()->json(['message' => 'Role deleted successfully'], 200);
     }

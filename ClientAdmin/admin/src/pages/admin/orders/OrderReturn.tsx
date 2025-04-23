@@ -28,6 +28,7 @@ const OrderReturn: React.FC = () => {
         refunded: ["completed"],
         rejected: [],
         completed: [],
+        shipping: ['received'],
     };
 
     const allowed = statusFlow[currentStatus] || [];
@@ -79,16 +80,21 @@ const OrderReturn: React.FC = () => {
             title: "Trạng thái",
             dataIndex: "status",
             key: "status",
-            render: (status: string, record: any) => (
-                <Select
-                    value={status}
-                    onChange={(newStatus) => updateStatus(record.id, newStatus)}
+            render: (status: string, record: any) => {
+                const matchedOption = statusOptions.find(option => option.value === status);
+              
+                return (
+                  <Select
+                    value={{ value: status, label: matchedOption?.label }}
+                    labelInValue
+                    onChange={(selected) => updateStatus(record.id, selected.value)}
                     style={{ width: 150 }}
                     options={getAvailableStatusOptions(status)}
-                />
-            ),
+                  />
+                );
+              }              
           },
-          
+                  
         {
             title: "Hành động",
             key: "action",

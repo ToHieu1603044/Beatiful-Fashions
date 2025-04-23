@@ -136,13 +136,19 @@ const Cart = () => {
                                 return (
                                     <div key={item.id}>
                                         <div className="d-flex" style={{ borderBottom: "1px solid #ccc", position: "relative", opacity: isDisabled ? 0.6 : 1 }}>
-                                            <img
-                                                src={item.product.images ? `http://127.0.0.1:8000/storage/${item.product.images}` : "https://placehold.co/50x50"}
-                                                alt=""
-                                                style={{ width: "100px", height: "180px", objectFit: "contain", margin: "15px 10px 10px" }}
-                                            />
+                                            <a href={`products/${item.product.id}/detail`}>
+                                                <img
+                                                    src={item.product.images ? `http://127.0.0.1:8000/storage/${item.product.images}` : "https://placehold.co/50x50"}
+                                                    alt=""
+                                                    style={{ width: "100px", height: "180px", objectFit: "contain", margin: "15px 10px 10px" }}
+                                                />
+                                            </a>
+
                                             <div style={{ marginLeft: "-20px", marginTop: "40px", fontSize: "15px", position: "absolute", left: "30%" }}>
-                                                <p>{item.product.name}</p>
+                                                <a style={{ color: "black", textDecoration: "none" }} href={`products/${item.product.id}/detail`}>
+                                                    <p>{item.product.name}</p>
+                                                </a>
+
                                                 <p className="mt-2">
                                                     {item.attributes.map((attr: any) => (
                                                         <span key={attr.id}>{attr.attribute}: {attr.value}{" "}{attr.price}</span>
@@ -217,7 +223,7 @@ const Cart = () => {
                                                 onClick={() => handleRemoveItem(item.id)}
                                             >
                                                 <i className="fa-solid fa-trash-can"></i>
-                                                
+
                                             </div>
                                             <input
                                                 type="checkbox"
@@ -234,13 +240,21 @@ const Cart = () => {
 
                         </div>
                     </div>
-
                     <div style={{ width: "30%", height: "130px", border: "1px solid #ccc" }}>
                         <table className="table table-borderless text-center">
                             <thead>
                                 <tr>
                                     <td>Tổng tiền</td>
-                                    <td>{products.reduce((total, item) => total + (item.price - item.sale_price) * item.quantity, 0)} VNĐ</td>
+                                    <td>
+                                        {products
+                                            .filter((item) => selectedItems.includes(item.id))
+                                            .reduce(
+                                                (total, item) =>
+                                                    total + (item.price - item.sale_price) * item.quantity,
+                                                0
+                                            )
+                                            .toLocaleString()} VNĐ
+                                    </td>
                                 </tr>
                             </thead>
                             <tbody style={{ borderTop: "1px solid #ccc", borderBottom: "1px solid #ccc", height: "30px" }}>
@@ -252,20 +266,19 @@ const Cart = () => {
                                             onClick={() =>
                                                 navigate("/checkout", {
                                                     state: {
-                                                        selectedItems: products.filter(p => selectedItems.includes(p.id)),
+                                                        selectedItems: products.filter((p) => selectedItems.includes(p.id)),
                                                     },
                                                 })
                                             }
-                                            
                                         >
                                             Thanh Toán
                                         </button>
-
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+
                 </div>
 
                 <div>

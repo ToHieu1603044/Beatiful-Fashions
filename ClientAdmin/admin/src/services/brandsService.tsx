@@ -5,7 +5,7 @@ const API_URL = "http://localhost:8000/api/brands";
 // Lấy token từ localStorage
 const getAuthToken = () => localStorage.getItem("access_token");
 
-export const getBrands = async (params?: { name?: string }) => {
+export const getBrands = async (params?: { name?: string, status?: string }) => {
   const token = getAuthToken();
   return await axios.get(API_URL, {
     params,
