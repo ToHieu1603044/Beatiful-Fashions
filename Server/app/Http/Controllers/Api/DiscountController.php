@@ -123,10 +123,22 @@ class DiscountController
         if ($currentDate < $discount->start_date || $currentDate > $discount->end_date) {
             return response()->json(['message' => 'Mã giảm giá không còn hiệu lực.'], 400);
         }
+        $rankingLevels = [
+            'bronze' => 1,
+            'silver' => 2,
+            'gold' => 3,
+            'platinum' => 4,
+        ];
+        
 
-        if($discount->required_ranking && $user->ranking < $discount->required_ranking){
+        if (
+            $discount->required_ranking &&
+            isset($rankingLevels[$discount->required_ranking]) &&
+            $user->ranking < $rankingLevels[$discount->required_ranking]
+        ) {
             return response()->json(['message' => 'Bạn không đủ hạng.'], 400);
         }
+        
 
         if ($discount->is_redeemable) {
             $redeemed = PointRedemption::where('user_id', $user->id)
@@ -241,10 +253,11 @@ class DiscountController
                 'required_ranking' => 'nullable|integer|min:1',
                 'is_first_order' => 'nullable|boolean',
                 'products.*.id' => 'exists:products,id',
-                'required_ranking' => 'nullable|integer|min:1|max:4',
+                'required_ranking' => 'nullable|in:bronze,silver,gold,platinum',
                 'is_redeemable' => 'nullable|boolean',
                 'can_be_redeemed_with_points' => 'nullable|integer',
             ]);
+            
             $startDate = Carbon::parse($request->start_date);
             $endDate = Carbon::parse($request->end_date);
 
@@ -253,7 +266,7 @@ class DiscountController
                     'value' => 'Giá trị phần trăm không thể lớn hơn 100%.',
                 ]);
             }
-
+            
             if ($request->discount_type == 'fixed' && $request->value < 0) {
                 throw ValidationException::withMessages([
                     'value' => 'Giá trị tiền khóa phải lớn hơn 0.',

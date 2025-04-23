@@ -36,7 +36,7 @@ class MomoController
     
         switch ($request->resultCode) {
             case 0: // Giao dịch thành công
-                $order->update(['status' => 'processing', 'is_paid' => true]);
+                $order->update(['status' => 'pending', 'is_paid' => true]);
     
                 Cart::where(function ($query) use ($userId, $session_id) {
                     $userId ? $query->where('user_id', $userId) : $query->where('session_id', $session_id);
@@ -46,18 +46,18 @@ class MomoController
     
                 OrderCreated::dispatch($order);
     
-                return redirect()->to(env('FRONTEND_URL') . "/order/success?orderId=$orderId");
+                return redirect()->to(env('FRONTEND_URL') . "/order/success");
     
             case 7002:
-                return redirect()->to(env('FRONTEND_URL') . "/order/pending?orderId=$orderId");
+                return redirect()->to(env('FRONTEND_URL') . "/order/pending");
     
             case 7003:
             case 9001:
             case 9003:
             case 9004:
             default:
-                $order->update(['status' => 'canceled']);
-                return redirect()->to(env('FRONTEND_URL') . "/order/failed?orderId=$orderId");
+                $order->update(['status' => 'cancelled']);
+                return redirect()->to(env('FRONTEND_URL') . "/order/failed");
         }
     }
     

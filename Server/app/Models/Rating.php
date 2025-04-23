@@ -15,6 +15,7 @@ class Rating extends Model
         'rating',
         'order_detail_id',
         'review',  
+        'parent_id',
     ];
     
 
@@ -30,6 +31,12 @@ class Rating extends Model
     public function orderDetail()
     {
         return $this->belongsTo(OrderDetail::class);
+    }
+    public function replies(){
+        return $this->hasMany(Rating::class, 'parent_id');
+    }
+    public function parent(){
+        return $this->belongsTo(Rating::class, 'parent_id');
     }
     
 }

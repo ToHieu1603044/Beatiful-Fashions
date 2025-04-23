@@ -74,6 +74,7 @@ class FlashSaleController extends Controller
             'products' => 'required|array',
             'products.*.product_id' => 'required|exists:products,id',
             'products.*.discount_price' => 'required|integer|min:0',
+            'products.*.quantity' => 'required|integer|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
         ]);
 
@@ -103,12 +104,13 @@ class FlashSaleController extends Controller
                 'discount_price' => $product['discount_price'],
                 'created_at' => now(),
                 'updated_at' => now(),
+                'quantity' => $product['quantity']
             ];
         }
-        $totalStock = ProductSku::where('product_id', $product['product_id'])->sum('stock');
+        $sku = ProductSku::where('product_id', $product['product_id']);
 
         // Lưu vào Redis
-        Redis::set("flash_sale:product:{$product['product_id']}", $totalStock);
+        Redis::set("flash_sale:product:{sku->sku}", $product['quantity']);
 
         FlashSaleProduct::insert($flashSaleProducts);
 
@@ -191,6 +193,8 @@ class FlashSaleController extends Controller
         if (!$flashSale) {
             return response()->json(['message' => 'Flash Sale không tồn tại'], 404);
         }
+
+        // Chuyển đổi thời gian bắt đầu và kết thúc nếu có
         if ($request->has('start_time')) {
             $request->merge(['start_time' => Carbon::parse($request->start_time)->format('Y-m-d H:i:s')]);
         }
@@ -213,33 +217,41 @@ class FlashSaleController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 400);
         }
+
+        // Kiểm tra thời gian kết thúc phải lớn hơn thời gian bắt đầu
         if ($request->filled('start_time') && $request->filled('end_time')) {
             if (strtotime($request->start_time) >= strtotime($request->end_time)) {
                 return response()->json(['message' => 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu'], 400);
             }
         }
 
+        // Cập nhật hình ảnh nếu có
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('flash_sale_images', 'public');
             $flashSale->image = $imagePath;
         }
 
+        // Cập nhật các thông tin khác của Flash Sale
         $flashSale->fill($request->only(['name', 'start_time', 'end_time', 'status']));
         $flashSale->save();
 
-        // Cập nhật sản phẩm nếu có
+        // Cập nhật sản phẩm trong Flash Sale nếu có
         if ($request->has('products')) {
+            // Xóa tất cả sản phẩm cũ trong Flash Sale
             FlashSaleProduct::where('flash_sale_id', $id)->delete();
 
             $flashSaleProducts = [];
             foreach ($request->products as $product) {
+                // Kiểm tra giá giảm không được lớn hơn giá gốc
                 $checkPrice = ProductSku::where('product_id', $product['product_id'])->first();
-                if ($product['discount_price'] > $checkPrice->price) {
+                if (!$checkPrice || $product['discount_price'] > $checkPrice->price) {
                     return response()->json([
-                        'message' => 'Giá giảm lớn hơn gía gốc',
+                        'message' => 'Giá giảm lớn hơn giá gốc của sản phẩm',
                         'success' => false
                     ], 400);
                 }
+
+                // Thêm sản phẩm vào mảng để lưu vào bảng FlashSaleProduct
                 $flashSaleProducts[] = [
                     'flash_sale_id' => $flashSale->id,
                     'product_id' => $product['product_id'],
@@ -247,8 +259,15 @@ class FlashSaleController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
+
+                // Cập nhật Redis với số lượng sản phẩm mới
+                $sku = ProductSku::where('product_id', $product['product_id'])->first();
+                if ($sku) {
+                    Redis::set("flash_sale:product:{$sku->sku}", $product['quantity']);
+                }
             }
 
+            // Lưu thông tin sản phẩm vào bảng FlashSaleProduct
             FlashSaleProduct::insert($flashSaleProducts);
         }
 
@@ -257,6 +276,7 @@ class FlashSaleController extends Controller
             'flash_sale' => $flashSale,
         ]);
     }
+
 
     // Xoá Flash Sale
     public function destroy($id)

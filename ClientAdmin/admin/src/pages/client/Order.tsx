@@ -96,20 +96,45 @@ const Orders: React.FC = () => {
             if (response.status === 200) {
                 await Swal.fire({
                     title: 'Mua hàng thành công',
-                    text: 'Vui long kiểm tra đơn hàng',
+                    text: 'Vui lòng kiểm tra đơn hàng',
                     icon: 'success',
                 });
             }
-
-        } catch (error) {
-            console.error(error);
-            Swal.fire({
-                title: 'Lỗi',
-                text: 'Không thể mua lại đơn hàng',
-                icon: 'error',
-            });
+        } catch (error: any) {
+            // Kiểm tra và in ra lỗi chi tiết
+            if (error.response) {
+                // Lỗi từ server trả về (ví dụ: mã lỗi HTTP)
+                console.error("Error Response:", error.response.data);
+                console.error("Error Status:", error.response.status);
+                console.error("Error Headers:", error.response.headers);
+                
+                Swal.fire({
+                    title: 'Lỗi',
+                    text: `Không thể mua lại đơn hàng: ${error.response.data.message || 'Vui lòng thử lại sau'}`,
+                    icon: 'error',
+                });
+            } else if (error.request) {
+                // Lỗi khi không nhận được phản hồi từ server
+                console.error("Error Request:", error.request);
+                
+                Swal.fire({
+                    title: 'Lỗi',
+                    text: 'Không nhận được phản hồi từ server. Vui lòng thử lại.',
+                    icon: 'error',
+                });
+            } else {
+                // Lỗi khác (ví dụ: cấu trúc lỗi không đúng)
+                console.error("Error Message:", error.message);
+                
+                Swal.fire({
+                    title: 'Lỗi',
+                    text: `Đã xảy ra lỗi: ${error.message}`,
+                    icon: 'error',
+                });
+            }
         }
     };
+    
 
     const handleSelectReturnItem = (detail: any, quantity: number) => {
         setSelectedReturnItems(prevItems => {

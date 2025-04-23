@@ -138,12 +138,12 @@ const Header = () => {
     <header className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
       <div className="container d-flex align-items-center justify-content-start">
         <a className="navbar-brand me-3 text-white" href="/">
-        <img
-  src={"../../../src/assets/logo.png"}
-  alt={site.site_name || "Logo"}
-  className="img-fluid"
-  style={{ width: '50px', height: '50px', objectFit: 'contain' }}
-/>
+          <img
+            src={"../../../src/assets/logo.png"}
+            alt={site.site_name || "Logo"}
+            className="img-fluid"
+            style={{ width: '50px', height: '50px', objectFit: 'contain' }}
+          />
 
         </a>
 
@@ -192,10 +192,11 @@ const Header = () => {
             <li className="nav-item position-relative">
               <a className="nav-link text-white" href="#" onClick={() => setIsNotificationsOpen(true)}>
                 <Badge count={unreadCount}>
-                  <Bell size={20} />
+                  <Bell size={25} style={{ color: 'white' }} />
                 </Badge>
               </a>
             </li>
+
           </ul>
         </div>
       </div>

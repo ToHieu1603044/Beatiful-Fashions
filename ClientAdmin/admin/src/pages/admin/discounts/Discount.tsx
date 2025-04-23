@@ -5,6 +5,7 @@ import moment from 'moment';
 import { createDiscount } from '../../../services/discountsService';
 import { getProducts } from '../../../services/productService';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 interface Discount {
     id: number; // hoặc string, tùy thuộc vào kiểu dữ liệu của bạn
     name: string;
@@ -61,6 +62,7 @@ const Discount = () => {
         setIsRedeemable(record.is_redeemable);
         setIsModalVisible(true);
     };
+    
     const handleOk = async () => {
         try {
             const data = await form.validateFields();
@@ -68,6 +70,7 @@ const Discount = () => {
                 ...data,
                 product_ids: selectedProducts,
             };
+
             console.log("requestData", requestData);
             
             
@@ -78,18 +81,20 @@ const Discount = () => {
                 
                 if (response.status === 200) {
                     message.success("Cập nhật mã giảm giá thành công!");
-                } else {
-                    message.error("Cập nhật thất bại.");
+                } catch (error) {
+                    handleApiError(error);
+                    return;
                 }
             } else {
-                const response = await createDiscount(requestData);
-                if (response.status == 201) {
+                try {
+                    const response = await createDiscount(requestData);
                     message.success("Tạo mã giảm giá thành công!");
-                } else {
-                    message.error("Tạo mã giảm giá thất bại.");
+                } catch (error) {
+                    handleApiError(error);
+                    return;
                 }
             }
-
+    
             fetchDiscounts();
             setIsModalVisible(false);
             form.resetFields();
@@ -97,9 +102,38 @@ const Discount = () => {
             setIsEditMode(false);
         } catch (error) {
             console.error("Lỗi khi lưu mã giảm giá:", error);
-            message.error("Có lỗi xảy ra khi lưu.");
+            Swal.fire("Lỗi!", "Có lỗi xảy ra khi lưu dữ liệu form.", "error");
         }
     };
+    const handleApiError = (error: any) => {
+        if (error.response) {
+            const response = error.response;
+    
+            // Hiển thị lỗi dạng chuỗi
+            if (typeof response.data.message === 'string') {
+                Swal.fire("Lỗi!", response.data.message, "error");
+            }
+    
+            // Hiển thị lỗi dạng danh sách (Laravel validation)
+            else if (response.data.errors) {
+                const errorList = Object.values(response.data.errors)
+                    .flat()
+                    .map(msg => `<li>${msg}</li>`)
+                    .join("");
+    
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi xác thực dữ liệu:',
+                    html: `<ul style="text-align: left;">${errorList}</ul>`,
+                });
+            } else {
+                Swal.fire("Lỗi!", "Đã xảy ra lỗi không xác định.", "error");
+            }
+        } else {
+            Swal.fire("Lỗi!", "Không thể kết nối đến máy chủ.", "error");
+        }
+    };
+    
     const handleCancel = () => {
         setIsModalVisible(false);
         setEditingDiscount(null);
@@ -286,6 +320,12 @@ const Discount = () => {
             console.error("Error fetching products:", error);
         }
     };
+    const rankingOptions = [
+        { label: 'Đồng', value: "Bronze" },
+        { label: 'Bạc', value: "Silver" },
+        { label: 'Vàng', value: "Gold" },
+        { label: 'Bạch kim', value: "Platinum" },
+    ];
 
     return (
         <div style={{ padding: '20px' }}>
@@ -396,26 +436,11 @@ const Discount = () => {
                                 </Select>
                             </Form.Item>
 
+
                             <Form.Item label="Cần Ranking Tối Thiểu" name="required_ranking">
-                                <InputNumber
-                                    min={1}
-                                    max={4}
-                                    step={1}
-                                    defaultValue={1}
-                                    formatter={(value) => {
-                                        if (value === 1) return 'Bronze';
-                                        if (value === 2) return 'Silver';
-                                        if (value === 3) return 'Gold';
-                                        if (value === 4) return 'Platinum';
-                                        return value;
-                                    }}
-                                    parser={(value) => {
-                                        if (value === 'Bronze') return 1;
-                                        if (value === 'Silver') return 2;
-                                        if (value === 'Gold') return 3;
-                                        if (value === 'Platinum') return 4;
-                                        return value;
-                                    }}
+                                <Select
+                                    options={rankingOptions}
+                                    placeholder="Chọn cấp bậc"
                                 />
                             </Form.Item>
 
@@ -426,7 +451,7 @@ const Discount = () => {
                             <Form.Item label="Có thể đổi bằng điểm?" name="is_redeemable" valuePropName="checked">
                                 <Checkbox onChange={(e) => setIsRedeemable(e.target.checked)}>Cho phép đổi điểm</Checkbox>
                             </Form.Item>
-                            
+
                             {isRedeemable && (
                                 <Form.Item label="Số điểm cần để đổi" name="can_be_redeemed_with_points" rules={[{ required: true, message: 'Vui lòng nhập số điểm!' }]}>
                                     <InputNumber min={1} />

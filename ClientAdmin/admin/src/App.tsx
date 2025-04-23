@@ -68,16 +68,25 @@ const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const [allowed, setAllowed] = useState<null | boolean>(null);
 
   useEffect(() => {
-    const role = localStorage.getItem("role");
+    const role = localStorage.getItem("roles");
     const token = localStorage.getItem("access_token");
-
-    // Check if there's no token or unauthorized role
-    if (!token || (role !== "admin" && role !== "manager" && role !== "content")) {
+  
+    console.log("Raw role from localStorage:", role);
+  
+    const parsedRoles = role ? JSON.parse(role) : [];
+    const allowedRoles = ["admin", "manager", "content"];
+  
+    const hasPermission = parsedRoles.some((r: string) =>
+      allowedRoles.includes(r)
+    );
+  
+    if (!token || !hasPermission) {
       setAllowed(false);
     } else {
       setAllowed(true);
     }
   }, []);
+  
 
   if (allowed === null) {
     return (
@@ -240,10 +249,10 @@ function App() {
     { path: "403", element: <Authorization /> },
     { path: "momo/callback/", element: <OrderCallback /> },
     { path: "order/success", element: <OrderSuccess /> },
+    { path: "order/cancel", element: <OrderFail /> },
+    { path: "order/pending", element: <OrderPending /> },
 
     { path: "order/failed", element: <OrderFail /> },
-
-    { path: "order/pending", element: <OrderPending /> },
 
     { path: "/maintance", element: <MaintenancePage /> },
     

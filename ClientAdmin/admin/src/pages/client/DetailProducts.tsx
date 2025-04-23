@@ -63,6 +63,7 @@ const DetailProducts: React.FC = () => {
                 const productResponse = await getProductById(id);
                 const productData = productResponse.data.data.data;
                 setProduct(productData);
+             //   console.log(productData);
                 setMainImage(`http://127.0.0.1:8000/storage/${productData.images}`);
 
                 if (productData.variants?.length > 0) {
@@ -248,7 +249,7 @@ const DetailProducts: React.FC = () => {
                         <div className="col-md-6">
                             <h3 className="fw-bold">Tên sản phẩm: {product.name}</h3>
                             <h4 className="text-danger fw-bold">
-                                Giá: {formatPrice(selectedVariant ? selectedVariant.price : product.price)}
+                                Giá: {formatPrice(selectedVariant ? selectedVariant.price - product.sale_price  : product.price)}
                                 {selectedVariant?.old_price && (
                                     <del className="text-muted ms-2">{formatPrice(selectedVariant.old_price)}đ</del>
                                 )}
