@@ -79,12 +79,7 @@ const Discount = () => {
                 const response = await axios.put(`http://127.0.0.1:8000/api/discounts/${editingDiscount}`, requestData);
                 console.log("response", response);
                 
-                if (response.status === 200) {
-                    message.success("Cập nhật mã giảm giá thành công!");
-                } catch (error) {
-                    handleApiError(error);
-                    return;
-                }
+         
             } else {
                 try {
                     const response = await createDiscount(requestData);
