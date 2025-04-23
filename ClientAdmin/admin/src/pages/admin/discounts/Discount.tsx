@@ -6,7 +6,24 @@ import { createDiscount } from '../../../services/discountsService';
 import { getProducts } from '../../../services/productService';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-
+interface Discount {
+    id: number; // hoặc string, tùy thuộc vào kiểu dữ liệu của bạn
+    name: string;
+    code: string;
+    discount_type: string;
+    value: number;
+    max_discount: number;
+    min_order_amount: number;
+    start_date: string; // hoặc Date
+    end_date: string; // hoặc Date
+    max_uses: number;
+    products: { id: number; name: string }[]; // Giả sử đây là mảng sản phẩm
+    is_global: boolean;
+    required_ranking: number;
+    is_first_order: boolean;
+    is_redeemable: boolean;
+    can_be_redeemed_with_points: number;
+}
 const Discount = () => {
     const [discounts, setDiscounts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -15,21 +32,34 @@ const Discount = () => {
     const [isRedeemable, setIsRedeemable] = useState(false);
     const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
     const [isEditMode, setIsEditMode] = useState(false);
-    const [editingDiscount, setEditingDiscount] = useState(null);
-    const handleEditDiscount = (discount) => {
+    const [editingDiscount, setEditingDiscount] = useState<Discount | null>(null);
+    console.log("editingDiscount", editingDiscount);
+    
+    const handleEditDiscount = (record) => {
         setIsEditMode(true);
-        setEditingDiscount(discount);
-
+        setEditingDiscount(record.id);
+        console.log("Editing Discount ID:", record.id);
+        // Populate the form with existing record data
         form.setFieldsValue({
-            ...discount,
-            start_date: moment(discount.start_date),
-            end_date: moment(discount.end_date),
-            is_redeemable: discount.is_redeemable,
-            product_ids: discount.products?.map(p => p.id) || [],
+            name: record.name,
+            code: record.code,
+            record_type: record.record_type,
+            value: record.value,
+            max_record: record.max_record,
+            min_order_amount: record.min_order_amount,
+            start_date: moment(record.start_date),
+            end_date: moment(record.end_date),
+            max_uses: record.max_uses,
+            product_ids: record.products?.map(p => p.id) || [],
+            is_global: record.is_global,
+            required_ranking: record.required_ranking,
+            is_first_order: record.is_first_order,
+            is_redeemable: record.is_redeemable,
+            can_be_redeemed_with_points: record.can_be_redeemed_with_points,
         });
 
-        setSelectedProducts(discount.products?.map(p => p.id) || []);
-        setIsRedeemable(discount.is_redeemable);
+        setSelectedProducts(record.products?.map(p => p.id) || []);
+        setIsRedeemable(record.is_redeemable);
         setIsModalVisible(true);
     };
     
@@ -40,10 +70,16 @@ const Discount = () => {
                 ...data,
                 product_ids: selectedProducts,
             };
-    
+
+            console.log("requestData", requestData);
+            
+            
             if (isEditMode && editingDiscount) {
-                try {
-                    const response = await axios.put(`http://127.0.0.1:8000/api/discounts/${editingDiscount.id}`, requestData);
+                console.log("requestData", editingDiscount);
+                const response = await axios.put(`http://127.0.0.1:8000/api/discounts/${editingDiscount}`, requestData);
+                console.log("response", response);
+                
+                if (response.status === 200) {
                     message.success("Cập nhật mã giảm giá thành công!");
                 } catch (error) {
                     handleApiError(error);
@@ -224,7 +260,7 @@ const Discount = () => {
             key: "actions",
             render: (record: any) => (
                 <Button.Group>
-                    <Button type="primary">Edit</Button>
+                   <Button type="primary" onClick={() => handleEditDiscount(record)}>Edit</Button>
                     <Button danger onClick={() => handleDeleteDiscount(record.id)}>Delete</Button>
 
                 </Button.Group>
