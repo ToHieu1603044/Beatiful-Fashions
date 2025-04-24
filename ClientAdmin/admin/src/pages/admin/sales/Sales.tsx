@@ -35,7 +35,7 @@ const Sales: React.FC = () => {
         const fetchSales = async () => {
             try {
                 const response = await axios.get('http://127.0.0.1:8000/api/sales');
-                console.log("data",response.data);
+                console.log("data", response.data);
                 setSales(response.data);
             } catch (error) {
                 console.error('Lỗi khi lấy sản phẩm:', error);
@@ -44,14 +44,18 @@ const Sales: React.FC = () => {
         fetchSales();
     }, []);
 
-    const handleProductAdd = (productId: number, discountPrice: number) => {
-        setSelectedProducts([...selectedProducts, { product_id: productId, discount_price: discountPrice }]);
+    const handleProductAdd = (productId: number, discountPrice: number, quantity: number) => {
+        setSelectedProducts([
+            ...selectedProducts,
+            { product_id: productId, discount_price: discountPrice, quantity }
+        ]);
         setShowModal(false);
     };
 
+
     const handleSubmit = async (values: any) => {
         setLoading(true);
-    
+
         const flashSaleData = {
             name: values.name,
             start_time: values.start_time.format('YYYY-MM-DD HH:mm:ss'),
@@ -60,86 +64,95 @@ const Sales: React.FC = () => {
             image: image,  // Đảm bảo rằng image đã được chọn
             products: selectedProducts,
         };
-    
+
         try {
             const formData = new FormData();
             formData.append('name', flashSaleData.name);
             formData.append('start_time', flashSaleData.start_time);
             formData.append('end_time', flashSaleData.end_time);
             formData.append('status', flashSaleData.status);
-    
+
             // Append products data to formData
             flashSaleData.products.forEach((product: any, index: number) => {
                 formData.append(`products[${index}][product_id]`, product.product_id);
                 formData.append(`products[${index}][discount_price]`, product.discount_price);
+                formData.append(`products[${index}][quantity]`, product.quantity);
+
             });
-    
+
             // Append image to formData if available
             if (image && image.file) {
                 formData.append('image', image.file);  // Chỉ gửi ảnh mà không gọi API upload ảnh
             }
-    
+
             // Gửi formData tới API
             const response = await axios.post('http://127.0.0.1:8000/api/flash-sales', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
-    
+
             setLoading(false);
             Modal.success({ content: 'Flash Sale đã được tạo thành công!' });
         } catch (error) {
             setLoading(false);
             console.error('Lỗi khi tạo Flash Sale:', error);
-    
+
             const errorMessage = error.response?.data?.errors?.name?.[0] || error.message || 'Có lỗi xảy ra, vui lòng thử lại!';
-            
+
             Modal.error({
                 title: 'Lỗi khi tạo Flash Sale',
                 content: errorMessage,
             });
         }
     };
-    
+
     const columns = [
         {
-          title: 'Tên Sản phẩm',
-          dataIndex: 'product_id',
-          key: 'product_id',
-          render: (text: number, record: any) => {
-            const product = products.find((product) => product.id === text);
-            return product ? product.name : 'Không tìm thấy';
-          },
+            title: 'Tên Sản phẩm',
+            dataIndex: 'product_id',
+            key: 'product_id',
+            render: (text: number, record: any) => {
+                const product = products.find((product) => product.id === text);
+                return product ? product.name : 'Không tìm thấy';
+            },
         },
         {
-          title: 'Giá giảm',
-          dataIndex: 'discount_price',
-          key: 'discount_price',
-          render: (text: number) => `${text} VNĐ`,
+            title: 'Giá giảm',
+            dataIndex: 'discount_price',
+            key: 'discount_price',
+            render: (text: number) => `${text} VNĐ`,
         },
         {
-          title: 'Hành động',
-          key: 'action',
-          render: (_: any, record: any) => (
-            <Button
-              danger
-              onClick={() =>
-                setSelectedProducts(
-                  selectedProducts.filter((item) => item.product_id !== record.product_id)
-                )
-              }
-            >
-              Xóa
-            </Button>
-          ),
+            title: 'Số lượng',
+            dataIndex: 'quantity',
+            key: 'quantity',
         },
-      ];
-      
+
+        {
+            title: 'Hành động',
+            key: 'action',
+            render: (_: any, record: any) => (
+                <Button
+                    danger
+                    onClick={() =>
+                        setSelectedProducts(
+                            selectedProducts.filter((item) => item.product_id !== record.product_id)
+                        )
+                    }
+                >
+                    Xóa
+                </Button>
+            ),
+        },
+    ];
+
 
     return (
         <div className='container' style={{ padding: 20 }}>
             <h2>Thêm Flash Sale</h2>
             <Form form={form} onFinish={handleSubmit} layout="vertical">
+
                 <Form.Item label="Tên Flash Sale" name="name" rules={[{ required: true, message: 'Vui lòng nhập tên!' }]}>
                     <Input />
                 </Form.Item>
@@ -207,8 +220,11 @@ const Sales: React.FC = () => {
             >
                 <Form
                     layout="vertical"
-                    onFinish={({ product_id, discount_price }: any) => handleProductAdd(product_id, discount_price)}
+                    onFinish={({ product_id, discount_price, quantity }: any) =>
+                        handleProductAdd(product_id, discount_price, quantity)
+                    }
                 >
+
                     <Form.Item
                         label="Chọn Sản Phẩm"
                         name="product_id"
@@ -229,6 +245,14 @@ const Sales: React.FC = () => {
                         rules={[{ required: true, message: 'Vui lòng nhập giá giảm!' }]}
                     >
                         <InputNumber min={0} style={{ width: '100%' }} />
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Số lượng"
+                        name="quantity"
+                        rules={[{ required: true, message: 'Vui lòng nhập số lượng!' }]}
+                    >
+                        <InputNumber min={1} style={{ width: '100%' }} />
                     </Form.Item>
 
                     <Form.Item>

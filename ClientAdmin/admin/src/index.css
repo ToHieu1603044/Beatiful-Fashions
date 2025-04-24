@@ -2,10 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 /* @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap'); */
-
+/* baif viet */
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 html, body {
   font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
 }
+@media print {
+	body {
+		margin: 0 !important;
+	}
+}
+
+.main-container {
+	font-family: 'Lato';
+	width: fit-content;
+	margin-left: auto;
+	margin-right: auto;background-color: red; 
+  margin-left: -0px;
+  margin: 10px 0px;
+}
+
+.ck-content {
+	font-family: 'Lato';
+	line-height: 1.6;
+	word-break: break-word;
+}
+.editor-container{
+  
+}
+.editor-container_classic-editor .editor-container__editor {
+	min-width: 795px;
+	max-width: 795px;
+}
+/* end bai viet */
 
 /* Thêm CSS vào file stylesheet của bạn */
 .address-column {
@@ -205,7 +234,7 @@ h1 {
     transform: translateY(0);
   }
 }
-// Products.module.css
+/* // Products.module.css */
 .container {
  margin-top: 20px;
 }
@@ -244,9 +273,3 @@ h1 {
  justify-content: flex-start;
  gap: 5px;
 }
-
- @tailwind base;
- @tailwind components;
- @tailwind utilities;
-
-  

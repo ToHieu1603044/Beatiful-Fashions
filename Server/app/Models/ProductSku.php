@@ -16,9 +16,6 @@ class ProductSku extends Model
         'sku',
     ];
 
-    public function product(){
-        return $this->belongsTo(Product::class);
-    }
     public function attributeOptions(){
         return $this->belongsToMany(AttributeOption::class,'attribute_option_sku','sku_id','attribute_option_id');
     }
@@ -32,6 +29,10 @@ public function flashSales()
     return $this->belongsToMany(FlashSale::class, 'flash_sale_products')
                 ->withPivot('discount_price')
                 ->withTimestamps();
+}
+public function product()
+{
+    return $this->belongsTo(Product::class)->withTrashed(); // Lấy luôn sản phẩm đã bị xóa mềm
 }
 
 }

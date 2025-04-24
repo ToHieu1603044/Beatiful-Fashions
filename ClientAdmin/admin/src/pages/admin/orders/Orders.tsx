@@ -14,7 +14,7 @@ const Orders: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string | null>(null); // Bộ lọc trạng thái
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [editOrder, setEditOrder] = useState(null);
 
   useEffect(() => {
@@ -84,6 +84,40 @@ const Orders: React.FC = () => {
     setModalVisible(false);
     setSelectedOrder(null);
   };
+  const handleUpdateStatusInline = async (orderId: number, newStatus: string) => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      Swal.fire("Cập nhật thành công", "Trạng thái đơn hàng đã được cập nhật.", "success");
+      fetchOrders(currentPage, filterStatus);
+    } catch (error) {
+      console.error("Lỗi cập nhật trạng thái:", error);
+      Swal.fire("Lỗi", "Không thể cập nhật trạng thái đơn hàng.", "error");
+    }
+  };
+  const handleMarkAsPaid = async (orderId: number) => {
+    const result = await Swal.fire({
+      title: "Xác nhận đã nhận tiền?",
+      text: "Bạn chắc chắn đã nhận tiền đơn hàng này?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Đã nhận",
+      cancelButtonText: "Hủy",
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await confirmOrder(orderId);
+        Swal.fire("Thành công", "Đã đánh dấu là đã nhận tiền.", "success");
+        fetchOrders(currentPage);
+      } catch (error) {
+        console.error("Lỗi khi đánh dấu đã nhận tiền:", error);
+        Swal.fire("Lỗi!", "Không thể đánh dấu đơn hàng.", "error");
+      }
+    }
+  };
+
 
   const handleUpdateStatus = async () => {
     if (!selectedOrder) return;
@@ -95,12 +129,13 @@ const Orders: React.FC = () => {
       Swal.fire("Thành công!", "Cập nhật trạng thái đơn hàng thành công.", "success");
 
       handleCloseModal();
-      fetchOrders(currentPage, filterStatus); // Giữ nguyên bộ lọc khi reload danh sách
+      fetchOrders(currentPage, filterStatus);
     } catch (error) {
       console.log(error);
       Swal.fire("Lỗi!", "Không thể cập nhật trạng thái đơn hàng.", "error");
     }
   };
+
   const trackingStatusMap: Record<string, string> = {
     pending: "Chờ xử lý",
     processing: "Đang xử lý",
@@ -164,16 +199,78 @@ const Orders: React.FC = () => {
         `${record.city}-${record.district}-${record.ward}-${record.address}`.slice(0, 30) + "...",
     },
     {
+      title: "Trạng thái giao hàng",
+      dataIndex: "tracking_status",
+      key: "tracking_status",
+      render: (status: string, record: any) => {
+        const validNextStatuses: Record<string, string[]> = {
+          pending: ["processing", "cancelled"],
+          processing: ["shipped", "cancelled"],
+          shipped: ["delivered"],
+          delivered: ["completed"],
+          completed: [],
+          cancelled: []
+        };
+
+        const allStatuses = [
+          { value: "pending", label: "Chờ xử lý" },
+          { value: "processing", label: "Đã xác nhận" },
+          { value: "shipped", label: "Đã gửi" },
+          { value: "delivered", label: "Đang giao" },
+          { value: "cancelled", label: "Đã hủy" },
+          { value: "completed", label: "Giao hàng thành công" },
+        ];
+
+        const allowed = validNextStatuses[status] || [];
+
+        return (
+          <Select
+            value={status}
+            onChange={(value) => handleUpdateStatusInline(record.id, value)}
+            disabled={status === 'completed' || status === 'cancelled'}
+            style={{ width: 180 }}
+          >
+            {allStatuses.map((item) => (
+              <Select.Option
+                key={item.value}
+                value={item.value}
+                disabled={item.value === status || !allowed.includes(item.value)}
+              >
+                {item.label}
+              </Select.Option>
+            ))}
+          </Select>
+        );
+      }
+    },
+    {
       title: "Hành động",
       key: "actions",
       render: (record: any) => (
         <Button.Group>
           <Button type="primary" onClick={() => handleShowModal(record)}>View</Button>
           <Button type="primary" onClick={() => handleEditOrder(record)}>Edit</Button>
-          <Button danger>Delete</Button>
+
+          {record.tracking_status === 'completed' && (
+            <Button
+              type="default"
+              disabled={record.is_paid === 1}
+              style={{
+                marginLeft: 8,
+                backgroundColor: record.is_paid === 1 ? "#ccc" : "#4CAF50",
+                color: record.is_paid === 1 ? "#666" : "white",
+                cursor: record.is_paid === 1 ? "not-allowed" : "pointer",
+              }}
+              onClick={() => handleMarkAsPaid(record.id)}
+            >
+              Đã nhận tiền
+            </Button>
+          )}
+
         </Button.Group>
       ),
-    },
+    }
+
   ];
   return (
     <div className="container mt-4">
@@ -189,16 +286,21 @@ const Orders: React.FC = () => {
             setFilterStatus(value || null);
             fetchOrders(1, value || null);
           }}
+          disabled={selectedOrder?.tracking_status === 'completed'} 
         >
-
           <Select.Option value="pending">Chờ xử lý</Select.Option>
           <Select.Option value="processing">Đã xác nhận</Select.Option>
           <Select.Option value="shipped">Đã gửi</Select.Option>
-          <Select.Option value="delivered">Đã giao</Select.Option>
+          <Select.Option value="delivered">Đang giao</Select.Option>
           <Select.Option value="cancelled">Đã hủy</Select.Option>
           <Select.Option value="completed">Giao hàng thành công</Select.Option>
         </Select>
-        <Button danger onClick={handleExportPDF}>📄 Export PDF</Button>
+
+
+        <div className="text-end mb-3">
+          <Button danger onClick={handleExportPDF}>📄 Export PDF</Button>
+        </div>
+
       </div>
 
       <Table columns={columns} dataSource={orders} loading={loading} pagination={false} rowKey="id" />
@@ -216,7 +318,16 @@ const Orders: React.FC = () => {
         className="mt-4 text-center"
       />
 
-      <OrderDetailModal order={selectedOrder} visible={modalVisible} onClose={handleCloseModal} status={status} setStatus={setStatus} onConfirmOrder={handleUpdateStatus} confirmOrder={handleConfirmOrder} />
+      <OrderDetailModal
+        order={selectedOrder}
+        visible={modalVisible}
+        onClose={handleCloseModal}
+        status={status}
+        setStatus={setStatus} 
+        onConfirmOrder={handleUpdateStatus} 
+        confirmOrder={handleMarkAsPaid}
+      />
+
     </div>
   );
 };

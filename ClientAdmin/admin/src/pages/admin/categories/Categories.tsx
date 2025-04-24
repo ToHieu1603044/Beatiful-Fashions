@@ -122,7 +122,7 @@ const Categories = () => {
         ),
         level: level,
       },
-      ...renderCategories(category.children, level + 1), 
+      // ...renderCategories(category.children, level + 1), 
     ]);
   };
 

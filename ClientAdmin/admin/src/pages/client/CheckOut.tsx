@@ -1,18 +1,22 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { getCart } from "../../services/homeService";
+import { fetchDiscountOptions, getCart, getUserProfile } from "../../services/homeService";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axiosInstance from "../../services/axiosInstance";
 import Swal from 'sweetalert2'
+import { Modal, Form, message, Button, InputNumber } from 'antd';
 import { set } from "react-hook-form";
+import ApplyPointsModal from "../../components/clients/ApplyPointsModal";
+import { applyPoints } from "../../services/orderService";
+import { useLocation } from "react-router-dom";
 
 const CheckOut = () => {
-    const userJson = localStorage.getItem("users");
-    const user = userJson ? JSON.parse(userJson) : null;
     const [bank, setBank] = useState<undefined | number>();
     const [provinces, setProvinces] = useState([]);
     const [districts, setDistricts] = useState([]);
+    //const [showPointsModal, setShowPointsModal] = useState(false);
+    const [form] = Form.useForm();
     const [wards, setWards] = useState([]);
     const [selectedProvince, setSelectedProvince] = useState("");
     const [selectedDistrict, setSelectedDistrict] = useState("");
@@ -23,6 +27,13 @@ const CheckOut = () => {
     const [priceDiscount, setPriceDiscount] = useState(0);
     const [isGHNSelected, setIsGHNSelected] = useState(false);
     const [priceShipping, setPriceShipping] = useState(45000);
+    const [showDiscountModal, setShowDiscountModal] = useState(false);
+    const [showPointsModal, setShowPointsModal] = useState(false);
+    const [user, setUser] = useState([]);
+    const [discountOptions, setDiscountOptions] = useState([]);
+    const [point, setPoint] = useState(0);
+    const [usedPoints, setUsedPoints] = useState(0);
+
     const [formData, setFormData] = useState({
         email: "",
         name: "",
@@ -36,39 +47,112 @@ const CheckOut = () => {
         city: "",
         district: "",
         district_name: "",
-        ward: ""
+        ward: "",
+        points: 0
 
     });
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchCarts();
-    }, []);
+    // useEffect(() => {
+    //     fetchCarts();
+    // }, []);
+    // const fetchCarts = async () => {
+    //     try {
+    //         const response = await getCart();
+    //         const cartData = response.data.data.map(item => ({
+    //             ...item,
+    //             quantity: item.quantity || 1,
+    //         }));
+    //         setProducts(cartData);
+    //         // calculateTotal(cartData);
+    //     } catch (error) {
+    //         if (error.response && error.response.status === 401) {
+    //             navigate("/login");
+    //         } else {
+    //             toast.error("Lỗi khi lấy giỏ hàng. Vui lòng thử lại!");
+    //             console.error("Lỗi khi lấy giỏ hàng:", error);
+    //         }
+    //     }
+    // };
     useEffect(() => {
         setFormData((prev) => ({
             ...prev,
             total_amount: discountedTotal
         }));
     }, [discountedTotal]);
+    // useEffect(() => {
+    //     const fetUser = async () => {
+    //         try {
+    //             const response = await getUserProfile()
+    //             const userData = response.data.data;
+    //             console.log("user", userData);
+    //             setPoint(userData.points);
+    //             setUser(userData);
 
-    const fetchCarts = async () => {
-        try {
-            const response = await getCart();
-            const cartData = response.data.data.map(item => ({
-                ...item,
-                quantity: item.quantity || 1,
-            }));
-            setProducts(cartData);
-            calculateTotal(cartData);
-        } catch (error) {
-            if (error.response && error.response.status === 401) {
-                navigate("/login");
-            } else {
-                toast.error("Lỗi khi lấy giỏ hàng. Vui lòng thử lại!");
-                console.error("Lỗi khi lấy giỏ hàng:", error);
+    //             // Cập nhật formData từ user
+    //             setFormData(prev => ({
+    //                 ...prev,
+    //                 email: userData.email,
+    //                 name: userData.name,
+    //                 phone: userData.phone,
+    //                 city: userData.city,
+    //                 district: userData.district,
+    //                 ward: userData.ward
+    //             }));
+    //         } catch (error) {
+    //             console.error("Error fetching user data:", error);
+    //         }
+    //     }
+    //     fetUser();
+    // }, []);
+
+    const location = useLocation();
+    const selectedItems = location.state?.selectedItems || [];
+
+    useEffect(() => {
+        const calculateTotal = (items: any[]) => {
+            const total = items.reduce((sum, item) => sum + (item.price - (item.sale_price || 0)) * item.quantity, 0);
+            console.log("Total amount:", total);
+
+            setTotalAmount(total);
+            setDiscountedTotal(total);
+        };
+
+        calculateTotal(selectedItems);
+        console.log("Các sản phẩm được chọn:", selectedItems);
+    }, [selectedItems]);
+
+    useEffect(() => {
+        const fetchAllData = async () => {
+            try {
+                const [userRes, discountRes] = await Promise.all([
+                    getUserProfile(),
+                    fetchDiscountOptions()
+                ]);
+
+                const userData = userRes.data.data;
+                setUser(userData);
+                setPoint(userData.points);
+
+                setFormData(prev => ({
+                    ...prev,
+                    email: userData.email,
+                    name: userData.name,
+                    phone: userData.phone,
+                    city: userData.city,
+                    district: userData.district,
+                    ward: userData.ward
+                }));
+
+                setDiscountOptions(discountRes.data);
+            } catch (error) {
+                console.error("Lỗi khi load thông tin:", error);
             }
-        }
-    };
+        };
+
+        fetchAllData();
+    }, []);
+
 
     useEffect(() => {
         axios
@@ -114,14 +198,14 @@ const CheckOut = () => {
             if (!selectedDistrict || !selectedWard || typeof selectedWard !== 'string') {
                 console.error("Thông tin địa chỉ không hợp lệ");
                 return;
-              }
-              
+            }
+
             const payload = {
-                from_district_id: 201, 
-                service_id: 53322, 
+                from_district_id: 201,
+                service_id: 53322,
                 to_district_id: selectedDistrict,
                 to_ward_code: selectedWard,
-                height: 5,  
+                height: 5,
                 length: 5,
                 width: 5,
                 weight: 1000,
@@ -155,14 +239,6 @@ const CheckOut = () => {
             calculateShippingFee();
         }
     }, [selectedProvince, selectedDistrict, selectedWard]);
-
-    const calculateTotal = (items: any[]) => {
-        const total = items.reduce((sum, item) => sum + (item.price - item.sale_price) * item.quantity, 0);
-        console.log("Total amount:", total);
-
-        setTotalAmount(total);
-        setDiscountedTotal(total);
-    };
 
     const applyDiscount = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -219,16 +295,59 @@ const CheckOut = () => {
             console.error("Error applying discount:", error);
         }
     };
+    const handleApplyPoints = async () => {
+        try {
+            const values = await form.validateFields();
+
+            if (values.usedPoints > point) {
+                message.error("Bạn không đủ điểm!");
+                return;
+            }
+            console.log('total', totalAmount);
+            const response = await applyPoints({
+                total_amount: totalAmount,
+                used_points: values.usedPoints,
+                priceShipping,
+                priceDiscount,
+                selectedItems
+
+            });
+            console.log(response.data);
+            const discount = response.data.points_discount;
+            const newTotal = Math.max(totalAmount - discount, 0);
+            setUsedPoints(response.data.used_points);
+            setDiscountedTotal(newTotal);
+            setPriceDiscount(discount);
+
+            if (response.data.status) {
+                message.success("Áp dụng điểm thành công!");
+                setFormData({
+                    ...formData,
+                    used_points: response.data.used_points,
+                    
+
+                });
+                form.resetFields();
+                setShowPointsModal(false);
+            } else {
+                message.error("Không thể áp dụng điểm.");
+            }
+        } catch (err) {
+            console.log(err);
+            message.error("Lỗi xảy ra khi áp dụng điểm!");
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Dữ liệu đã gửi:", JSON.stringify({ ...formData, priceDiscount }, null, 2));
+        console.log("Dữ liệu đã gửi:", JSON.stringify({ ...formData, priceDiscount, priceShipping }, null, 2));
 
         try {
             const response = await axiosInstance.post('/orders', {
                 ...formData,
                 priceShipping,
-                priceDiscount
+                priceDiscount,
+                selectedItems
             }, {
                 headers: { 'Content-Type': 'application/json' },
             });
@@ -247,7 +366,7 @@ const CheckOut = () => {
                     icon: "success",
                     confirmButtonText: "OK",
                 }).then(() => {
-                    window.location.href = "/orders";
+
                 });
             }
 
@@ -260,9 +379,8 @@ const CheckOut = () => {
                 confirmButtonText: "OK",
             });
         }
+
     };
-
-
     return (
         <>
             <div
@@ -281,7 +399,7 @@ const CheckOut = () => {
                     {/* logo shop */}
                     <div className="w-100">
                         <img
-                            src="https://bizweb.dktcdn.net/100/347/891/themes/710583/assets/checkout_logo.png?1739517244563"
+                            src="../../assets/logo.png"
                             alt=""
                             style={{
                                 width: "55px",
@@ -325,23 +443,18 @@ const CheckOut = () => {
                             <div
                                 className="mt-3"
                                 style={{
-                                    pointerEvents: !user ? "none" : "auto",
-                                    opacity: !user ? 0.6 : 1,
-                                    cursor: !user ? "not-allowed" : "auto",
+
                                 }}
                             >
                                 <form onSubmit={handleSubmit}>
                                     {/* email */}
                                     <div className="mb-3">
-                                        <input type="text" className="form-control" placeholder="Email"
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Email"
                                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            style={{
-                                                height: "45px",
-                                                pointerEvents: !user ? "none" : "none",
-                                                opacity: !user ? 0.6 : 1,
-                                                cursor: !user ? "not-allowed" : "auto",
-                                            }}
-                                            value={user ? user.email : ""}
+                                            value={formData.email}
                                         />
                                     </div>
                                     {/* họ và tên */}
@@ -351,13 +464,7 @@ const CheckOut = () => {
                                             className="form-control"
                                             placeholder="Họ và tên"
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            style={{
-                                                height: "45px",
-                                                pointerEvents: !user ? "none" : "none",
-                                                opacity: !user ? 0.6 : 1,
-                                                cursor: !user ? "not-allowed" : "auto",
-                                            }}
-                                            value={user ? user.name : ""}
+                                            value={formData.name}
                                         />
                                     </div>
                                     {/* số điện thoại */}
@@ -367,13 +474,7 @@ const CheckOut = () => {
                                             className="form-control"
                                             placeholder="Số điện thoại"
                                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                            style={{
-                                                height: "45px",
-                                                pointerEvents: !user ? "none" : "none",
-                                                opacity: !user ? 0.6 : 1,
-                                                cursor: !user ? "not-allowed" : "auto",
-                                            }}
-                                            value={user ? user.phone : ""}
+                                            value={formData.phone}
                                         />
                                     </div>
                                     {/* tỉnh thành */}
@@ -555,7 +656,7 @@ const CheckOut = () => {
                                             className="form-check-label"
                                             htmlFor="flexRadioDefault1"
                                         >
-                                            Chuyển khoản qua ngân hàng{" "}
+                                            Thanh toán Momo {" "}
                                             <i
                                                 className="fa-regular fa-money-bill-1 text-danger"
                                                 style={{
@@ -576,23 +677,8 @@ const CheckOut = () => {
                                         }}
                                     >
                                         <p>
-                                            Quý Khách vui lòng ghi rõ nội dung
-                                            chuyển tiền :
+                                            Quý Khách vui lòng kiểm tra số tiền giao dịch :
                                         </p>
-
-                                        <p>★ TÊN + MÃ ĐƠN HÀNG</p>
-
-                                        <p>
-                                            Nhận được chuyển khoản shop sẽ gửi
-                                            email thông báo xác nhận thanh toán
-                                            và đóng gói / gửi hàng ngay .
-                                        </p>
-
-                                        <p>
-                                            Ngân hàng TMCP Công thương Việt Nam
-                                        </p>
-                                        <p>NGUYEN DUC DUNG </p>
-                                        <p>103004408358</p>
                                     </div>
                                     <div
                                         style={{
@@ -649,13 +735,13 @@ const CheckOut = () => {
                 </div>
                 {/* right */}
                 <div className="pt-3" style={{ width: "35%", backgroundColor: "#EEEEEEE", paddingLeft: "25px" }}>
-                    <p className="fs-5 fw-bolder mb-4">Đơn hàng ({products.length} sản phẩm)</p>
+                    <p className="fs-5 fw-bolder mb-4">Đơn hàng ({selectedItems.length} sản phẩm)</p>
                     <div className="py-3" style={{ borderTop: "1px solid #C0C0C0", borderBottom: "1px solid #C0C0C0", maxHeight: "200px", overflowY: "scroll" }}>
-                        {products.map((item, index) => (
+                        {selectedItems.map((item, index) => (
                             <div key={index} className="d-flex align-items-center">
                                 <div className="position-relative" style={{ width: "100px" }}>
                                     <img
-                                        src={item.product.image || "https://placeholder.com/50"}
+                                        src={item.product.images ? `http://127.0.0.1:8000/storage/${item.product.images}` : "https://placehold.co/50x50"}
                                         alt=""
                                         style={{ width: "50px", height: "50px", objectFit: "cover", border: "1px solid #C0C0C0", borderRadius: "5px" }}
                                     />
@@ -676,7 +762,7 @@ const CheckOut = () => {
                                 </div>
                                 <div style={{ marginLeft: "-30px", width: "230px" }}>
                                     <p>{item.product.name}</p>
-                                    {item.product.attributes && item.product.attributes.map((attr, attrIndex) => (
+                                    {item.attributes && item.attributes.map((attr, attrIndex) => (
                                         <p key={attrIndex} style={{ marginTop: "-15px" }}>
                                             {attr.attribute}: {attr.value}
                                         </p>
@@ -687,16 +773,91 @@ const CheckOut = () => {
                         ))}
                     </div>
                     <div className="py-3 pl-5" style={{ borderBottom: "1px solid #C0C0C0" }}>
-                        <form onSubmit={applyDiscount} className="d-flex">
-                            <input
-                                type="text"
-                                className="form-control me-2"
-                                placeholder="Nhập mã giảm giá"
-                                style={{ height: "50px", width: "250px" }}
-                                onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
-                            />
-                            <button type="submit" className="btn btn-warning mt-2">Áp Dụng</button>
+                        <form onSubmit={applyDiscount} className="d-flex flex-column" style={{ gap: "10px" }}>
+                            {/* Ô nhập mã giảm giá */}
+                            <button
+                                type="button"
+                                className="btn btn-outline-primary"
+                                style={{ height: "50px", width: "250px", textAlign: "left" }}
+                                onClick={() => setShowDiscountModal(true)}
+                            >
+                                {formData.discount ? `Đã chọn: ${formData.discount}` : "Chọn mã giảm giá"}
+                            </button>
+                            <Button onClick={() => setShowPointsModal(true)}>Dùng điểm</Button>
+                            {usedPoints > 0 && (
+                                <div style={{ marginTop: 10, padding: 10, background: "#f6ffed", border: "1px solid #b7eb8f", borderRadius: 4 }}>
+                                    <strong>{usedPoints.toLocaleString()}</strong> điểm đã dùng
+                                    — giảm giá <strong>{priceDiscount.toLocaleString()}₫</strong>
+                                </div>
+                            )}
+
+                            {/* Select mã giảm giá có thể chọn */}
+                            {showDiscountModal && (
+                                <div className="modal d-block" tabIndex={-1} style={{ background: "rgba(0,0,0,0.5)" }}>
+                                    <div className="modal-dialog modal-lg">
+                                        <div className="modal-content">
+                                            <div className="modal-header">
+                                                <h5 className="modal-title">Chọn mã giảm giá</h5>
+                                                <button type="button" className="btn-close" onClick={() => setShowDiscountModal(false)} />
+                                            </div>
+                                            <div className="modal-body">
+                                                {discountOptions.length === 0 ? (
+                                                    <p>Không có mã giảm giá khả dụng.</p>
+                                                ) : (
+                                                    <div className="row">
+                                                        {discountOptions.map((item) => (
+                                                            <div key={item.id} className="col-md-6 mb-3">
+                                                                <div
+                                                                    className="card h-100 shadow-sm"
+                                                                    style={{ cursor: "pointer", border: formData.discount === item.code ? "2px solid #007bff" : "" }}
+                                                                    onClick={() => {
+                                                                        setFormData({ ...formData, discount: item.code });
+                                                                        setShowDiscountModal(false);
+                                                                    }}
+                                                                >
+                                                                    <div className="card-body">
+                                                                        <h5 className="card-title text-primary">{item.name}</h5>
+                                                                        <p className="card-text">
+                                                                            <strong>Mã:</strong> {item.code} <br />
+                                                                            <strong>Giảm:</strong>{" "}
+                                                                            {item.value}
+                                                                            {item.discount_type === "percentage" ? "%" : " VNĐ"}{" "}
+                                                                            {item.max_discount && ` (Tối đa: ${item.max_discount.toLocaleString()}đ)`} <br />
+                                                                            {item.min_order_amount && (
+                                                                                <>
+                                                                                    <strong>Đơn tối thiểu:</strong> {item.min_order_amount.toLocaleString()}đ <br />
+                                                                                </>
+                                                                            )}
+                                                                            <strong>Hiệu lực:</strong> {item.start_date} → {item.end_date} <br />
+                                                                            <strong>Đã dùng:</strong> {item.used_count}/{item.max_uses}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="card-footer text-end">
+                                                                        <button className="btn btn-sm btn-outline-primary">
+                                                                            {formData.discount === item.code ? "Đã chọn" : "Chọn"}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="modal-footer">
+                                                <button type="button" className="btn btn-secondary" onClick={() => setShowDiscountModal(false)}>
+                                                    Đóng
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {/* Nút áp dụng */}
+                            <button type="submit" className="btn btn-warning mt-2" style={{ width: "250px" }}>
+                                Áp Dụng
+                            </button>
                         </form>
+
                     </div>
                     <div className="py-3 pl-5" style={{ borderBottom: "1px solid #C0C0C0" }}>
                         <div className="d-flex justify-content-between mb-3">
@@ -723,6 +884,34 @@ const CheckOut = () => {
                         </div>
                     </div>
                 </div>
+                <Modal
+                    title="Sử dụng điểm"
+                    open={showPointsModal}
+                    onCancel={() => {
+                        form.resetFields();
+                        setShowPointsModal(false);
+                    }}
+                    onOk={handleApplyPoints}
+                    okText="Xác nhận"
+                    cancelText="Hủy"
+                >
+                    <Form form={form} layout="vertical">
+                        <Form.Item
+                            label={`Nhập số điểm muốn sử dụng (Bạn có ${point} điểm)`}
+                            name="usedPoints"
+                            rules={[{ required: true, message: "Vui lòng nhập số điểm" }]}
+                        >
+                            
+                            <InputNumber
+                                min={0}
+                                max={point}
+                                style={{ width: "100%" }}
+                                placeholder="Ví dụ: 100"
+                            />
+                        </Form.Item>
+                        
+                    </Form>
+                </Modal>
             </div>
         </>
     );

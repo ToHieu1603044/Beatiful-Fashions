@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\OrderReturnController;
 use App\Http\Controllers\Api\PdfController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProductSkuController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
@@ -50,6 +51,7 @@ Route::get('/categories/web', [CategoryController::class, 'indexWeb']);
 Route::get('/categories/web/{id}/', [CategoryController::class, 'categoryDetail']);
 Route::get('slide-banner', [SlideController::class, 'slides']);
 Route::get('site-setting', [SettingController::class, 'siteName']);
+Route::get('avg-rating/{id}', [ProductController::class, 'getAverageRating']);
 //Discount
 Route::get('/provinces', function () {
     $response = Http::get("https://provinces.open-api.vn/api/p/");
@@ -88,8 +90,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('google/login', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
     Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
 
-    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
-    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
+    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy'])->middleware('throttle:2,5');
+    //Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
+    Route::post('orders/apply-points',[OrderController::class, 'applyPoints']);
     Route::get('/orders/invoice', [PdfController::class, 'index']);
     Route::get('carts/count', [CartController::class, 'countCart']);
     Route::apiResource('carts', CartController::class);
@@ -126,6 +129,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
+    Route::get('/products/sku', [ProductSkuController::class, 'index']);
+    Route::post('/ratings/{id}/reply', [RatingController::class, 'reply']);
+
+    Route::get('discounts/usegeder', [DiscountController::class, 'fetchDiscount']);
     Route::get('discounts', [DiscountController::class, 'index']);
     Route::post('discounts', [DiscountController::class, 'store']);
     Route::put('discounts/{id}', [DiscountController::class, 'update']);
@@ -136,7 +143,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/revenue', [DashboardController::class, 'revenueStats']);
 
-    Route::apiResource('slides', SlideController::class); //Slide
+    Route::apiResource('slides', SlideController::class); 
     // User
     Route::get('/users', [UserController::class, 'index']);
 
@@ -231,6 +238,9 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::put('banners/{id}', [SlideController::class, 'updateBanner']);
     Route::get('banners/{id}', [SlideController::class, 'showBanner']);
     Route::delete('banners/{id}', [SlideController::class, 'deleteBanner']);
+
+    Route::put('sales/{id}', [FlashSaleController::class, 'update']);
+    Route::delete('sales/{id}', [FlashSaleController::class, 'destroy']);
 
 
 

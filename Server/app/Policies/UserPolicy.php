@@ -26,10 +26,12 @@ class UserPolicy
         return $user->hasPermissionTo('update_user');
     }
 
-    public function delete(User $user)
+    public function delete(User $authUser, User $targetUser)
     {
-        return $user->hasPermissionTo('delete_user');
+        // Chỉ được xóa nếu có quyền "delete_user" và không xóa user có role admin
+        return $authUser->hasPermissionTo('delete_user') && !$targetUser->hasRole('admin');
     }
+    
 
     public function deleteAny(User $user)
     {

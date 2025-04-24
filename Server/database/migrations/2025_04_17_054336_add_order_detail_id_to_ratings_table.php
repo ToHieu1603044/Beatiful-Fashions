@@ -11,9 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('posts', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+        Schema::table('ratings', function (Blueprint $table) {
+            $table->foreignId('order_detail_id')->after('product_id')->constrained()->onDelete('cascade');
         });
     }
 
@@ -22,6 +21,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('posts');
+        Schema::table('ratings', function (Blueprint $table) {
+            $table->dropForeign(['order_detail_id']);
+            $table->dropColumn('order_detail_id');
+        });
     }
 };

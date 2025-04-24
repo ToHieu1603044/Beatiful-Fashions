@@ -17,67 +17,67 @@ class UserController extends Controller
 {
     // Lấy danh sách users
     public function index()
-{
-    // Check thử xem cache có không
-    if (Cache::has('users')) {
-        logger('✅ Cache tồn tại: users');
-    } else {
-        logger('❌ Không có cache users');
+    {
+        // Check thử xem cache có không
+        if (Cache::has('users')) {
+            logger('✅ Cache tồn tại: users');
+        } else {
+            logger('❌ Không có cache users');
+        }
+
+        $users = User::withoutTrashed()->get();
+
+        return ApiResponse::responsePage(UserResource::collection($users));
     }
 
-    $users = User::withoutTrashed()->get();
 
-    return ApiResponse::responsePage(UserResource::collection($users));
-}
-
-    
 
     // Tạo user mới
     public function store(Request $request)
-{
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => 'required|string|email|max:255|unique:users',
-        'password' => 'required|string|min:6|confirmed',
-        
-        'phone' => 'nullable|string|max:15',
-        'address' => 'nullable|string|max:255',
-        'city' => 'nullable|string|max:100',
-        'ward' => 'nullable|string|max:100',
-        'district' => 'nullable|string|max:100',
-        'zip_code' => 'nullable|string|max:10',
-        'active' => 'nullable|boolean',
-        'roles' => 'nullable|array', 
-        'roles.*' => 'string|exists:roles,name',
-    ]);
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:6|confirmed',
 
-    $user = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'phone' => $request->phone,
-        'address' => $request->address,
-        'city' => $request->city,
-        'ward' => $request->ward,
-        'district' => $request->district,
-        'zip_code' => $request->zip_code,
-        'active' => $request->active ?? 0, 
-    ]);
+            'phone' => 'nullable|string|max:15',
+            'address' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'ward' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'zip_code' => 'nullable|string|max:10',
+            'active' => 'nullable|boolean',
+            'roles' => 'nullable|array',
+            'roles.*' => 'string|exists:roles,name',
+        ]);
 
-
-    if ($request->has('roles')) {
-        $roles = \Spatie\Permission\Models\Role::whereIn('name', $request->roles)->get();
-        $user->syncRoles($roles);
-
-   
-    
-
-    return response()->json($user, 201);
-}
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'phone' => $request->phone,
+            'address' => $request->address,
+            'city' => $request->city,
+            'ward' => $request->ward,
+            'district' => $request->district,
+            'zip_code' => $request->zip_code,
+            'active' => $request->active ?? 0,
+        ]);
 
 
-    return ApiResponse::responseObject(new UserResource($user), 201, 'User created successfully');
-}
+        if ($request->has('roles')) {
+            $roles = \Spatie\Permission\Models\Role::whereIn('name', $request->roles)->get();
+            $user->syncRoles($roles);
+
+
+
+
+            return response()->json($user, 201);
+        }
+
+
+        return ApiResponse::responseObject(new UserResource($user), 201, 'User created successfully');
+    }
 
 
     // Xem chi tiết user
@@ -94,7 +94,7 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
-    
+
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|string|email|max:255|unique:users,email,' . $id,
@@ -106,10 +106,10 @@ class UserController extends Controller
             'district' => 'nullable|string|max:100',
             'zip_code' => 'nullable|string|max:10',
             'active' => 'nullable|boolean',
-            'roles' => 'nullable|array', 
+            'roles' => 'nullable|array',
             'roles.*' => 'string|exists:roles,name',
         ]);
-    
+
         $user->update([
             'name' => $request->name ?? $user->name,
             'email' => $request->email ?? $user->email,
@@ -122,54 +122,59 @@ class UserController extends Controller
             'zip_code' => $request->zip_code ?? $user->zip_code,
             'active' => $request->active ?? $user->active,
         ]);
-    
+
 
         if ($request->has('roles')) {
             $roles = \Spatie\Permission\Models\Role::whereIn('name', $request->roles)->get();
             $user->syncRoles($roles);
         }
     }
-    
+
 
     // Xóa user
     public function destroy($id)
     {
         $user = User::find($id);
+        
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
+        }
+        if($user->hasRole('admin')) {
+            return response()->json(['message' => 'Cannot delete admin user'], 400);
         }
 
         $user->delete();
         return response()->json(['message' => 'User deleted successfully'], 200);
     }
 
-    
- public function profile(Request $request)
- {
-    // Lấy thông tin người dùng từ token (Auth::user() sẽ lấy người dùng dựa trên token)
-    $user = $request->user(); 
 
-    // Trả về thông tin người dùng
-    return ApiResponse::responseObject(new UserResource($user));
- }
+    public function profile(Request $request)
+    {
 
- public function updateProfile(Request $request) {
-    $request->validate([
-        'phone' => 'nullable|string|max:15',
-        'address' => 'nullable|string|max:255',
-        'city' => 'nullable|string|max:100',
-        'district' => 'nullable|string|max:100',
-        'ward' => 'nullable|string|max:100',
-    ]);
+        $user = $request->user();
 
-    $user = Auth::user();
-    $user->update($request->only(['phone', 'address', 'city', 'district', 'ward']));
+        // Trả về thông tin người dùng
+        return ApiResponse::responseObject(new UserResource($user));
+    }
 
-    return response()->json(['message' => 'Cập nhật thành công!', 'user' => $user]);
-}
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'phone' => 'nullable|string|max:15',
+            'address' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'ward' => 'nullable|string|max:100',
+        ]);
 
-//Đổi mật khẩu
- public function changePassword(Request $request)
+        $user = Auth::user();
+        $user->update($request->only(['phone', 'address', 'city', 'district', 'ward']));
+
+        return response()->json(['message' => 'Cập nhật thành công!', 'user' => $user]);
+    }
+
+    //Đổi mật khẩu
+    public function changePassword(Request $request)
     {
         $request->validate([
             'oldPassword' => 'required',

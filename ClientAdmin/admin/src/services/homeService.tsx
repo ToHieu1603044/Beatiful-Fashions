@@ -332,12 +332,45 @@ export const getMaintenanceStatus = async () => {
   });
 };
 
+export const fetchDiscountOptions = async () => {
+  const token = getAuthToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  return axios.get(`${API_BASE_URL}/discounts/usegeder`,{
+      headers
+  });
+};
+
+export const ratings = async (data: any) => {
+  const token = getAuthToken();
+  
+  if (!data) {
+    throw new Error("Data is required");
+  }
+
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/ratings`,
+      { data }, // payload, cần đảm bảo `data` được cấu hình đúng
+      { headers }
+    );
+    return response.data; // Trả về dữ liệu từ response
+  } catch (error) {
+    console.error("Error submitting rating:", error);
+    throw error; // Ném lỗi ra ngoài để có thể xử lý ở nơi gọi hàm
+  }
+};
 export const updateSystemSettings = async (data: any) => {
   const token = getAuthToken();
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   return axios.put(`${API_BASE_URL}/system-settings`, data, { headers });
 };
 
-
+export const getAvgProduct = async (id: number) => {
+  const token = getAuthToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  return axios.get(`${API_BASE_URL}/avg-rating/${id}`, { headers });
+}
 
 

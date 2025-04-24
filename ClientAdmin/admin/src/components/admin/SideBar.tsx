@@ -19,6 +19,7 @@ const menuItems = [
   { to: "/admin/permissions", icon: <TbShieldLock />, label: "Quyền" },
   { to: "/admin/index-sales", icon: <TbShieldLock />, label: "FlashSales" },
   {to: "/admin/discounts", icon: <RiCoupon3Line />, label: "Giảm Giá"},
+  {to: "/admin/slider", icon: <RiCoupon3Line />, label: "Slide"},
   { to: "#", icon: <RiUser3Line />, label: "User", subMenu: [
     { to: "/admin/users/staff", label: "Staff" },
     { to: "/admin/users/customers", label: "Thành Viên" }

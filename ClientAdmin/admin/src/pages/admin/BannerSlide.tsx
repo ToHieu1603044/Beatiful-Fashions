@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, Button, message, Row, Col, Tag } from 'antd';
 import axios from 'axios';
 import { Link } from 'react-router-dom';  // Sử dụng Link nếu bạn sử dụng React Router
+import { getSlide } from '../../services/orderService';
+
 
 interface Slide {
   id: number;
@@ -16,7 +18,7 @@ const BannerSlide: React.FC = () => {
 
   const fetchSlides = async () => {
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/slides');
+      const response = await getSlide();
       setSlides(response.data);
     } catch (error) {
       console.error(error);

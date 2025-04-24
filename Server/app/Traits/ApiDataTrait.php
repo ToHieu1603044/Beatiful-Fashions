@@ -22,7 +22,9 @@ trait ApiDataTrait
             } else {
                 \Log::info("Không có cache, truy vấn database: $cacheKey");
             }
-                        
+            
+            
+            
             $start = microtime(true);
             // Cache trong 10 phút (600 giây)
             $data = Cache::remember($cacheKey, 600, function () use ($model, $relations, $filters, $filterableFields, $dates) {

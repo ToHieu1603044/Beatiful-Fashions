@@ -1,15 +1,24 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getCart, updateCart, deleteCartItem } from "../../services/homeService";
 import { useNavigate } from "react-router-dom";
+
+import { getCart, updateCart, deleteCartItem } from "../../services/homeService";
 import Swal from 'sweetalert2'
 const Cart = () => {
     const [products, setProducts] = useState([]);
     const navigate = useNavigate();
+    const [selectedItems, setSelectedItems] = useState<number[]>([]);
 
     useEffect(() => {
         fetchCarts();
     }, []);
+    const handleSelectItem = (id: number) => {
+        setSelectedItems((prevSelected) =>
+            prevSelected.includes(id)
+                ? prevSelected.filter(itemId => itemId !== id)
+                : [...prevSelected, id]
+        );
+    };
 
     const fetchCarts = async () => {
         try {
@@ -43,14 +52,23 @@ const Cart = () => {
         if (newQuantity < 1) return;
 
         try {
-            await updateCart({ quantity: newQuantity }, id);
+            const response = await updateCart({ quantity: newQuantity }, id);
             setProducts((prevProducts) =>
                 prevProducts.map((item) =>
                     item.id === id ? { ...item, quantity: newQuantity } : item
                 )
             );
+            console.log('Resss', response.data);
+            if (response.data.status === "success") {
+                fetchCarts();
+            }
         } catch (error) {
-            console.error("Lỗi khi cập nhật giỏ hàng:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi',
+                text: `Sản phẩm ${product.product.name} vượt quá số lượng trong kho.`,
+            });
+
         }
     };
 
@@ -105,108 +123,162 @@ const Cart = () => {
                 <div className="w-100 d-flex">
                     <div style={{ width: "68%", marginRight: "30px" }}>
                         <div className="d-flex" style={{ padding: "10px 20px", borderTop: "1px solid #ccc", borderBottom: "1px solid #ccc" }}>
-                            <p style={{ marginRight: "400px" }}>Sản phẩm</p>
+                            <p style={{ marginRight: "350px" }}>Sản phẩm</p>
                             <p style={{ marginRight: "140px" }}>Số lượng</p>
                             <p style={{ marginRight: "40px" }}>Tổng tiền</p>
-                            <p>Xóa</p>
+                            <p>Thao tác</p>
                         </div>
 
                         <div>
-                            {products.map((item: any) => (
-                                <div key={item.id}>
-                                    <div className="d-flex" style={{ borderBottom: "1px solid #ccc", position: "relative" }}>
-                                        <img
-                                            src={item.product.images ? `http://127.0.0.1:8000/storage/${item.product.images}` : "https://placehold.co/50x50"}
-                                            alt=""
-                                            style={{ width: "190px", height: "230px", objectFit: "contain", margin: "15px 10px 10px" }}
-                                        />
-                                        <div style={{ marginLeft: "-20px", marginTop: "40px", fontSize: "15px", position: "absolute", left: "30%" }}>
-                                            <p>{item.product.name}</p>
-                                            <p className="mt-2">
-                                                {item.attributes.map((attr: any) => (
-                                                    <span key={attr.id}>{attr.attribute}: {attr.value}{" "}{attr.price}</span>
-                                                ))}
-                                            </p>
+                            {products.map((item: any) => {
+                                const isDisabled = !item.product.active || item.product.deleted_at !== null;
 
-                                        </div>
+                                return (
+                                    <div key={item.id}>
+                                        <div className="d-flex" style={{ borderBottom: "1px solid #ccc", position: "relative", opacity: isDisabled ? 0.6 : 1 }}>
+                                            <a href={`products/${item.product.id}/detail`}>
+                                                <img
+                                                    src={item.product.images ? `http://127.0.0.1:8000/storage/${item.product.images}` : "https://placehold.co/50x50"}
+                                                    alt=""
+                                                    style={{ width: "100px", height: "180px", objectFit: "contain", margin: "15px 10px 10px" }}
+                                                />
+                                            </a>
 
-                                        <div style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "10px",
-                                            height: "50px",
-                                            padding: "10px",
-                                            border: "1px solid #ccc",
-                                            borderRadius: "30px",
-                                            marginTop: "100px",
-                                            marginLeft: "270px",
-                                        }}>
-                                            <button
-                                                onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                                style={{ padding: "5px 0px 5px 10px", background: "white", border: "none", cursor: item.quantity > 1 ? "pointer" : "not-allowed" }}
-                                                disabled={item.quantity <= 1}
-                                            >
-                                                {"<"}
-                                            </button>
-                                            <span style={{
-                                                minWidth: "30px",
-                                                textAlign: "center",
-                                                border: "1px solid #ccc",
-                                                height: "50px",
+                                            <div style={{ marginLeft: "-20px", marginTop: "40px", fontSize: "15px", position: "absolute", left: "30%" }}>
+                                                <a style={{ color: "black", textDecoration: "none" }} href={`products/${item.product.id}/detail`}>
+                                                    <p>{item.product.name}</p>
+                                                </a>
+
+                                                <p className="mt-2">
+                                                    {item.attributes.map((attr: any) => (
+                                                        <span key={attr.id}>{attr.attribute}: {attr.value}{" "}{attr.price}</span>
+                                                    ))}
+                                                </p>
+                                                {isDisabled && (
+                                                    <p style={{ color: "red", fontSize: "13px" }}>
+                                                        Sản phẩm không tồn tại.
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div style={{
                                                 display: "flex",
                                                 alignItems: "center",
-                                                justifyContent: "center",
-                                                width: "60px",
+                                                gap: "10px",
+                                                height: "50px",
+                                                padding: "10px",
+                                                border: "1px solid #ccc",
+                                                borderRadius: "30px",
+                                                marginTop: "100px",
+                                                marginLeft: "270px",
+                                                opacity: isDisabled ? 0.5 : 1,
+                                                pointerEvents: isDisabled ? "none" : "auto",
                                             }}>
-                                                {item.quantity}
-                                            </span>
-                                            <button
-                                                onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                                style={{ padding: "5px 10px 5px 0px", border: "none", background: "white", cursor: "pointer" }}
+                                                <button
+                                                    onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                                    style={{
+                                                        padding: "5px 0px 5px 10px",
+                                                        background: "white",
+                                                        border: "none",
+                                                        cursor: item.quantity > 1 ? "pointer" : "not-allowed"
+                                                    }}
+                                                    disabled={item.quantity <= 1 || isDisabled}
+                                                >
+                                                    {"<"}
+                                                </button>
+                                                <span style={{
+                                                    minWidth: "30px",
+                                                    textAlign: "center",
+                                                    border: "1px solid #ccc",
+                                                    height: "50px",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    width: "60px",
+                                                }}>
+                                                    {item.quantity}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                                    style={{
+                                                        padding: "5px 10px 5px 0px",
+                                                        border: "none",
+                                                        background: "white",
+                                                        cursor: "pointer"
+                                                    }}
+                                                    disabled={isDisabled}
+                                                >
+                                                    {">"}
+                                                </button>
+                                            </div>
+
+                                            <div style={{ margin: "110px 0px 0px 50px", width: "100px" }}>
+                                                <p>
+                                                    {((item.price - item.sale_price) * item.quantity).toLocaleString()} VNĐ
+                                                </p>
+                                            </div>
+
+                                            <div
+                                                style={{ margin: "110px 0px 0px -10px", cursor: "pointer" }}
+                                                onClick={() => handleRemoveItem(item.id)}
                                             >
-                                                {">"}
-                                            </button>
-                                        </div>
+                                                <i className="fa-solid fa-trash-can"></i>
 
-                                        <div style={{ margin: "110px 0px 0px 50px", width: "100px" }}>
-                                            <p>
-                                                {(item.price - item.sale_price) * item.quantity
-                                                    .toLocaleString()} VNĐ
-                                            </p>
+                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedItems.includes(item.id)}
+                                                onChange={() => handleSelectItem(item.id)}
+                                                style={{ marginTop: '38px', left: '0px', marginLeft: '15px' }}
 
-                                        </div>
-
-                                        <div
-                                            style={{ margin: "110px 0px 0px 10px", cursor: "pointer" }}
-                                            onClick={() => handleRemoveItem(item.id)}
-                                        >
-                                            <i className="fa-solid fa-trash-can"></i>
+                                                disabled={!item.product.active || item.product.deleted_at !== null}
+                                            />
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
+
                         </div>
                     </div>
-
                     <div style={{ width: "30%", height: "130px", border: "1px solid #ccc" }}>
                         <table className="table table-borderless text-center">
                             <thead>
                                 <tr>
                                     <td>Tổng tiền</td>
-                                    <td>{products.reduce((total, item) => total + (item.price - item.sale_price) * item.quantity, 0)} VNĐ</td>
+                                    <td>
+                                        {products
+                                            .filter((item) => selectedItems.includes(item.id))
+                                            .reduce(
+                                                (total, item) =>
+                                                    total + (item.price - item.sale_price) * item.quantity,
+                                                0
+                                            )
+                                            .toLocaleString()} VNĐ
+                                    </td>
                                 </tr>
                             </thead>
                             <tbody style={{ borderTop: "1px solid #ccc", borderBottom: "1px solid #ccc", height: "30px" }}>
                                 <tr>
                                     <td colSpan={2}>
-                                        <Link to="/checkout">
-                                            <button className="btn btn-dark" style={{ width: "150px", padding: "10px", borderRadius: "30px" }}>Thanh Toán</button>
-                                        </Link>
+                                        <button
+                                            className="btn btn-dark"
+                                            style={{ width: "150px", padding: "10px", borderRadius: "30px" }}
+                                            onClick={() =>
+                                                navigate("/checkout", {
+                                                    state: {
+                                                        selectedItems: products.filter((p) => selectedItems.includes(p.id)),
+                                                    },
+                                                })
+                                            }
+                                        >
+                                            Thanh Toán
+                                        </button>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+
                 </div>
 
                 <div>
