@@ -67,7 +67,6 @@ const Login = () => {
     setLoading(true);
     try {
       const response = await login(data.email, data.password);
-
       if (response.access_token) {
         const expiresAt = new Date().getTime() + 24 * 60 * 60 * 1000; // 1 ngày
 
@@ -77,7 +76,6 @@ const Login = () => {
 
         const userRoles = response.user.roles?.map(role => role.name) || response.role || [];
         localStorage.setItem("roles", JSON.stringify(userRoles));
-
         axios.defaults.headers.common["Authorization"] = `Bearer ${response.access_token}`;
 
         // Điều hướng theo vai trò
@@ -117,7 +115,7 @@ const Login = () => {
 
   return (
     <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
-      <div className="card shadow-lg border-0 p-4 rounded-4" style={{ width: "380px", background: "rgba(255, 255, 255, 0.85)", backdropFilter: "blur(10px)" }}>
+<div className="card shadow-lg border-0 p-4 rounded-4" style={{ width: "380px", background: "rgba(255, 255, 255, 0.85)", backdropFilter: "blur(10px)" }}>
         <div className="text-center mb-4">
           <h2 className="fw-bold text-dark">Đăng nhập</h2>
         </div>

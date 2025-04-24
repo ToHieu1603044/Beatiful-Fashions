@@ -161,7 +161,7 @@ function App() {
         { path: "users", element: <Users />,
         },
         { path: "users/add", element: <AddUser/> },
-        // { path: "users/:id/edit", element: <EditUser /> },
+         { path: "users/:id/edit", element: <EditUser /> },
 
         {
           path: "attributes",
