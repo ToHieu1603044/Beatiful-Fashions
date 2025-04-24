@@ -12,8 +12,14 @@ import {
   Popconfirm,
   Typography,
   Modal,
+  Select,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+} from "@ant-design/icons";
 
 const { Search } = Input;
 
@@ -21,37 +27,55 @@ const Staff = () => {
   const [users, setUsers] = useState<IUsers[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<IUsers | null>(null);
-  const usersPerPage = 10;
+  const [filterType, setFilterType] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const usersPerPage = 5;
   const navigate = useNavigate();
+
   const showUserDetail = (user: IUsers) => {
     setSelectedUser(user);
     setIsModalVisible(true);
   };
 
-  const getAll = async () => {
+  const getAll = async (page: number = 1, type: string = "") => {
     try {
+      setLoading(true);
       const response = await axios.get("http://127.0.0.1:8000/api/listUsers", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
+        params: {
+          page,
+          type,
+        },
       });
-      setUsers(response.data.data.filter((user: IUsers) => user.role.includes("manager")));
+
+      setUsers(response.data.data);
+      setTotalUsers(response.data.page.total);
     } catch (error) {
       console.log(error);
+      message.error("Lỗi khi tải danh sách người dùng");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    getAll();
-  }, []);
+    getAll(currentPage, filterType);
+  }, [currentPage, filterType]);
 
   const handleDelete = async (id: string) => {
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/users/${id}`);
+      await axios.delete(`http://127.0.0.1:8000/api/users/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+      });
       message.success("Xóa thành công!");
-      getAll();
+      getAll(currentPage, filterType);
     } catch (error) {
       console.log(error);
       message.error("Xóa thất bại!");
@@ -107,6 +131,9 @@ const Staff = () => {
     {
       title: "Vai trò",
       dataIndex: "role",
+      render: (role: any[]) => {
+        return role.length > 0 ? role.map((r) => r.name).join(", ") : "N/A";
+      },
     },
     {
       title: "Hành động",
@@ -133,15 +160,29 @@ const Staff = () => {
 
   return (
     <div className="container mt-4">
-      <Typography.Title level={3}>Danh sách Staff</Typography.Title>
+      <Typography.Title level={3}>Danh sách người dùng</Typography.Title>
 
       <Space style={{ marginBottom: 16 }}>
         <Search
           placeholder="Tìm kiếm theo tên hoặc email..."
           allowClear
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ width: 400 }}
+          style={{ width: 300 }}
         />
+
+        <Select
+          value={filterType}
+          onChange={(value) => {
+            setCurrentPage(1);
+            setFilterType(value);
+          }}
+          style={{ width: 200 }}
+        >
+          <Select.Option value="">Tất cả</Select.Option>
+          <Select.Option value="staff">Nhân viên</Select.Option>
+          <Select.Option value="customer">Khách hàng</Select.Option>
+        </Select>
+
         <Link to="/admin/users/add">
           <Button type="primary" icon={<PlusOutlined />}>
             Thêm Staff
@@ -150,22 +191,23 @@ const Staff = () => {
       </Space>
 
       <Table
-        dataSource={filteredUsers}
-        columns={columns}
         rowKey="id"
+        columns={columns}
+        dataSource={filteredUsers}
         pagination={false}
-        bordered
+        loading={loading}
       />
 
       <div className="flex justify-center mt-4">
         <Pagination
           current={currentPage}
           pageSize={usersPerPage}
-          total={filteredUsers.length}
+          total={totalUsers}
           onChange={(page) => setCurrentPage(page)}
           showSizeChanger={false}
         />
       </div>
+
       <Modal
         title="Chi tiết người dùng"
         open={isModalVisible}
@@ -186,11 +228,10 @@ const Staff = () => {
             <p><strong>Quận / Huyện:</strong> {selectedUser.district}</p>
             <p><strong>Phường / Xã:</strong> {selectedUser.ward}</p>
             <p><strong>Mã Zip:</strong> {selectedUser.zipCode}</p>
-            <p><strong>Vai trò:</strong> {selectedUser.role}</p>
+            <p><strong>Vai trò:</strong> {selectedUser.role && selectedUser.role.length > 0 ? selectedUser.role.map((r) => r.name).join(", ") : "N/A"}</p>
           </div>
         )}
       </Modal>
-
     </div>
   );
 };

@@ -197,55 +197,56 @@ class ProductController extends Controller
     public function update(ProductRequest $request, $id)
     {
         $validated = $request->validated();
-
+    
         DB::beginTransaction();
-
+    
         try {
             $product = Product::findOrFail($id);
             $product->fill($request->only(['name', 'brand_id', 'category_id', 'description', 'images']));
-
+    
             $currentImage = $product->images;
             if ($request->hasFile('images')) {
-
                 if (!empty($currentImage) && \Storage::exists('public/' . $currentImage)) {
                     \Storage::delete('public/' . $currentImage);
                 }
-
+    
                 $path = $request->file('images')->store('products', 'public');
                 $product->images = $path;
             }
-
+    
             $product->save();
-
+    
             if ($request->hasFile('image')) {
                 foreach ($request->image as $file) {
                     $pathImage = $file->store('products/gallery', 'public');
-
+    
                     Gallery::updateOrCreate([
                         'product_id' => $product->id,
                         'image' => $pathImage
                     ]);
                 }
             }
-
+    
             $attributeMap = [];
             if ($request->has('attributes')) {
                 foreach ($validated['attributes'] as $attr) {
                     $attribute = Attribute::firstOrCreate(['name' => $attr['name']]);
-
+    
                     foreach ($attr['values'] as $value) {
                         $attributeOption = AttributeOption::firstOrCreate([
                             'attribute_id' => $attribute->id,
                             'value' => $value
                         ]);
-
+    
                         $attributeMap[$attr['name']][$value] = $attributeOption->id;
                     }
                 }
-
             }
+    
             if ($request->has('variant_values')) {
                 $existingSkus = $product->skus->pluck('id', 'sku');
+                $requestedSkus = [];
+    
                 foreach ($validated['variant_values'] as $variant) {
                     $sku_values = [];
                     foreach ($variant['variant_combination'] as $option_value) {
@@ -257,6 +258,30 @@ class ProductController extends Controller
                     }
                     sort($sku_values);
                     $sku = $product->id . '-' . implode('-', $sku_values);
+                    $requestedSkus[] = $sku;
+                }
+    
+                // Xoá SKU không còn trong variant_values
+                $skusToDelete = $existingSkus->keys()->diff($requestedSkus);
+                if ($skusToDelete->isNotEmpty()) {
+                    $skusToDeleteIds = $existingSkus->only($skusToDelete)->values();
+                    AttributeOptionSku::whereIn('sku_id', $skusToDeleteIds)->delete();
+                    ProductSku::whereIn('id', $skusToDeleteIds)->delete();
+                }
+    
+                // Tạo hoặc cập nhật SKU
+                foreach ($validated['variant_values'] as $variant) {
+                    $sku_values = [];
+                    foreach ($variant['variant_combination'] as $option_value) {
+                        foreach ($attributeMap as $name => $values) {
+                            if (isset($values[$option_value])) {
+                                $sku_values[] = $values[$option_value];
+                            }
+                        }
+                    }
+                    sort($sku_values);
+                    $sku = $product->id . '-' . implode('-', $sku_values);
+    
                     if ($existingSkus->has($sku)) {
                         $productSku = ProductSku::findOrFail($existingSkus[$sku]);
                         $productSku->update([
@@ -265,7 +290,6 @@ class ProductController extends Controller
                             'stock' => $variant['stock'],
                         ]);
                     } else {
-
                         $productSku = ProductSku::create([
                             'product_id' => $product->id,
                             'price' => $variant['price'],
@@ -282,7 +306,9 @@ class ProductController extends Controller
                     }
                 }
             }
+    
             DB::commit();
+            Cache::forget('products_cache');
             return response()->json([
                 'message' => 'Sản phẩm đã được cập nhật thành công!',
                 'product' => $product->load('skus')
@@ -295,6 +321,7 @@ class ProductController extends Controller
             ], 500);
         }
     }
+    
     public function destroy($id)
     {
         try {

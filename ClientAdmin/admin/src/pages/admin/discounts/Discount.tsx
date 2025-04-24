@@ -79,9 +79,12 @@ const Discount = () => {
                 const response = await axios.put(`http://127.0.0.1:8000/api/discounts/${editingDiscount}`, requestData);
                 console.log("response", response);
                 
+               try{
                 if (response.status === 200) {
                     message.success("Cập nhật mã giảm giá thành công!");
-                } catch (error) {
+                }
+               }
+                 catch (error) {
                     handleApiError(error);
                     return;
                 }
@@ -321,10 +324,10 @@ const Discount = () => {
         }
     };
     const rankingOptions = [
-        { label: 'Đồng', value: "Bronze" },
-        { label: 'Bạc', value: "Silver" },
-        { label: 'Vàng', value: "Gold" },
-        { label: 'Bạch kim', value: "Platinum" },
+        { label: 'Đồng', value: "bronze" },
+        { label: 'Bạc', value: "silver" },
+        { label: 'Vàng', value: "gold" },
+        { label: 'Bạch kim', value: "platinum" },
     ];
 
     return (
