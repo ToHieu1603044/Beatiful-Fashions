@@ -8,7 +8,7 @@ import "../../../App.css";
 import { CKEditorComponent } from "../../../components/CKEditorComponent";
 import { Baiviet } from "../../../interfaces/baiviet";
 
-const BaivietForm = () => {
+const EditBaiviet = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [description, setDescription] = useState<string>("");
@@ -16,11 +16,11 @@ const BaivietForm = () => {
     const [loading, setLoading] = useState(false);
     const [imgURL, setImgURL] = useState<string>("");
     const token = localStorage.getItem("access_token");
-    
+
     const {
         register,
         handleSubmit,
-        setValue,
+        reset,
         formState: { errors },
     } = useForm<Baiviet>();
 
@@ -30,10 +30,12 @@ const BaivietForm = () => {
                 try {
                     setLoading(true);
                     const { data } = await axios.get(`http://127.0.0.1:8000/api/posts/${id}`);
-                    setValue("title", data.title);
-                    setValue("titleHead", data.titleHead);
-                    setValue("description", data.description);
-                    setValue("image", data.image);
+                    reset({
+                        title: data.title,
+                        titleHead: data.titleHead,
+                        description: data.description,
+                        image: data.image,
+                    });
                     setDescription(data.description);
                     setImgURL(data.image); // Hiển thị ảnh hiện tại
                 } catch {
@@ -43,7 +45,7 @@ const BaivietForm = () => {
                 }
             })();
         }
-    }, [id, setValue]);
+    }, [id, reset]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -53,6 +55,8 @@ const BaivietForm = () => {
     };
 
     const handleSubmitForm = async (data: any) => {
+        console.log(data);
+
         if (!description.trim()) {
             Swal.fire({
                 icon: "error",
@@ -61,15 +65,12 @@ const BaivietForm = () => {
             });
             return;
         }
-
         const result = await Swal.fire({
-            title: id ? "Xác nhận cập nhật" : "Xác nhận tạo mới",
-            text: id
-                ? "Bạn có chắc chắn muốn cập nhật bài viết này?"
-                : "Bạn có chắc chắn muốn tạo mới bài viết?",
+            title: "Xác nhận cập nhật",
+            text: "Bạn có chắc chắn muốn cập nhật bài viết này?",
             icon: "warning",
             showCancelButton: true,
-            confirmButtonText: id ? "Cập nhật" : "Tạo mới",
+            confirmButtonText: "Cập nhật",
             cancelButtonText: "Hủy",
         });
 
@@ -79,37 +80,33 @@ const BaivietForm = () => {
 
         try {
             setLoading(true);
-            const payload = { ...data, description: description, isActive: true };
+            const payload = { ...data, isActive: true };
+            console.log("payload", payload);
+
             const formData = new FormData();
 
             // Thêm dữ liệu vào FormData
-            Object.keys(payload).forEach(key => {
+            Object.keys(payload).forEach((key) => {
                 formData.append(key, payload[key]);
-                
             });
             if (image) {
-                formData.append('image', image); // Thêm tệp ảnh
+                formData.append("image", image); // Thêm tệp ảnh
             }
+            console.log("formData", [...formData]);
 
-            if (id) {
-                const response =await axios.put(`http://127.0.0.1:8000/api/posts/${id}`, formData, {
-                     headers: {
-                        'Content-Type': 'multipart/form-data',
-                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                    },
-                });
-                console.log(response.data); 
-                Swal.fire("Thành công", "Bài viết đã được cập nhật", "success");
-            } else {
-                await axios.post("http://127.0.0.1:8000/api/posts", formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                    },
-                });
-                Swal.fire("Thành công", "Bài viết mới đã được tạo", "success");
-            }
-            navigate("/admin/baiviet");
+            const arrayData = Object.fromEntries(formData);
+            console.log("arrayData", arrayData);
+            
+            // const response = await axios.put(`http://127.0.0.1:8000/api/posts/${id}`, arrayData, {
+            //     headers: {
+            //         "Content-Type": "multipart/form-data",
+            //         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            //     },
+            // });
+            
+            // console.log(response.data);
+            // Swal.fire("Thành công", "Bài viết đã được cập nhật", "success");
+            // navigate("/admin/baiviet");
         } catch (error: any) {
             const errorMessage =
                 error.response?.data?.message ||
@@ -128,7 +125,7 @@ const BaivietForm = () => {
 
     return (
         <div className="container">
-            <h1>{id ? "Chỉnh sửa bài viết" : "Tạo mới bài viết"}</h1>
+            <h1>Chỉnh sửa bài viết</h1>
             <form onSubmit={handleSubmit(handleSubmitForm)}>
                 <div className="mb-3">
                     <label>Tiêu đề</label>
@@ -157,13 +154,12 @@ const BaivietForm = () => {
 
                 <div className="mb-3">
                     <label>Mô tả</label>
-                    <CKEditorComponent
-                        value={description}
-                        onChange={setDescription}
-                    />
+                    <CKEditorComponent value={description} onChange={setDescription} />
                 </div>
                 <div className="mb-3">
-                    <label className="form-label" htmlFor="mainImage">Ảnh chính</label>
+                    <label className="form-label" htmlFor="mainImage">
+                        Ảnh chính
+                    </label>
                     <input
                         id="mainImage"
                         type="file"
@@ -175,11 +171,11 @@ const BaivietForm = () => {
                     {id ? <img src={imgURL} alt="" style={{ width: "100px" }} /> : ""}
                 </div>
                 <button type="submit" className="btn btn-primary">
-                    {id ? "Cập nhật" : "Tạo mới"}
+                    Cập nhật
                 </button>
             </form>
         </div>
     );
 };
 
-export default BaivietForm;
+export default EditBaiviet;

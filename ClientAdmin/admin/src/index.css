@@ -273,15 +273,13 @@ h1 {
  justify-content: flex-start;
  gap: 5px;
 }
-<<<<<<< HEAD
-
- @tailwind base;
+ /* @tailwind base;
  @tailwind components;
  @tailwind utilities;
 
  @tailwind base;
  @tailwind components;
- @tailwind utilities;
+ @tailwind utilities; */
  /* @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap'); */
  
  /* html, body {
@@ -479,10 +477,10 @@ h1 {
      transform: translateY(0);
    }
  }
- // Products.module.css
+ /* // Products.module.css
  .container {
   margin-top: 20px;
- }
+ } */
  
  
  .searchBox {
@@ -511,7 +509,7 @@ h1 {
   background-color: #dc3545;
   color: white;
  }
-  */
+
  
  /* .actionButtons {
   display: flex;
@@ -519,13 +517,12 @@ h1 {
   gap: 5px;
  }  */
  
-  @tailwind base;
+  /* @tailwind base;
   @tailwind components;
-  @tailwind utilities;
+  @tailwind utilities; */
  
    
  
-=======
 .image_baiviet_header{
   position: relative;
   height: 200px;
@@ -573,4 +570,3 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
 }
->>>>>>> c1b01cccacc25232cd96df6111056f8d1a5ce92f
