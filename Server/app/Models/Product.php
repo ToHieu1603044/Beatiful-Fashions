@@ -92,6 +92,11 @@ class Product extends Model
             ->withPivot('discount_price', 'quantity')
             ->withTimestamps();
     }
+    public function carts()
+    {
+        return $this->hasMany(Cart::class);
+    }
+
 
     // public static function boot()
 // {

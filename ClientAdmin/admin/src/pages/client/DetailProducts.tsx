@@ -12,7 +12,7 @@ import DOMPurify from "dompurify";
 import axios from "axios";
 import { FaStar, FaStarHalfAlt, FaRegStar } from "react-icons/fa";
 import { formatPrice } from "../../utils/formatNumber";
-import { Tag } from "antd";
+import { Avatar, Tag, Button, Tabs, Popconfirm, message, Input, Modal, Rate } from "antd";
 const DetailProducts: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   console.log(id);
@@ -29,7 +29,8 @@ const DetailProducts: React.FC = () => {
 
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
-
+  const userId = localStorage.getItem("userId");
+  console.log(userId);
   const handleAddComment = () => {
     if (newComment.trim() !== "") {
       setComments([
@@ -84,57 +85,106 @@ const DetailProducts: React.FC = () => {
 
     return roots;
   };
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const productResponse = await getProductById(id);
+      const productData = productResponse.data.data.data;
+      setProduct(productData);
+      //   console.log(productData);
+      setMainImage(`http://127.0.0.1:8000/storage/${productData.images}`);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const productResponse = await getProductById(id);
-        const productData = productResponse.data.data.data;
-        setProduct(productData);
-        //   console.log(productData);
-        setMainImage(`http://127.0.0.1:8000/storage/${productData.images}`);
-
-        if (productData.variants?.length > 0) {
-          const defaultVariant = productData.variants[0];
-          const defaultAttributes: { [key: string]: string } = {};
-          defaultVariant.attributes?.forEach((attr: any) => {
-            defaultAttributes[attr.name] = attr.value;
-          });
-          setSelectedAttributes(defaultAttributes);
-        }
-
-        // Sau khi có product.id -> gọi 2 API song song
-        const [ratingRes, commentRes] = await Promise.all([
-          getAvgProduct(productData.id),
-          axios.get(
-            `http://127.0.0.1:8000/api/ratings/product/${productData.id}`
-          ),
-        ]);
-        console.log(commentRes.data.data);
-
-        setRating(ratingRes.data.average_rating);
-        setComments(buildCommentTree(commentRes.data.data));
-      } catch (error: any) {
-        console.error("Lỗi:", error);
-        setErrorMessage(error.message || "Có lỗi xảy ra");
+      if (productData.variants?.length > 0) {
+        const defaultVariant = productData.variants[0];
+        const defaultAttributes: { [key: string]: string } = {};
+        defaultVariant.attributes?.forEach((attr: any) => {
+          defaultAttributes[attr.name] = attr.value;
+        });
+        setSelectedAttributes(defaultAttributes);
       }
-      setLoading(false);
-    };
 
+      // Sau khi có product.id -> gọi 2 API song song
+      const [ratingRes, commentRes] = await Promise.all([
+        getAvgProduct(productData.id),
+        axios.get(
+          `http://127.0.0.1:8000/api/ratings/product/${productData.id}`
+        ),
+      ]);
+      console.log(commentRes.data.data);
+
+      setRating(ratingRes.data.average_rating);
+      setComments(buildCommentTree(commentRes.data.data));
+    } catch (error: any) {
+      console.error("Lỗi:", error);
+      setErrorMessage(error.message || "Có lỗi xảy ra");
+    }
+    setLoading(false);
+  };
+  useEffect(() => {
     fetchData();
   }, [id]);
-  const renderComments = (comments: any[]) => {
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editedComment, setEditedComment] = useState("");
+  const [commentToEdit, setCommentToEdit] = useState(null);
+  const showModal = (comment) => {
+    setEditedComment(comment.review); // Load nội dung bình luận vào input
+    setCommentToEdit(comment);
+    setRating(comment.rating || 0); 
+    setIsModalVisible(true);
+  };
+  const handleCancel = () => {
+    setIsModalVisible(false);
+    setEditedComment("");
+    setCommentToEdit(null);
+  };
+
+  // Hàm xử lý lưu bình luận đã sửa
+  const handleOk = async () => {
+    if (editedComment.trim() === "") {
+      message.error("Nội dung bình luận không được để trống");
+      return;
+    }
+
+    setLoading(true); // Bật trạng thái loading
+
+    try {
+      if (commentToEdit) {
+        // Gọi hàm cập nhật bình luận (có thể là API call)
+       const response = await axios.put(`http://127.0.0.1:8000/api/ratings/${commentToEdit.id}`, { review: editedComment, rating }); 
+        setIsModalVisible(false); 
+        setEditedComment(""); 
+        setRating(0); 
+        setCommentToEdit(null); 
+        fetchData();
+        message.success(response.data.message);
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message);
+    } finally {
+      setLoading(false); // Tắt trạng thái loading
+    }
+  };
+
+  const generateRandomColor = (name) => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const color = `hsl(${hash % 360}, 70%, 60%)`; // Tạo màu ngẫu nhiên
+    return color;
+  };
+  const renderComments = (comments: any[], userId: string) => {
     return comments.map((comment) => (
       <div key={comment.id} className="mb-3">
         <div className="d-flex align-items-start p-2 border rounded bg-light">
-          <img
-            src={comment.avatar || "https://i.pravatar.cc/40?img=3"}
-            alt={comment.user.name}
-            className="rounded-circle me-2"
-            width="40"
-            height="40"
-          />
+          <Avatar
+            className="me-2"
+            size={40}
+            style={{ backgroundColor: generateRandomColor(comment.user.name) }}
+          >
+            {comment.user.name.charAt(0).toUpperCase()}
+          </Avatar>
+  
           <div>
             <p className="fw-bold mb-1">{comment.user.name}</p>
             {comment.rating && <StarRating rating={comment.rating} />}
@@ -142,14 +192,91 @@ const DetailProducts: React.FC = () => {
               {comment.review || <i>(Không có nội dung)</i>}
             </p>
           </div>
-        </div>
+  
+          {/* Nếu là bình luận chính của người dùng thì hiển thị nút xóa */}
+          {comment.user.id == userId && comment.parent_id === null && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa bình luận này?"
+              onConfirm={() => handleDelete(comment.id)} // Gọi hàm xóa tại đây
+              okText="Có"
+              cancelText="Không"
+            >
+              <Button type="link" danger>
+                Xóa
+              </Button>
+            </Popconfirm>
+          )}
+           {comment.user.id == userId && comment.parent_id === null && (
+            <>
+              <Button type="link" onClick={() => showModal(comment)}>
+                Sửa
+              </Button>
 
+             
+              <Modal
+                title="Chỉnh sửa bình luận"
+                visible={isModalVisible}
+                onOk={handleOk}
+                onCancel={handleCancel}
+                okText="Lưu"
+                cancelText="Hủy"
+                footer={[
+                  <Button key="cancel" onClick={handleCancel}>
+                    Hủy
+                  </Button>,
+                  <Button
+                    key="ok"
+                    type="primary"
+                    onClick={handleOk}
+                    loading={loading} // Hiển thị loading khi lưu
+                  >
+                    Lưu
+                  </Button>,
+                ]}
+              >
+                <Input
+                  value={editedComment}
+                  onChange={(e) => setEditedComment(e.target.value)}
+                  placeholder="Nhập nội dung bình luận"
+                  style={{ marginBottom: 16 }}
+                />
+                
+                {/* Phần chọn sao */}
+                <div>
+                  <label>Đánh giá (Sao):</label>
+                  <Rate 
+                    value={rating}
+                    onChange={(value) => setRating(value)} // Lưu rating
+                  />
+                </div>
+              </Modal>
+            </>
+          )}
+        </div>
+  
         {comment.replies && comment.replies.length > 0 && (
-          <div className="ms-5 mt-2">{renderComments(comment.replies)}</div>
+          <div className="ms-5 mt-2">{renderComments(comment.replies, userId)}</div>
         )}
       </div>
     ));
   };
+  const handleDelete = async (commentId: string) => {
+    try {
+      // Gọi API để xóa bình luận
+      const response = await axios.delete(`http://127.0.0.1:8000/api/ratings/${commentId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+      });
+      message.success(response.data.data.message);
+      // Sau khi xóa thành công, cập nhật lại danh sách bình luận (hoặc gọi lại API để lấy lại dữ liệu)
+      fetchData();
+    } catch (error) {
+      message.error("Không thể xóa bình luận!");
+      console.error("Error deleting comment:", error);
+    }
+  };
+  
 
   const StarRating = ({ rating }) => {
     const stars = [];
@@ -207,15 +334,12 @@ const DetailProducts: React.FC = () => {
       quantity: quantity,
     };
 
-    console.log("Dữ liệu gửi đi:", data);
-
     try {
       const response = await storeCart(data);
-      console.log("Phản hồi từ API:", response.data);
 
       if (response.status === 200) {
         Swal.fire({
-          title: "Thêm giỏ hàng thành công!",
+          title: response.data.message,
           icon: "success",
           timer: 1500,
           showConfirmButton: false,
@@ -228,6 +352,7 @@ const DetailProducts: React.FC = () => {
         });
       }
     } catch (error: any) {
+      console.error("Lỗi:", error);
       if (error?.response?.status === 401) {
         Swal.fire({
           icon: "error",
@@ -243,9 +368,7 @@ const DetailProducts: React.FC = () => {
         Swal.fire({
           icon: "error",
           title: "Lỗi!",
-          text:
-            error?.response?.data?.message ||
-            "Đã có lỗi xảy ra, vui lòng thử lại!",
+          text: error.response.data.message,
         });
       }
     }
@@ -432,9 +555,8 @@ const DetailProducts: React.FC = () => {
             <ul className="nav nav-tabs">
               <li className="nav-item">
                 <button
-                  className={`nav-link ${
-                    activeTab === "description" ? "active" : ""
-                  }`}
+                  className={`nav-link ${activeTab === "description" ? "active" : ""
+                    }`}
                   onClick={() => setActiveTab("description")}
                 >
                   Mô tả
@@ -442,9 +564,8 @@ const DetailProducts: React.FC = () => {
               </li>
               <li className="nav-item">
                 <button
-                  className={`nav-link ${
-                    activeTab === "comments" ? "active" : ""
-                  }`}
+                  className={`nav-link ${activeTab === "comments" ? "active" : ""
+                    }`}
                   onClick={() => setActiveTab("comments")}
                 >
                   Bình luận {"(" + product.total_rating + ")"}
@@ -469,20 +590,20 @@ const DetailProducts: React.FC = () => {
                 <div className="mt-3">
                   <h3 className="fw-bold">Bình luận</h3>
                   <div className="mt-3">
-                  {renderComments(comments)}
+                  {renderComments(comments, userId)}
 
                   </div>
 
                   {/* Nhập bình luận */}
-                  <div className="d-flex align-items-center border rounded p-2 mt-3 bg-white">
+                  {/* <div className="d-flex align-items-center border rounded p-2 mt-3 bg-white">
                     <img
                       src="https://i.pravatar.cc/40?img=3"
                       alt="User"
                       className="rounded-circle me-2"
                       width="40"
                       height="40"
-                    />
-                    <input
+                    /> */}
+                  {/* <input
                       type="text"
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
@@ -494,8 +615,8 @@ const DetailProducts: React.FC = () => {
                       className="btn btn-primary btn-sm ms-2"
                     >
                       <Send size={16} />
-                    </button>
-                  </div>
+                //     </button> */}
+                  {/* </div> */}
                 </div>
               )}
             </div>

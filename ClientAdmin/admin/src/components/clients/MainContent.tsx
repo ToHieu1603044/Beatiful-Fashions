@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal, Button, Form } from "react-bootstrap";
-import { getsales, getCategories, getProductSales, getProducts } from "../../services/homeService";
+import { getsales, getCategories, getProductSales, getProducts, storeCart } from "../../services/homeService";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/navigation";
@@ -16,6 +16,7 @@ import axios from "axios";
 // import { ToastContainer } from 'react-toastify';
 // import 'react-toastify/dist/ReactToastify.css';
 import { toast } from 'react-toastify';
+import Swal from "sweetalert2";
 const MainContent = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -52,8 +53,8 @@ const MainContent = () => {
       setProducts(productsRes.data.data || []);
       console.log("Danh sách san pham:", productsRes.data.data);
       setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
-      setSales(salesRes.data.message || []);
-      console.log("Danh sách khuyen mai:", salesRes.data.message);
+      setSales(salesRes.data.data || []);
+      console.log("Danh sách khuyen mai:", salesRes.data);
 
       const token = localStorage.getItem("access_token");
       if (token) {
@@ -75,12 +76,70 @@ const MainContent = () => {
     fetchData();
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedVariant) {
-      alert("Vui lòng chọn biến thể.");
+      Swal.fire({
+        icon: "warning",
+        title: "Vui lòng chọn biến thể.",
+      });
       return;
     }
-    console.log("Dữ liệu gửi đi:", { sku_id: selectedVariant.sku_id });
+
+    if (quantity <= 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Số lượng phải lớn hơn 0.",
+      });
+      return;
+    }
+
+    const data = {
+      sku_id: selectedVariant.sku_id,
+      quantity: quantity
+    };
+
+    console.log("Dữ liệu gửi đi:", data);
+
+    try {
+      const response = await storeCart(data);
+      console.log("Phản hồi từ API:", response.data);
+
+      if (response.status === 200) {
+        Swal.fire({
+          title: "Thêm giỏ hàng thành công!",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Lỗi!",
+          text: "Vui lòng thử lại sau.",
+        });
+      }
+    } catch (error: any) {
+
+      if (error?.response?.status === 401) {
+        Swal.fire({
+          icon: "error",
+          title: "Bạn chưa đăng nhập!",
+          text: "Vui lòng đăng nhập để tiếp tục.",
+          confirmButtonText: "Đăng nhập"
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = "/login";
+          }
+        });
+      } else {
+
+        Swal.fire({
+          icon: "error",
+          title: "Lỗi!",
+          text: error?.response?.data?.message || "Đã có lỗi xảy ra, vui lòng thử lại!",
+        });
+      }
+    }
   };
   const handleCategoryClick = (id: number, slug: string) => {
     navigate(`/category/${id}/${slug}`);
@@ -150,7 +209,13 @@ const MainContent = () => {
         ),
       ];
     });
+    const sale = {
+      old_price: 500000,   // Giá gốc
+      sale_price: 480000   // Giá sau giảm
+    };
 
+    const discountPercent = ((sale.old_price - sale.sale_price) / sale.old_price) * 100;
+    const discountPercentFormatted = discountPercent.toFixed(0); // Phần trăm giảm giá
     setSelectedAttributes(initialSelectedAttributes);
     setAvailableOptions(initialAvailableOptions);
   };
@@ -341,24 +406,15 @@ const MainContent = () => {
                     e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
                   }}
                 >
-                  {/* Icon trái tim */}
-                  {/* <div
-                    className="position-absolute top-0 end-0 m-2 p-2 rounded-circle bg-white shadow-sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddToFavorites(sale);
-                    }}
-                    style={{
-                      cursor: "pointer",
-                      zIndex: 10,
-                      transition: "color 0.2s ease-in-out",
-                    }}
+                  {/* Tag giảm giá ở góc trên bên phải */}
+                  <div
+                    className="discount-tag position-absolute top-0 end-0 m-2 p-2 rounded-circle bg-danger text-white fw-bold"
+                    style={{ fontSize: "0.9rem", zIndex: 1 }}
                   >
-                    <i
-                      className={`fas fa-heart ${sale.is_favorite ? "text-danger" : "text-muted"}`}
-                      style={{ fontSize: "1.2rem" }}
-                    ></i>
-                  </div> */}
+                    - {((sale.sale_price / sale.old_price) * 100).toFixed(0)
+                    }%
+
+                  </div>
 
                   <div
                     onClick={() => handleProductClick(sale.id)}
@@ -410,6 +466,7 @@ const MainContent = () => {
           </div>
         </>
       )}
+
 
       {sales.length === 0 && (
         <p className="text-center"></p>

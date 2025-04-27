@@ -1,31 +1,42 @@
 import React, { useEffect, useState } from "react";
-import { Table, Select, Button, Modal } from "antd";
-
+import { Table, Select, Button, Modal, Popover, message } from "antd";
 import axios from "axios";
-import { getOrderReturns, getOrderReturnUser } from "../../services/orderService";
+import { getOrderReturnUser } from "../../services/orderService";
 
-const OrderReturns: React.FC = () => {
+const OrderReturns = () => {
     const [orders, setOrders] = useState<any[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [loading, setLoading] = useState(false); // Thêm state loading
 
     useEffect(() => {
         fetchOrders();
     }, []);
 
+    // Danh sách trạng thái có thể cập nhật
     const statusOptions = [
         { value: "shipping", label: "Đã gửi hàng" },
+        { value: "received", label: "Đã nhận hàng" },
+        { value: "refunded", label: "Đã hoàn tiền" },
+        { value: "completed", label: "Hoàn thành" },
+        { value: "cancelled", label: "Đã hủy" },
     ];
+
+    // Hủy đơn hàng
     const cancelOrder = async (id: number) => {
         try {
             const response = await axios.delete(`http://127.0.0.1:8000/api/orders/${id}/cancel`);
             if (response.status === 200) {
                 fetchOrders();
+                message.success("Đơn hàng đã bị hủy thành công");
             }
         } catch (error) {
             console.error("Lỗi khi hủy đơn hàng:", error);
+            message.error("Lỗi khi hủy đơn hàng");
         }
-    }
+    };
+
+    // Cập nhật trạng thái đơn hàng
     const updateStatus = async (id: number, newStatus: string) => {
         try {
             const response = await axios.patch(`http://127.0.0.1:8000/api/order-returns/${id}/status/user`, { status: newStatus });
@@ -36,33 +47,41 @@ const OrderReturns: React.FC = () => {
             );
 
             if (response.status === 200) {
-                console.log("Cập nhật trạng thái thanh cong");
+                message.success("Cập nhật trạng thái thành công");
             }
         } catch (error) {
             console.error("Lỗi cập nhật trạng thái:", error);
+            message.error("Lỗi cập nhật trạng thái");
         }
     };
 
+    // Lấy danh sách đơn hàng hoàn trả
     const fetchOrders = async () => {
+        setLoading(true); // Đặt loading trước khi lấy dữ liệu
         try {
             const response = await getOrderReturnUser();
-            console.log("Danh sách đơn hàng hoàn:", response.data.data);
             setOrders(response.data.data);
         } catch (error) {
             console.error("Lỗi lấy danh sách đơn hàng:", error);
+            message.error("Lỗi lấy danh sách đơn hàng");
+        } finally {
+            setLoading(false); // Tắt loading sau khi lấy dữ liệu
         }
     };
 
+    // Hiển thị chi tiết đơn hàng
     const showOrderDetails = (order: any) => {
         setSelectedOrder(order);
         setIsModalVisible(true);
     };
 
+    // Đóng modal
     const handleCancel = () => {
         setIsModalVisible(false);
         setSelectedOrder(null);
     };
 
+    // Cấu hình các cột của bảng
     const columns = [
         { title: "ID", dataIndex: "id", key: "id" },
         { title: "Tên khách hàng", dataIndex: ["order", "name"], key: "name" },
@@ -72,6 +91,7 @@ const OrderReturns: React.FC = () => {
             title: "Trạng thái",
             dataIndex: "status",
             key: "status",
+            render: (status: string) => <span>{getStatusText(status)}</span>,
         },
         {
             title: "Tiến trình",
@@ -89,7 +109,6 @@ const OrderReturns: React.FC = () => {
                 }
 
                 if (record.status === "refunded") {
-
                     return (
                         <Button
                             type="primary"
@@ -99,7 +118,7 @@ const OrderReturns: React.FC = () => {
                         </Button>
                     );
                 }
-                return <span>{record.status}</span>;
+                return <span>{getStatusText(record.status)}</span>;
             },
         },
 
@@ -118,8 +137,20 @@ const OrderReturns: React.FC = () => {
                 </>
             ),
         },
-
     ];
+
+    const getStatusText = (status: string) => {
+        switch (status) {
+            case "pending": return "Chờ xử lý";
+            case "approved": return "Đã duyệt";
+            case "shipping": return "Đang gửi";
+            case "received": return "Đã nhận";
+            case "refunded": return "Đã hoàn tiền";
+            case "completed": return "Hoàn thành";
+            case "cancelled": return "Đã hủy";
+            default: return status;
+        }
+    };
 
     return (
         <div className="container mt-4">
@@ -138,7 +169,13 @@ const OrderReturns: React.FC = () => {
             </nav>
 
             <h2>Danh sách đơn hàng hoàn</h2>
-            <Table dataSource={orders} columns={columns} rowKey="id" pagination={{ pageSize: 5 }} />
+            <Table
+                dataSource={orders}
+                columns={columns}
+                rowKey="id"
+                pagination={{ pageSize: 5 }}
+                loading={loading} // Thêm thuộc tính loading
+            />
 
             {/* Modal hiển thị chi tiết đơn hàng */}
             <Modal
@@ -215,6 +252,27 @@ const OrderReturns: React.FC = () => {
                                     render: (amount: number) =>
                                         Number(amount).toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
                                 },
+                                {
+                                    title: "Lí do hoàn",
+                                    dataIndex: "reason",
+                                    key: "reason",
+                                    render: (reason: string) => {
+                                        const isLong = reason.length > 50;
+                                        const shortText = reason.slice(0, 50) + '...';
+                                      
+                                        return (
+                                          <div style={{ maxWidth: '200px', wordWrap: 'break-word' }}>
+                                            {isLong ? (
+                                              <Popover content={reason} title="Lý do huỷ" trigger="click">
+                                                <span>{shortText} <Button type="link" size="small">Xem thêm</Button></span>
+                                              </Popover>
+                                            ) : (
+                                              <span>{reason}</span>
+                                            )}
+                                          </div>
+                                        );
+                                    }
+                                }
                             ]}
                         />
                     </>

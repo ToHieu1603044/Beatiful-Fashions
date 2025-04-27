@@ -7,6 +7,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { IUsers } from "../../../interfaces/User";
 import { getRoles } from "../../../services/roleService";
+import { message } from "antd";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -18,15 +19,7 @@ const AddUser = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check user role
-    const userRole = localStorage.getItem("role");
-    if (!userRole || userRole !== "admin") {
-      alert("Bạn không có quyền truy cập!");
-      navigate("/");
-      return;
-    }
-
-    // Fetch roles from API
+   
     const fetchRoles = async () => {
       try {
         const response = await getRoles();
@@ -49,20 +42,19 @@ const AddUser = () => {
 
   const onSubmit = async (data: IUsers) => {
     try {
-      data.role = selectedRoles;
+      data.roles = selectedRoles;
       data.createDate = dayjs().tz("Asia/Ho_Chi_Minh").format(); // Add create date
       const token = localStorage.getItem("access_token");
       if (!token) {
         alert("Bạn chưa đăng nhập!");
         return;
       }
-
-      await axios.post("http://127.0.0.1:8000/api/users", data, {
+      console.log(data);
+      const response = await axios.post("http://127.0.0.1:8000/api/users", data, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      alert("Thêm người dùng thành công!");
-      navigate("/admin/users");
+      console.log(response.data);
+      message.success(response.data.message || "Thêm người dùng thành cong!");
 
     } catch (error) {
       alert("Thêm người dùng thất bại!");

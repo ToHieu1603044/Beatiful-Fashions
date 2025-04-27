@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Helpers\ApiResponse;
+use App\Helpers\TextSystemConst;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Traits\ApiDataTrait;
@@ -19,59 +20,65 @@ class AuthController extends Controller
 {
   use ApiDataTrait;
 
-  
+
   public function login(Request $request)
   {
-      $request->validate([
-          'email' => 'required|string|email',
-          'password' => 'required|string',
-      ]);
-  
-      $key = Str::lower($request->input('email')) . '|' . $request->ip();
-  
-      if (RateLimiter::tooManyAttempts($key, 5)) {
-          $seconds = RateLimiter::availableIn($key);
-  
-          return response()->json([
-              'message' => "Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau $seconds giây."
-          ], 429);
-      }
-  
-      if (!Auth::attempt($request->only('email', 'password'))) {
-          RateLimiter::hit($key, 60); 
-          return response()->json(['message' => 'Sai email hoặc mật khẩu'], 401);
-      }
-  
-      RateLimiter::clear($key); 
-        
-      $userAgent = $request->header('User-Agent');
-      $ip = $request->ip();
-      \Log::info($ip);
-      \Log::info($userAgent);
-  
-      $user = Auth::user();
-      $tokenResult = $user->createToken('auth_token');
-      $plainTextToken = $tokenResult->plainTextToken;
-  
-      $tokenResult->accessToken->update([
-          'name' => $this->parseDeviceName($userAgent),
-          'user_agent' => $userAgent,
-          'ip_address' => $ip,
-      ]);
-  
-      if ($user->roles()->exists()) {
-          event(new \App\Events\UserLoggedIn($user));
-      }
-  
+    $request->validate([
+      'email' => 'required|string|email',
+      'password' => 'required|string',
+    ]);
+
+    $key = Str::lower($request->input('email')) . '|' . $request->ip();
+
+    if (RateLimiter::tooManyAttempts($key, 5)) {
+      $seconds = RateLimiter::availableIn($key);
+
       return response()->json([
-          'message' => 'Đăng nhập thành công!',
-          'access_token' => $plainTextToken,
-          'token_type' => 'Bearer',
-          'user' => $user,
-          'role' => $user->getRoleNames()
-      ]);
+        'message' => __('messages.throttle', ['seconds' => $seconds]),
+      ], 429);
+    }
+
+    if (!Auth::attempt($request->only('email', 'password'))) {
+      RateLimiter::hit($key, 60);
+      return response()->json(
+        [
+          'message' => __('messages.login_fail'),
+          "status" => 401
+        ],
+        401
+      );
+    }
+
+    RateLimiter::clear($key);
+
+    $userAgent = $request->header('User-Agent');
+    $ip = $request->ip();
+    \Log::info($ip);
+    \Log::info($userAgent);
+
+    $user = Auth::user();
+    $tokenResult = $user->createToken('auth_token');
+    $plainTextToken = $tokenResult->plainTextToken;
+
+    $tokenResult->accessToken->update([
+      'name' => $this->parseDeviceName($userAgent),
+      'user_agent' => $userAgent,
+      'ip_address' => $ip,
+    ]);
+
+    if ($user->roles()->exists()) {
+      event(new \App\Events\UserLoggedIn($user));
+    }
+
+    return response()->json([
+      'message' => __('messages.login_success'),
+      'access_token' => $plainTextToken,
+      'token_type' => 'Bearer',
+      'user' => $user,
+      'role' => $user->getRoleNames()
+    ]);
   }
-  
+
   protected function parseDeviceName($userAgent)
   {
     $agent = new \Jenssegers\Agent\Agent();
@@ -92,8 +99,7 @@ class AuthController extends Controller
       'name' => 'required|string|max:255',
       'email' => 'required|string|email|max:255|unique:users',
       'password' => 'required|string|min:6|confirmed',
-
-      'phone' => 'nullable|string|max:15',
+      'phone' => 'nullable|string|max:15|unique:users:phone',
       'address' => 'nullable|string|max:255',
       'city' => 'nullable|string|max:100',
       'ward' => 'nullable|string|max:100',
@@ -124,12 +130,12 @@ class AuthController extends Controller
 
     $token = $user->createToken('auth_token')->plainTextToken;
 
-    return ApiResponse::responseObject(new UserResource($user), 201, 'User created successfully');
+    return ApiResponse::responseObject(new UserResource($user), 201, __('messages.register_success'));
 
   }
   public function listUser(Request $request)
   {
-    return $this->getAllData(new User, 'Danh sách người dùng', [], ['role', 'name', 'email', 'phone'], [], UserResource::class);
+    return $this->getAllData(new User, __('messages.list_user'), [], ['role', 'name', 'email', 'phone'], [], UserResource::class);
 
   }
 
@@ -138,9 +144,9 @@ class AuthController extends Controller
     $user = Auth::user();
     try {
       if ($user) {
-        return ApiResponse::responseObject(new UserResource($user), 200, 'Thong tin nguoi dung');
+        return ApiResponse::responseObject(new UserResource($user), 200, __('messages.profile'));
       } else {
-        return ApiResponse::errorResponse('User not found', 404);
+        return ApiResponse::errorResponse(404, TextSystemConst::USER_NOT_FOUND, );
       }
     } catch (\Exception $e) {
       return ApiResponse::errorResponse($e->getMessage(), 500);
@@ -153,7 +159,7 @@ class AuthController extends Controller
   {
     $request->user()->tokens()->delete();
 
-    return response()->json(['message' => 'Đăng xuất thành công']);
+    return response()->json(['message' => __('messages.logout_success')]);
   }
   // Doi mat khau
   public function resetPassword(Request $request)
@@ -172,7 +178,7 @@ class AuthController extends Controller
       ]);
 
       $user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
-      return ApiResponse::responseObject(new UserResource($user), 200, 'Reset password successfully');
+      return ApiResponse::responseObject(new UserResource($user), 200, __('messages.change_password_success'));
     }
     return ApiResponse::errorResponse('Old password is incorrect', 400);
 
@@ -185,7 +191,7 @@ class AuthController extends Controller
     $status = Password::sendResetLink($request->only('email'));
 
     return $status === Password::RESET_LINK_SENT
-      ? response()->json(['message' => 'Reset password link sent to your email.'])
+      ? response()->json(['message' => __('messages.reset_link_sent')])
       : response()->json(['error' => 'Unable to send reset link.'], 500);
   }
 
@@ -215,8 +221,9 @@ class AuthController extends Controller
     );
 
     return $status === Password::PASSWORD_RESET
-      ? response()->json(['message' => 'Password has been reset.'])
-      : response()->json(['error' => 'Invalid token or email.'], 500);
+      ? response()->json(['message' => __('messages.password_reset_success')])
+      : response()->json(['error' => __('messages.invalid_token_or_email')], 500);
+
   }
   public function myDevices(Request $request)
   {
@@ -236,7 +243,7 @@ class AuthController extends Controller
     });
 
     return response()->json([
-      'message' => 'Danh sách thiết bị đã đăng nhập',
+      'message' => __('messages.device_list'),
       'devices' => $devices,
     ]);
   }
@@ -249,16 +256,16 @@ class AuthController extends Controller
     $token = $user->tokens()->find($id);
 
     if (!$token) {
-      return response()->json(['message' => 'Không tìm thấy thiết bị'], 404);
+      return response()->json(['message' => __('messages.device_not_found')], 404);
     }
 
     if ($token->id === $request->user()->currentAccessToken()->id) {
-      return response()->json(['message' => 'Không thể xóa thiết bị đang dùng'], 400);
+      return response()->json(['message' => __('messages.cannot_revoke_current_device')], 400);
     }
 
     $token->delete();
 
-    return response()->json(['message' => 'Thiết bị đã được đăng xuất']);
+    return response()->json(['message' => __('messages.device_logged_out')]);
   }
 
 }

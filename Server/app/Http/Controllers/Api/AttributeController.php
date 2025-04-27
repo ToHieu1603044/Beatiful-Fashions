@@ -86,7 +86,7 @@ class AttributeController extends Controller
             ->first();
     
         if (!$sku) {
-            return ApiResponse::errorResponse(404, 'Không tìm thấy SKU');
+            return ApiResponse::errorResponse(404, __('messages.not_found'));
         }
     
         return ApiResponse::responseSuccess([
@@ -108,7 +108,7 @@ class AttributeController extends Controller
             ->get();
     
         if ($productSkus->isEmpty()) {
-            return ApiResponse::errorResponse(404, 'Không có SKU nào cho sản phẩm này.');
+            return ApiResponse::errorResponse(404, 'Sku'.__('messages.not_found'));
         }
     
         // Format dữ liệu trả về

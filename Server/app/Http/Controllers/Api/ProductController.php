@@ -1,17 +1,20 @@
 <?php
 namespace App\Http\Controllers\Api;
 use App\Helpers\ApiResponse;
+use App\Helpers\TextSystemConst;
 use App\Http\Requests\ProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Gallery;
 use App\Models\Rating;
 use App\Traits\ApiDataTrait;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\ProductSku;
 use App\Models\Attribute;
 use App\Models\AttributeOption;
 use App\Models\AttributeOptionSku;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -21,31 +24,153 @@ use Illuminate\Support\Facades\Validator;
 class ProductController extends Controller
 {
     use ApiDataTrait;
+    use AuthorizesRequests;
     public function index(Request $request)
-    {
+{
+    try {
+        $this->authorize('viewAny', Product::class);
+
+        // Lấy tham số từ request
+        $filters = $request->query();
+        $page = $request->query('page', 1);
+
+        // Tạo cache key dựa trên các tham số tìm kiếm
+        $cacheKey = 'products_cache_' . md5(json_encode($filters));
+
+        \Log::info("Cache Key: $cacheKey");
+
+        // Thời gian bắt đầu để đo hiệu suất
+        $start = microtime(true);
+
+        // Thực hiện truy vấn trực tiếp mà không sử dụng cache
         $relations = ['brand', 'category', 'skus.attributeOptions', 'galleries'];
         $filterableFields = ['name', 'category_id', 'brand_id', 'active'];
+        $dates = ['created_at']; // Sửa lỗi nhỏ trong trường 'create_at' -> 'created_at'
 
-        $dates = ['create_at'];
+        // Kiểm tra cache
+        if (Cache::has($cacheKey)) {
+            \Log::info("Lấy dữ liệu từ cache: $cacheKey");
+            $data = Cache::get($cacheKey);
+        } else {
+            \Log::info("Không có cache, truy vấn database: $cacheKey");
 
-        return $this->getAllData(new Product, 'Danh sách sản phẩm', $relations, $filterableFields, $dates, ProductResource::class);
+            // Truy vấn và lưu vào cache
+            $query = Product::with($relations);
+
+            // Kiểm tra và thực hiện tìm kiếm
+            if (!empty($filters['search'])) {
+                $search = trim($filters['search']);
+                \Log::info('Search term: ' . $search);
+
+                $query->where(function ($q) use ($search, $filterableFields) {
+                    foreach ($filterableFields as $field) {
+                        $q->orWhere($field, 'like', "%$search%");
+                    }
+                });
+            }
+
+            // Bộ lọc giá cả
+            if (isset($filters['min_price']) && isset($filters['max_price'])) {
+                $query->whereHas('skus', function ($q) use ($filters) {
+                    $minPrice = (int) $filters['min_price'];
+                    $maxPrice = (int) $filters['max_price'];
+                    $q->whereBetween('price', [$minPrice, $maxPrice]);
+                });
+            }
+
+            if (isset($filters['price_range'])) {
+                [$minPrice, $maxPrice] = explode('-', $filters['price_range']);
+                $query->whereHas('skus', function ($q) use ($minPrice, $maxPrice) {
+                    $q->whereBetween('price', [(int) $minPrice, (int) $maxPrice]);
+                });
+            }
+
+            // Lọc theo giá cả
+            if (isset($filters['price'])) {
+                $flagPrice = strtolower($filters['price']) === 'asc' ? 'asc' : 'desc';
+                $query->addSelect([
+                    'min_price' => \DB::table('product_skus')
+                        ->selectRaw('MIN(price)')
+                        ->whereColumn('product_skus.product_id', 'products.id')
+                ])->orderBy('min_price', $flagPrice);
+            }
+
+            // Lọc theo active
+            if (isset($filters['active'])) {
+                $query->where('active', $filters['active']);
+            }
+
+            // Lọc theo category_id
+            if (isset($filters['category_id'])) {
+                $query->where('category_id', $filters['category_id']);
+            }
+
+            // Bộ lọc theo ngày tháng
+            foreach ($dates as $date) {
+                if (isset($filters['start_date']) && isset($filters['end_date'])) {
+                    $query->whereBetween($date, [$filters['start_date'], $filters['end_date']]);
+                } elseif (isset($filters['from_date'])) {
+                    $query->where($date, '>=', $filters['from_date']);
+                } elseif (isset($filters['to_date'])) {
+                    $query->where($date, '<=', $filters['to_date']);
+                }
+            }
+
+            // Lọc theo ngày tạo
+            if (isset($filters['date'])) {
+                $orderDirection = strtolower($filters['date']) === 'asc' ? 'asc' : 'desc';
+                $query->orderBy('created_at', $orderDirection);
+            }
+
+            // Phân trang
+            $perPage = $request->query('per_page', 10);
+            $data = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+            // Lưu vào cache
+            Cache::put($cacheKey, $data, 600); // Lưu cache trong 10 phút
+
+            \Log::info("Dữ liệu đã được cache: $cacheKey");
+        }
+
+        // Thời gian kết thúc để đo hiệu suất
+        $end = microtime(true);
+        \Log::info('Thời gian truy vấn: ' . round($end - $start, 4) . ' giây.');
+
+        // Kiểm tra nếu không có dữ liệu
+        if ($data->isEmpty()) {
+            \Log::info('Không có dữ liệu phù hợp với tìm kiếm.');
+            return response()->json([
+                'message' => 'Không có dữ liệu.',
+                'data' => []
+            ], Response::HTTP_OK);
+        }
+
+        // Trả về kết quả dưới dạng phân trang
+        return ApiResponse::responsePage(ProductResource::collection($data));
+
+    } catch (\Exception $e) {
+        \Log::error('Lỗi trong index', ['exception' => $e->getMessage()]);
+        return ApiResponse::errorResponse();
     }
+}
+
+    
+    
     public function indexWeb(Request $request)
     {
         try {
-            // Tạo cache key dựa trên các tham số của request
+
             $filters = $request->query();
-            $page = $request->query('page', 1);  // Lấy số trang nếu có
-            $perPage = $request->query('per_page', 10);  // Lấy số bản ghi mỗi trang nếu có
+            $page = $request->query('page', 1);
+            $perPage = $request->query('per_page', 10);
             $cacheKey = "products_cache_web";
 
-            // Kiểm tra xem cache có tồn tại không
+
             if (Cache::has($cacheKey)) {
                 \Log::info("Lấy dữ liệu từ cache: $cacheKey");
-                $data = Cache::get($cacheKey);  // Lấy dữ liệu từ cache
+                $data = Cache::get($cacheKey);
             } else {
-                \Log::info("Không có cache, truy vấn database: $cacheKey");
-                // Nếu không có cache, thực hiện truy vấn và lưu vào cache
+
                 $data = Product::with([
                     'brand',
                     'category',
@@ -55,7 +180,6 @@ class ProductController extends Controller
                     ->where('active', 1)
                     ->paginate($perPage);
 
-                // Lưu dữ liệu vào cache trong 10 phút (600 giây)
                 Cache::put($cacheKey, $data, 600);
             }
 
@@ -68,6 +192,8 @@ class ProductController extends Controller
 
     public function store(ProductRequest $request)
     {
+        $this->authorize('create', Product::class);
+
         $validated = $request->validated();
 
         DB::beginTransaction();
@@ -127,7 +253,7 @@ class ProductController extends Controller
                 $sku = $product->id . '-' . implode('-', $sku_values);
                 // Kiểm tra SKU đã tồn tại chưa
                 if (ProductSku::where('sku', $sku)->exists()) {
-                    return response()->json(['error' => 'SKU đã tồn tại!'], 422);
+                    return response()->json(['error' => 'SKU' . __('messages.already_exists')], 422);
                 }
 
                 $productSku = ProductSku::create([
@@ -151,14 +277,14 @@ class ProductController extends Controller
             Cache::forget('products_cache');
             // Http::post("http://localhost:9200/products/_doc/{$product->id}", $product->toArray());
             return response()->json([
-                'message' => 'Sản phẩm đã được tạo thành công!',
+                'message' => TextSystemConst::CREATE_SUCCESS,
                 'product' => $product->load('skus')
             ], 201);
         } catch (\Exception $e) {
             \Log::error($e);
             DB::rollBack();
             return response()->json([
-                'error' => 'Lỗi khi tạo sản phẩm',
+                'error' => TextSystemConst::CREATE_FAILED,
                 'message' => $e->getMessage()
             ], 500);
         }
@@ -171,6 +297,9 @@ class ProductController extends Controller
             'category',
             'skus.attributeOptions'
         ])->findOrFail($id);
+
+        $this->authorize('view', $data);
+
         return ApiResponse::responseObject(new ProductResource($data));
     }
     public function productDetail($id)
@@ -202,11 +331,13 @@ class ProductController extends Controller
 
         try {
             $product = Product::findOrFail($id);
+
+            $this->authorize('update', $product);
+
             $product->fill($request->only(['name', 'brand_id', 'category_id', 'description', 'images']));
 
             $currentImage = $product->images;
             if ($request->hasFile('images')) {
-
                 if (!empty($currentImage) && \Storage::exists('public/' . $currentImage)) {
                     \Storage::delete('public/' . $currentImage);
                 }
@@ -242,10 +373,12 @@ class ProductController extends Controller
                         $attributeMap[$attr['name']][$value] = $attributeOption->id;
                     }
                 }
-
             }
+
             if ($request->has('variant_values')) {
                 $existingSkus = $product->skus->pluck('id', 'sku');
+                $requestedSkus = [];
+
                 foreach ($validated['variant_values'] as $variant) {
                     $sku_values = [];
                     foreach ($variant['variant_combination'] as $option_value) {
@@ -257,6 +390,30 @@ class ProductController extends Controller
                     }
                     sort($sku_values);
                     $sku = $product->id . '-' . implode('-', $sku_values);
+                    $requestedSkus[] = $sku;
+                }
+
+                // Xoá SKU không còn trong variant_values
+                $skusToDelete = $existingSkus->keys()->diff($requestedSkus);
+                if ($skusToDelete->isNotEmpty()) {
+                    $skusToDeleteIds = $existingSkus->only($skusToDelete)->values();
+                    AttributeOptionSku::whereIn('sku_id', $skusToDeleteIds)->delete();
+                    ProductSku::whereIn('id', $skusToDeleteIds)->delete();
+                }
+
+                // Tạo hoặc cập nhật SKU
+                foreach ($validated['variant_values'] as $variant) {
+                    $sku_values = [];
+                    foreach ($variant['variant_combination'] as $option_value) {
+                        foreach ($attributeMap as $name => $values) {
+                            if (isset($values[$option_value])) {
+                                $sku_values[] = $values[$option_value];
+                            }
+                        }
+                    }
+                    sort($sku_values);
+                    $sku = $product->id . '-' . implode('-', $sku_values);
+
                     if ($existingSkus->has($sku)) {
                         $productSku = ProductSku::findOrFail($existingSkus[$sku]);
                         $productSku->update([
@@ -265,7 +422,6 @@ class ProductController extends Controller
                             'stock' => $variant['stock'],
                         ]);
                     } else {
-
                         $productSku = ProductSku::create([
                             'product_id' => $product->id,
                             'price' => $variant['price'],
@@ -282,26 +438,34 @@ class ProductController extends Controller
                     }
                 }
             }
+
             DB::commit();
+            Cache::forget('products_cache');
             return response()->json([
-                'message' => 'Sản phẩm đã được cập nhật thành công!',
+                'message' => __('messages.updated'),
                 'product' => $product->load('skus')
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'error' => 'Lỗi khi cập nhật sản phẩm',
+                'error' => __('messages.error'),
                 'message' => $e->getMessage()
             ], 500);
         }
     }
+
     public function destroy($id)
     {
         try {
             $product = Product::findOrFail($id);
+
+            $this->authorize('delete', $product);
+
             $product->delete();
+
             Cache::forget('products_cache');
-            return ApiResponse::responseSuccess('Xoa thanh cong');
+
+            return ApiResponse::responseSuccess(__('messages.deleted'));
         } catch (\Exception $e) {
             return ApiResponse::errorResponse(500, $e->getMessage());
         }
@@ -312,14 +476,16 @@ class ProductController extends Controller
         try {
             $product = Product::withTrashed()->findOrFail($id);
 
+            $this->authorize('restore', $product);
+
             if (!$product->trashed()) {
                 return response()->json([
-                    'message' => 'Sản phẩm chưa bi xoa',
+                    'message' => __('messages.product_not_deleted'),
                 ], 400);
             }
             $product->restore();
             Cache::forget('products_cache');
-            return ApiResponse::responseSuccess('Sản phẩm khôi phục');
+            return ApiResponse::responseSuccess(__('messages.restored'));
         } catch (\Exception $e) {
             \Log::error("Lỗi: " . $e->getMessage());
 
@@ -328,15 +494,16 @@ class ProductController extends Controller
     }
     public function forceDelete($id)
     {
-        return $this->deleteDataById(new Product, $id, "Xoa thanh cong", true);
+        return $this->deleteDataById(new Product, $id, __('messages.deleted'), true);
     }
     public function productDelete()
     {
+        $this->authorize('viewAny', Product::class);
         try {
             $product = Product::onlyTrashed()->paginate(10);
 
             if ($product->isEmpty()) {
-                return ApiResponse::errorResponse(200, 'Không tìm thấy sản phẩm đã xóa.');
+                return ApiResponse::errorResponse(200, __('messages.product_not_deleted'));
             }
 
             return ApiResponse::responsePage(ProductResource::collection($product));
@@ -380,7 +547,7 @@ class ProductController extends Controller
             $this->clearProductsCache();
         }
         Cache::flush();
-        return ApiResponse::responseSuccess('Cập nhật trạng thái thành công');
+        return ApiResponse::responseSuccess($product, __('messages.updated'));
     }
 
     private function clearProductsCache()

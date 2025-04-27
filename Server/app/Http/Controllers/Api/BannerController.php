@@ -61,7 +61,7 @@ class BannerController extends Controller {
         $banner->update($validatedData);
     
         return response()->json([
-            'message' => 'Banner updated successfully',
+            'message' => __('messages.updated'),
             'banner' => $banner
         ], 200);
     }
@@ -72,6 +72,6 @@ class BannerController extends Controller {
         Storage::disk('public')->delete($banner->image);
         $banner->delete();
 
-        return response()->json(['message' => 'Banner deleted successfully'], Response::HTTP_OK);
+        return response()->json(['message' => __('messages.deleted')], Response::HTTP_OK);
     }
 }

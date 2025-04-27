@@ -13,7 +13,7 @@ class ApiResponse{
         return response()->json($response,$code);
     }
 
-    public static function responseObject($data, $code = 200, $message = 'success'){
+    public static function responseObject($data, $code = 200, $message = ''){
         $response = [
                 'code' => $code,
                 'message' => $message,
@@ -28,6 +28,7 @@ class ApiResponse{
             'success' => true,
             'status' => 'success',
             'data' => $page->items(),
+            'message' => __('messages.success'),
             'page' => [
                 'currentPage' => $page->currentPage(),
                 'lastPage' => $page->lastPage(),
@@ -39,14 +40,17 @@ class ApiResponse{
         return response()->json($reponse,200);
     }
 
-    public static function responseSuccess($message, $code = 200){
+    public static function responseSuccess($data, $message, $code = 200)
+    {
         $response = [
             'status' => 'success',
-            'message' => $message
+            'message' => $message,  
+            'data' => $data
         ];
-
-        return response()->json($response, 200);
+    
+        return response()->json($response, $code);  // Trả về mã trạng thái theo tham số $code
     }
+    
 }
 
 ?>

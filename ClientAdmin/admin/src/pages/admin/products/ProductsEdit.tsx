@@ -186,10 +186,10 @@ export default function EditProductForm() {
     });
 
     try {
-      await updateProduct(id, formData);
-      message.success("Cập nhật sản phẩm thành công!");
+      const response = await updateProduct(id, formData);
+      message.success(response.data.message);
     } catch (error) {
-      message.error("Lỗi khi cập nhật sản phẩm!");
+      message.error(error.response.data.message);
       console.error(error);
     }
   };

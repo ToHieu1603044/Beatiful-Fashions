@@ -180,15 +180,24 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import {
+  createBrand,
   deleteBrands,
   getBrands,
+  updateBrand,
   // createBrands,
   // updateBrands,
 } from "../../../services/brandsService";
 const { Option } = Select;
 
+type BrandsType = {
+    id: number;
+    name: string;
+    status: string;
+    children: BrandsType[];
+    created_at: string;
+    updated_at: string;
 
-
+}
 
 
 const Brands = () => {
@@ -220,6 +229,9 @@ const Brands = () => {
       setBrands(response.data.data);
     } catch (error) {
       message.error("Lỗi khi lấy danh sách thương hiệu");
+      if (error.response?.status === 403) {
+        navigate("/403");
+      }
     } finally {
       setLoading(false);
     }
@@ -234,11 +246,12 @@ const Brands = () => {
       cancelText: "Hủy",
       async onOk() {
         try {
-          await deleteBrands(id);
-          message.success("Đã xóa thương hiệu thành công");
+        const response =  await deleteBrands(id);
+          message.success(response.data.message);
           fetchBrands();
-        } catch {
-          message.error("Xóa không thành công");
+        } catch(error) {
+          console.error("Lỗi khi xóa thương hiệu:", error);
+          message.error(error.response.data.message);
         }
       },
     });
@@ -268,17 +281,18 @@ const Brands = () => {
       const values = await form.validateFields();
 
       if (formMode === "create") {
-        await createBrands(values);
-        message.success("Thêm thương hiệu thành công");
+     const response = await createBrand(values);
+        message.success(response.data.message);
       } else if (formMode === "edit" && selectedBrand) {
-        await updateBrands(selectedBrand.id, values);
-        message.success("Cập nhật thương hiệu thành công");
+       const responseUpdate = await updateBrand(selectedBrand.id, values);
+        message.success(responseUpdate.data.message);
       }
 
       setEditModalVisible(false);
       fetchBrands();
     } catch (error) {
-      message.error("Có lỗi xảy ra. Vui lòng thử lại.");
+      console.error("Error submitting form:", error);
+      message.error(error.response.data.message);
     }
   };
 
@@ -296,7 +310,7 @@ const Brands = () => {
       dataIndex: "status",
       render: (status: string) =>
 
-        status === "active" ? (
+        status === 1 ? (
           <Tag color="green">Đang hoạt động</Tag>
         ) : (
           <Tag color="red">Ngừng hoạt động</Tag>
@@ -425,8 +439,8 @@ const Brands = () => {
             rules={[{ required: true, message: "Chọn trạng thái" }]}
           >
             <Select placeholder="Chọn trạng thái">
-              <Option value="active">Đang hoạt động</Option>
-              <Option value="inactive">Ngừng hoạt động</Option>
+              <Option value="1">Đang hoạt động</Option>
+              <Option value="0">Ngừng hoạt động</Option>
             </Select>
           </Form.Item>
         </Form>
@@ -438,5 +452,3 @@ const Brands = () => {
 };
 
 export default Brands;
-
-    

@@ -17,7 +17,7 @@ class PostController extends Controller
             return response()->json(Post::all());
         } catch (Exception $e) {
             Log::error('Error fetching posts: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to fetch posts'], 500);
+            return response()->json(['message' => __('messages.error')], 500);
         }
     }
 
@@ -47,7 +47,7 @@ class PostController extends Controller
             return response()->json($post, 201);
         } catch (Exception $e) {
             Log::error('Error creating post: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to create post'], 500);
+            return response()->json(['message' => __('messages.error')], 500);
         }
     }
 
@@ -57,7 +57,7 @@ class PostController extends Controller
             return response()->json($post);
         } catch (Exception $e) {
             Log::error('Error fetching post: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to fetch post'], 500);
+            return response()->json(['message' => __('messages.error')], 500);
         }
     }
 
@@ -91,7 +91,7 @@ class PostController extends Controller
             return response()->json($post);
         } catch (Exception $e) {
             Log::error('Error updating post: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to update post'], 500);
+            return response()->json(['message' => __('messages.error')], 500);
         }
     }
 
@@ -100,10 +100,10 @@ class PostController extends Controller
         try {
             $this->deleteImage($post->image);
             $post->delete();
-            return response()->json(['message' => 'Post deleted successfully']);
+            return response()->json(['message' => __('messages.deleted')]);
         } catch (Exception $e) {
             Log::error('Error deleting post: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to delete post'], 500);
+            return response()->json(['message' => __('messages.error')], 500);
         }
     }
 

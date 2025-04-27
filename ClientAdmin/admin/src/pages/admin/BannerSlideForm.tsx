@@ -28,18 +28,21 @@ const BannerSlideForm: React.FC = () => {
     });
 
     try {
-      await axios.post('http://127.0.0.1:8000/api/slides', formData, {
+      const getAuthToken = () => localStorage.getItem('access_token');
+     const response = await axios.post('http://127.0.0.1:8000/api/slides', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${getAuthToken()}`,
         },
       });
-      message.success('Tạo slide và banner thành công!');
+      console.log(response.data); 
+      message.success(response.data.message);
       form.resetFields();
       setImages([]);
       setBanners([]);
     } catch (err) {
       console.error(err);
-      message.error('Đã có lỗi xảy ra!');
+      message.error(err.response.data.message);
     }
   };
 

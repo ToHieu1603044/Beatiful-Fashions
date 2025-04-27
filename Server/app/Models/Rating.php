@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -37,6 +38,15 @@ class Rating extends Model
     }
     public function parent(){
         return $this->belongsTo(Rating::class, 'parent_id');
+    }
+    public function getCreatedAtAttribute($date)
+    {
+        return Carbon::parse($date)->format('d-m-Y-H:i:s');
+    }
+
+    public function getUpdatedAtAttribute($date)
+    {
+        return Carbon::parse($date)->format('d-m-Y-H:i:s');
     }
     
 }

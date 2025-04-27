@@ -23,7 +23,6 @@ if (token && tokenExpiry && new Date().getTime() < Number(tokenExpiry)) {
   delete axios.defaults.headers.common["Authorization"];
 }
 
-// ======== Xác thực form với Zod ========
 const schema = z.object({
   email: z.string().email({ message: "Email không hợp lệ" }),
   password: z.string().min(6, { message: "Mật khẩu phải có ít nhất 6 ký tự" }),
@@ -41,7 +40,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Lưu ReturnUrl nếu có
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const returnUrl = params.get("ReturnUrl");
@@ -57,7 +56,7 @@ const Login = () => {
     return axios.post("/login", { email, password }).then((res) => res.data);
   };
 
-  // ======== Login với Google ========
+
   const googleLogin = () => {
     window.location.href = `${API_BASE_URL}/auth/google`;
   };
@@ -71,6 +70,7 @@ const Login = () => {
         const expiresAt = new Date().getTime() + 24 * 60 * 60 * 1000; // 1 ngày
 
         localStorage.setItem("access_token", response.access_token);
+        localStorage.setItem("userId", JSON.stringify(response.user.id));
         localStorage.setItem("access_token_expiry", expiresAt.toString());
         localStorage.setItem("users", JSON.stringify(response.user));
 

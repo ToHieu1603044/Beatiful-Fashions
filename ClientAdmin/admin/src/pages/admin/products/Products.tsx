@@ -22,7 +22,6 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-
   useEffect(() => {
     fetchProducts();
   }, [searchTerm, selectedCategory, selectedStatus]);
@@ -44,8 +43,14 @@ const Products = () => {
       setCurrentPage(response.data.page.currentPage);
       setLastPage(response.data.page.lastPage);
     } catch (error) {
+      console.log(error);
       console.error("Lỗi khi lấy sản phẩm:", error);
-      setProducts([]);
+      
+      if (error.response?.status === 403) {
+        navigate("/403");
+      } else {
+        setProducts([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -98,7 +103,8 @@ const Products = () => {
       content: "Bạn có chắc chắn muốn xóa sản phẩm này không?",
       onOk: async () => {
         try {
-          await deleteProduct(id);
+        const response =  await deleteProduct(id);
+          message.success(response.data.message);
           fetchProducts();
         } catch (error) {
           console.error("Lỗi khi xóa sản phẩm:", error);
@@ -108,13 +114,14 @@ const Products = () => {
   };
   const handleToggleStatus = async (product) => {
     try {
-      const newStatus = product.active ? 0 : 1; // Đảo trạng thái
-      await updateProductStatus(product.id, newStatus);
-      message.success("Cập nhật trạng thái thành công!");
-      fetchProducts(); // Load lại danh sách sản phẩm sau khi cập nhật
+      const newStatus = product.active ? 0 : 1; 
+     const resStatus = await updateProductStatus(product.id, newStatus);
+      message.success(resStatus.data.message);
+      console.log("Sta",resStatus.data);
+      fetchProducts(); 
     } catch (error) {
       console.error("Lỗi khi cập nhật trạng thái:", error);
-      message.error("Lỗi khi cập nhật trạng thái!");
+      message.error(error.response.data.message);
     }
   };
   const columns = [

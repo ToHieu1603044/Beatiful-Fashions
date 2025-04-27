@@ -22,7 +22,7 @@ class NotificationResource extends JsonResource
             'message' => $this->message,
             'type' => $this->type,
             'status' => $this->notificationUsers()->where('user_id', auth()->id())->value('status') ?? 'unread',
-            'created_at' => $this->created_at ? $this->created_at->format('Y-m-d H:i:s') : null, 
+            'created_at' => $this->created_at, 
             'time_ago' => $this->created_at ? Carbon::parse($this->created_at)->diffForHumans() : null, 
         ];
     }

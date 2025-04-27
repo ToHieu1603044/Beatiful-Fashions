@@ -44,12 +44,12 @@ const Cart = () => {
         const product = products.find(item => item.id === id);
         if (!product) return;
 
-        if (newQuantity > product.product.stock) {
-            alert(`Sản phẩm ${product.product.name} chỉ còn ${product.product.stock} trong kho.`);
-            return;
-        }
+        // if (newQuantity > product.product.stock) {
+        //     alert(`Sản phẩm ${product.product.name} chỉ còn ${product.product.stock} trong kho.`);
+        //     return;
+        // }
 
-        if (newQuantity < 1) return;
+        // if (newQuantity < 1) return;
 
         try {
             const response = await updateCart({ quantity: newQuantity }, id);
@@ -63,11 +63,8 @@ const Cart = () => {
                 fetchCarts();
             }
         } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Lỗi',
-                text: `Sản phẩm ${product.product.name} vượt quá số lượng trong kho.`,
-            });
+            alert(error)
+            console.log(error);
 
         }
     };
