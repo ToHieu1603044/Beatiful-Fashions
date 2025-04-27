@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Button, Select, Input, Table, Tag } from "antd";
+import { Modal, Button, Select, Input, Table, Tag, message } from "antd";
 import { updateOrder } from "../../../services/orderService";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -91,12 +91,11 @@ const EditOrderModal = ({ order, visible, onClose }) => {
 
   const handleUpdateOrder = async () => {
     try {
-      await updateOrder(order.id, formData);
-      Swal.fire("Thành công!", "Cập nhật đơn hàng thành công.", "success");
-
+     const response = await updateOrder(order.id, formData);
+      message.success(response.data.message);
       onClose();
     } catch (error) {
-      console.error("Lỗi cập nhật đơn hàng:", error);
+      message.error(error.response.data.message);
       Swal.fire("Lỗi!", "Không thể cập nhật đơn hàng.", "error");
     }
   };

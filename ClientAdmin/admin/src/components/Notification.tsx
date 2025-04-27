@@ -110,7 +110,13 @@ const Notifications = () => {
 
 
             <div className={`offcanvas offcanvas-end ${isOpen ? "show" : ""}`}
-                style={{ width: "260px", visibility: isOpen ? "visible" : "hidden", position: "fixed" }}>
+                style={{
+                    width: "260px",
+                    visibility: isOpen ? "visible" : "hidden",
+                    position: "fixed",
+                    zIndex: 1050 
+                }}>
+
 
                 <div className="offcanvas-header border-bottom">
                     <h5 className="offcanvas-title">Thông báo</h5>
@@ -175,46 +181,48 @@ const Notifications = () => {
 
 
             <style jsx>{`
+    .offcanvas-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1040; /* Ensure it's above other background elements */
+    }
 
-            .offcanvas-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
-}
-                .notification-item {
-                    transition: all 0.2s ease;
-                    border-left: 3px solid transparent;
-                }
-                .notification-item:hover {
-                    background-color: #f8f9fa;
-                }
-                .notification-item.bg-light {
-                    border-left-color: #0d6efd;
-                }
-                .notification-content {
-                    flex: 1;
-                }
-                .message-wrapper {
-                    padding-top: 0.5rem;
-                    margin-top: 0.5rem;
-                    border-top: 1px solid #eee;
-                }
-                .notification-message {
-                    color: #666;
-                    font-size: 0.9rem;
-                    line-height: 1.4;
-                }
-                .btn-link {
-                    opacity: 0.5;
-                    transition: opacity 0.2s;
-                }
-                .btn-link:hover {
-                    opacity: 1;
-                }
-            `}</style>
+    .notification-item {
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+    }
+    .notification-item:hover {
+        background-color: #f8f9fa;
+    }
+    .notification-item.bg-light {
+        border-left-color: #0d6efd;
+    }
+    .notification-content {
+        flex: 1;
+    }
+    .message-wrapper {
+        padding-top: 0.5rem;
+        margin-top: 0.5rem;
+        border-top: 1px solid #eee;
+    }
+    .notification-message {
+        color: #666;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    .btn-link {
+        opacity: 0.5;
+        transition: opacity 0.2s;
+    }
+    .btn-link:hover {
+        opacity: 1;
+    }
+`}</style>
+
         </>
     );
 };

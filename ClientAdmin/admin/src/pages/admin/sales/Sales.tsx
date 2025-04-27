@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, DatePicker, Form, Input, Modal, Select, Table, InputNumber, Upload } from 'antd';
+import { Button, DatePicker, Form, Input, Modal, Select, Table, InputNumber, Upload, message } from 'antd';
 import { useForm } from 'antd/es/form/Form';
 import axios from 'axios';
 import moment from 'moment';
@@ -80,30 +80,29 @@ const Sales: React.FC = () => {
 
             });
 
-            // Append image to formData if available
-            if (image && image.file) {
-                formData.append('image', image.file);  // Chỉ gửi ảnh mà không gọi API upload ảnh
+            if (image) {
+                formData.append('image', image);
             }
-
-            // Gửi formData tới API
+            
+         
             const response = await axios.post('http://127.0.0.1:8000/api/flash-sales', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
+            console.log("formData", formData);
 
             setLoading(false);
-            Modal.success({ content: 'Flash Sale đã được tạo thành công!' });
+            Modal.success({ content: response.data.message });
         } catch (error) {
             setLoading(false);
             console.error('Lỗi khi tạo Flash Sale:', error);
-
-            const errorMessage = error.response?.data?.errors?.name?.[0] || error.message || 'Có lỗi xảy ra, vui lòng thử lại!';
-
+            message.error(error.response.data.message);
+            const errorMessages = Object.values(error.response.data.errors).flat().join('\n');
             Modal.error({
                 title: 'Lỗi khi tạo Flash Sale',
-                content: errorMessage,
-            });
+                content: errorMessages,
+              });
         }
     };
 

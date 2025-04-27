@@ -50,7 +50,6 @@ const Categories = () => {
     try {
       const response = await getCategories({ search: searchTerm });
       setCategories(response.data);
-      console.log("Dữ liệu ---:", response.data);
     } catch (error) {
       if (error.response.status === 401) {
         navigate("/login");
@@ -58,7 +57,7 @@ const Categories = () => {
       if (error.response.status === 403) {
         navigate("/403");
       }
-      console.error("Lỗi khi lấy danh mục:", error);
+      message.error(error.response.data.message);
     } finally {
       setLoading(false);
     }
@@ -67,12 +66,12 @@ const Categories = () => {
     console.log("ID:", id, " New Status:", newStatus); // Log để kiểm tra giá trị
 
     try {
-      await updateCategoryStatus(id, newStatus);
-      message.success("Cập nhật trạng thái thành công!");
+    const resStatus =  await updateCategoryStatus(id, newStatus);
+      message.success(resStatus.data.message);
       fetchCategories(); // reload lại dữ liệu
     } catch (error) {
       console.error("Lỗi khi cập nhật trạng thái:", error);
-      message.error("Cập nhật trạng thái thất bại.");
+      message.error(error.response.data.message);
     }
   };
 
@@ -85,8 +84,11 @@ const Categories = () => {
 
   const handleDelete = async (id: number) => {
     try {
-      await deleteCategory(id);
-      message.success("Xóa danh mục thành công!");
+      const response = await deleteCategory(id);
+      message.success(response.data.message);
+
+      console.log("Response:", response);
+
       fetchCategories();
     } catch (error) {
       console.error("Lỗi khi xóa danh mục:", error);

@@ -23,7 +23,6 @@ if (token && tokenExpiry && new Date().getTime() < Number(tokenExpiry)) {
   delete axios.defaults.headers.common["Authorization"];
 }
 
-// ======== Xác thực form với Zod ========
 const schema = z.object({
   email: z.string().email({ message: "Email không hợp lệ" }),
   password: z.string().min(6, { message: "Mật khẩu phải có ít nhất 6 ký tự" }),
@@ -41,7 +40,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Lưu ReturnUrl nếu có
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const returnUrl = params.get("ReturnUrl");
@@ -57,7 +56,7 @@ const Login = () => {
     return axios.post("/login", { email, password }).then((res) => res.data);
   };
 
-  // ======== Login với Google ========
+
   const googleLogin = () => {
     window.location.href = `${API_BASE_URL}/auth/google`;
   };
@@ -67,17 +66,16 @@ const Login = () => {
     setLoading(true);
     try {
       const response = await login(data.email, data.password);
-
       if (response.access_token) {
         const expiresAt = new Date().getTime() + 24 * 60 * 60 * 1000; // 1 ngày
 
         localStorage.setItem("access_token", response.access_token);
+        localStorage.setItem("userId", JSON.stringify(response.user.id));
         localStorage.setItem("access_token_expiry", expiresAt.toString());
         localStorage.setItem("users", JSON.stringify(response.user));
 
         const userRoles = response.user.roles?.map(role => role.name) || response.role || [];
         localStorage.setItem("roles", JSON.stringify(userRoles));
-
         axios.defaults.headers.common["Authorization"] = `Bearer ${response.access_token}`;
 
         // Điều hướng theo vai trò
@@ -117,7 +115,7 @@ const Login = () => {
 
   return (
     <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
-      <div className="card shadow-lg border-0 p-4 rounded-4" style={{ width: "380px", background: "rgba(255, 255, 255, 0.85)", backdropFilter: "blur(10px)" }}>
+<div className="card shadow-lg border-0 p-4 rounded-4" style={{ width: "380px", background: "rgba(255, 255, 255, 0.85)", backdropFilter: "blur(10px)" }}>
         <div className="text-center mb-4">
           <h2 className="fw-bold text-dark">Đăng nhập</h2>
         </div>

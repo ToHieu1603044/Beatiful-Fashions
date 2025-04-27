@@ -14,4 +14,8 @@ class FlashSaleProduct extends Model
         'sale_price',
         'quantity'
     ];
+    public function flashSale()
+{
+    return $this->belongsTo(FlashSale::class);
+}
 }

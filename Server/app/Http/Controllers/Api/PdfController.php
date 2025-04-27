@@ -14,7 +14,7 @@ class PdfController
             $orders = Order::with('orderDetails.sku')->orderBy('created_at', 'desc')->get();
     
             if ($orders->isEmpty()) {
-                return response()->json(['error' => 'Không có đơn hàng nào để xuất PDF'], 404);
+                return response()->json(['error' => __('messages.order_not_found')], 404);
             }
     
             $pdf = Pdf::loadView('pdf.invoices', compact('orders'));

@@ -45,7 +45,7 @@ const Index = () => {
         try {
             const response = await axios.get('http://127.0.0.1:8000/api/sales');
             setFlashSales(response.data);
-            console.log("dayaba",response.data);
+            console.log("dayaba", response.data);
         } catch (error) {
             console.error('Lỗi khi lấy dữ liệu khuyến mãi:', error);
         }
@@ -58,15 +58,36 @@ const Index = () => {
 
     const handleToggleStatus = async (id: number) => {
         try {
-            await axios.put(`http://127.0.0.1:8000/api/sales/${id}/toggle-status`);
-            const updatedSales = flashSales.map((sale) =>
-                sale.id === id ? { ...sale, status: sale.status === 'active' ? 'inactive' : 'active' } : sale
-            );
-            setFlashSales(updatedSales);
+            // Tìm FlashSale tương ứng với id và cập nhật status
+            const sale = flashSales.find(sale => sale.id === id);
+            if (!sale) {
+                message.error("Không tìm thấy chương trình Flash Sale");
+                return;
+            }
+
+            const updatedStatus = sale.status === 'active' ? 'inactive' : 'active';
+
+            // Gửi PUT request với status
+            const response = await axios.put(`http://127.0.0.1:8000/api/sales/${id}/toggle-status`, {
+                status: updatedStatus,  // Truyền status trong body request
+            });
+
+            if (response.status === 200) {
+                // Cập nhật lại danh sách Flash Sale trong state
+                const updatedSales = flashSales.map((sale) =>
+                    sale.id === id ? { ...sale, status: updatedStatus } : sale
+                );
+                message.success(response.data.message);
+                setFlashSales(updatedSales);
+            } else {
+                message.error("Không thể cập nhật trạng thái");
+            }
         } catch (error) {
             console.error("Lỗi khi cập nhật trạng thái:", error);
+            message.error("Có lỗi xảy ra khi cập nhật trạng thái.");
         }
     };
+
 
     const handleDeleteSale = async (id: number) => {
         try {
@@ -82,30 +103,33 @@ const Index = () => {
 
     const handleEdit = (sale: FlashSale) => {
         setCurrentEditSale(sale);
-    
+
         const formattedProducts = sale.products.map(p => ({
             product_id: p.id,
-            discount_price: p.pivot?.discount_price || 0
+            discount_price: p.discount_price,  // lấy thẳng discount_price
+            quantity: p.quantity               // thêm luôn quantity
         }));
-    
+
         form.setFieldsValue({
             name: sale.name,
             start_time: dayjs(sale.start_time),
             end_time: dayjs(sale.end_time),
             status: sale.status,
             products: formattedProducts,
+            image: sale.image
         });
-    
+
         setIsModalVisible(true);
     };
-    
+
+
     useEffect(() => {
         const fetchProducts = async () => {
             try {
                 const response = await axios.get('http://127.0.0.1:8000/api/flash-sales/products');
                 const productList = Object.entries(response.data).map(([id, name]) => ({ id: parseInt(id), name }));
                 setProducts(productList);
-                console.log("productList",productList);
+                console.log("productList", productList);
             } catch (error) {
                 console.error('Lỗi khi lấy sản phẩm:', error);
             }
@@ -123,16 +147,16 @@ const Index = () => {
             formData.append('status', values.status);
             if (image) formData.append('image', image);
 
-           await updateSales(currentEditSale.id, values);
-            console.log("values",formData);
-            message.success("Cập nhật thành công");
+           const response = await updateSales(currentEditSale.id, values);
+            console.log("values", formData);
+            message.success(response.data.message);
             setIsModalVisible(false);
             setCurrentEditSale(null);
             setImage(null);
             fetchSales();
         } catch (error) {
             console.error("Lỗi khi cập nhật:", error);
-            message.error("Có lỗi xảy ra khi cập nhật.");
+            message.error(error.response.data.message);
         }
     };
 
@@ -190,6 +214,7 @@ const Index = () => {
                                     <li key={p.id}>
                                         <Text strong>{p.name}</Text>
                                         <Text type="secondary">-{p.discount_price} đ</Text>
+                                        <Text type="secondary">-{p.quantity} sản phẩm</Text>
                                     </li>
                                 ))}
                             </ul>
@@ -287,45 +312,78 @@ const Index = () => {
                         </Select>
                     </Form.Item>
                     <Form.List name="products">
-    {(fields, { add, remove }) => (
-        <>
-            {fields.map(({ key, name, ...restField }) => (
-                <div key={key} style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                    <Form.Item
-                        {...restField}
-                        name={[name, 'product_id']}
-                        rules={[{ required: true, message: 'Chọn sản phẩm' }]}
-                        style={{ flex: 2 }}
-                    >
-                        <Select placeholder="Chọn sản phẩm">
-                            {products.map((product) => (
-                                <Option key={product.id} value={product.id}>
-                                    {product.name}
-                                </Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
+                        {(fields, { add, remove }) => (
+                            <>
+                                {fields.map(({ key, name, ...restField }) => (
+                                    <div
+                                        key={key}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 12,
+                                            marginBottom: 16,
+                                        }}
+                                    >
+                                        <Form.Item
+                                            {...restField}
+                                            name={[name, 'product_id']}
+                                            rules={[{ required: true, message: 'Chọn sản phẩm' }]}
+                                            style={{ flex: 2 }}
+                                        >
+                                            <Select placeholder="Chọn sản phẩm">
+                                                {products.map((product) => (
+                                                    <Select.Option key={product.id} value={product.id}>
+                                                        {product.name}
+                                                    </Select.Option>
+                                                ))}
+                                            </Select>
+                                        </Form.Item>
 
-                    <Form.Item
-                        {...restField}
-                        name={[name, 'discount_price']}
-                        rules={[{ required: true, message: 'Nhập giá giảm' }]}
-                        style={{ flex: 1 }}
-                    >
-                        <InputNumber min={0} style={{ width: '100%' }} />
-                    </Form.Item>
+                                        <Form.Item
+                                            {...restField}
+                                            name={[name, 'discount_price']}
+                                            rules={[{ required: true, message: 'Nhập giá giảm' }]}
+                                            style={{ flex: 1 }}
+                                        >
+                                            <InputNumber
+                                                min={0}
+                                                style={{ width: '100%' }}
+                                                placeholder="Giá giảm"
+                                            />
+                                        </Form.Item>
 
-                    <Button danger onClick={() => remove(name)}>
-                        Xóa
-                    </Button>
-                </div>
-            ))}
-            <Button type="dashed" onClick={() => add()} block>
-                + Thêm sản phẩm
-            </Button>
-        </>
-    )}
-</Form.List>
+                                        <Form.Item
+                                            {...restField}
+                                            name={[name, 'quantity']}
+                                            rules={[{ required: true, message: 'Không được để trống' }]}
+                                            style={{ flex: 1 }}
+                                        >
+                                            <InputNumber
+                                                min={1}
+                                                style={{ width: '100%' }}
+                                                placeholder="Số lượng"
+                                            />
+                                        </Form.Item>
+
+                                        <Button
+                                            danger
+                                            onClick={() => remove(name)}
+                                            type="text"
+                                        >
+                                            Xóa
+                                        </Button>
+                                    </div>
+                                ))}
+
+                                <Form.Item>
+                                    <Button type="dashed" onClick={() => add()} block icon="+">
+                                        Thêm sản phẩm
+                                    </Button>
+                                </Form.Item>
+                            </>
+                        )}
+                    </Form.List>
+
 
                 </Form>
             </Modal>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -45,6 +46,16 @@ class OrderReturn extends Model
     public function orderReturn()
     {
         return $this->belongsTo(OrderReturn::class, 'order_return_id');
+    }
+    public function getCreatedAtAttribute($date)
+    {
+        return Carbon::parse($date)->format('d-m-Y-H:i:s');
+    }
+
+    // Accessor to format the updated_at date automatically
+    public function getUpdatedAtAttribute($date)
+    {
+        return Carbon::parse($date)->format('d-m-Y-H:i:s');
     }
     
 

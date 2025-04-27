@@ -64,29 +64,30 @@ import BaivietForm from "./pages/admin/baiviet/FormBaiViet";
 import BaivietPage from "./pages/client/baiviet/Baiviet";
 import BaivietDetailPage from "./pages/client/baiviet/ChiTietbaChiTiet";
 import SkuTable from "./pages/admin/sku";
+import BannerSlideFormUpdate from "./pages/admin/BannerSlideFormUpdate";
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const [allowed, setAllowed] = useState<null | boolean>(null);
 
   useEffect(() => {
     const role = localStorage.getItem("roles");
     const token = localStorage.getItem("access_token");
-  
+
     console.log("Raw role from localStorage:", role);
-  
+
     const parsedRoles = role ? JSON.parse(role) : [];
     const allowedRoles = ["admin", "manager", "content"];
-  
+
     const hasPermission = parsedRoles.some((r: string) =>
       allowedRoles.includes(r)
     );
-  
+
     if (!token || !hasPermission) {
       setAllowed(false);
     } else {
       setAllowed(true);
     }
   }, []);
-  
+
 
   if (allowed === null) {
     return (
@@ -132,16 +133,25 @@ function App() {
   }
 
   if (isMaintenance) {
-    const allowPaths = ["/admin", "/login", "/register", "/maintance"];
+    const allowPaths = ["/admin", "/login", "/register", "/maintenance"];
     const isAllowPath = allowPaths.some(path =>
       window.location.pathname.startsWith(path)
     );
-  
+
     if (!isAllowPath) {
       return <MaintenancePage />;
     }
   }
-  
+  const PublicRoute = ({ element }: { element: JSX.Element }) => {
+    const token = localStorage.getItem("access_token");
+
+    if (token) {
+      // Nếu đã đăng nhập rồi thì redirect
+      return <Navigate to="/" replace />;
+    }
+
+    return element;
+  };
   const routes = useRoutes([
     {
       path: "/admin",
@@ -153,20 +163,21 @@ function App() {
           element: <ProtectedRoute element={<Categories />} />,
           children: [
             { path: "create", element: <ProtectedRoute element={<CategoriesAdd />} />, },
-            { path: ":id/edit",  element: <ProtectedRoute element={<CategoriesEdit />} />, },
-           
+            { path: ":id/edit", element: <ProtectedRoute element={<CategoriesEdit />} />, },
+
           ],
         },
 
-        { path: "users", element: <Users />,
+        {
+          path: "users", element: <Users />,
         },
-        { path: "users/add", element: <AddUser/> },
-        // { path: "users/:id/edit", element: <EditUser /> },
+        { path: "users/add", element: <AddUser /> },
+        { path: "users/:id/edit", element: <EditUser /> },
 
         {
           path: "attributes",
           element: <Attributes />,
-          
+
           children: [
             { path: "create", element: <AttributesAdd /> },
             { path: "edit/:id", element: <AttributesEdit /> },
@@ -213,10 +224,11 @@ function App() {
         { path: "slider/create", element: <BannerSlideForm />, },
         { path: "slider", element: <BannerSlide />, },
         { path: "categories/trashed", element: <ProtectedRoute element={<CategoriesTrash />} />, },
-        { path:"baiviet",element:<ListBaiViet/>},
-        { path:"baiviet/add",element:<BaivietForm/>},
-        { path:"baiviet/edit/:id",element:<BaivietForm/>},
-        { path:"sku",element:<SkuTable/>},
+        { path: "baiviet", element: <ListBaiViet /> },
+        { path: "baiviet/add", element: <BaivietForm /> },
+        { path: "baiviet/edit/:id", element: <BaivietForm /> },
+        { path: "sku", element: <SkuTable /> },
+        { path: "slider/edit/:id", element: <BannerSlideFormUpdate /> },
 
       ],
     },
@@ -226,7 +238,10 @@ function App() {
       children: [
         { path: "category/:id/:slug", element: <ProductCategories /> },
         { path: "products/:id/detail", element: <DetailProducts /> },
-        { path: "login", element: <Login /> },
+        {
+          path: "login",
+          element: <PublicRoute element={<Login />} />,
+        },
         { path: "register", element: <Register /> },
         { path: "cart", element: <Cart /> },
         { path: "auth/reset-password", element: <ResetPassword /> },
@@ -236,9 +251,9 @@ function App() {
         { path: "searchs", element: <SearchProducts /> },
         { path: "orders/return", element: <OrderReturns /> },
         { path: "whishlish", element: <Whishlish /> },
-        { path: "sales", element: <Index />},
-        { path: "baiviet", element: <BaivietPage />},
-        { path: "baiviet/:id", element: <BaivietDetailPage />},
+        { path: "sales", element: <Index /> },
+        { path: "baiviet", element: <BaivietPage /> },
+        { path: "baiviet/:id", element: <BaivietDetailPage /> },
         { path: "whislist", element: <Whishlish /> },
       ],
     },
@@ -251,11 +266,9 @@ function App() {
     { path: "order/success", element: <OrderSuccess /> },
     { path: "order/cancel", element: <OrderFail /> },
     { path: "order/pending", element: <OrderPending /> },
-
     { path: "order/failed", element: <OrderFail /> },
+    { path: "/maintenance ", element: <MaintenancePage /> },
 
-    { path: "/maintance", element: <MaintenancePage /> },
-    
   ]);
 
   return routes;

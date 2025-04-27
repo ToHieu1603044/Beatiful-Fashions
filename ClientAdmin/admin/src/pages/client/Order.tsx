@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Tabs, Table, Select, Checkbox, Tag, Spin, Button, Modal, Input, Descriptions, Divider, Space, Rate } from "antd";
+import { Tabs, Table, Select, Checkbox, Tag, Spin, Button, Modal, Input, Descriptions, Divider, Space, Rate, message } from "antd";
 import { fetchOrders, returnOrderAPI } from "../../services/homeService";
 import { updateOrderStatus, fetchReturnDetails } from "../../services/orderService";
 import { useNavigate } from "react-router-dom";
@@ -44,7 +44,7 @@ const Orders: React.FC = () => {
             [productId]: reason
         }));
     };
-    
+
     const handleOpenReviewModal = (productDetail: any) => {
         setReviewProduct(productDetail);
         setReviewModalVisible(true);
@@ -93,48 +93,13 @@ const Orders: React.FC = () => {
     const handleRebuy = async (order: any) => {
         try {
             const response = await axios.post(`http://127.0.0.1:8000/api/orders/rebuy-item/${order.id}`);
-            if (response.status === 200) {
-                await Swal.fire({
-                    title: 'Mua hàng thành công',
-                    text: 'Vui lòng kiểm tra đơn hàng',
-                    icon: 'success',
-                });
-            }
-        } catch (error: any) {
-            // Kiểm tra và in ra lỗi chi tiết
-            if (error.response) {
-                // Lỗi từ server trả về (ví dụ: mã lỗi HTTP)
-                console.error("Error Response:", error.response.data);
-                console.error("Error Status:", error.response.status);
-                console.error("Error Headers:", error.response.headers);
-                
-                Swal.fire({
-                    title: 'Lỗi',
-                    text: `Không thể mua lại đơn hàng: ${error.response.data.message || 'Vui lòng thử lại sau'}`,
-                    icon: 'error',
-                });
-            } else if (error.request) {
-                // Lỗi khi không nhận được phản hồi từ server
-                console.error("Error Request:", error.request);
-                
-                Swal.fire({
-                    title: 'Lỗi',
-                    text: 'Không nhận được phản hồi từ server. Vui lòng thử lại.',
-                    icon: 'error',
-                });
-            } else {
-                // Lỗi khác (ví dụ: cấu trúc lỗi không đúng)
-                console.error("Error Message:", error.message);
-                
-                Swal.fire({
-                    title: 'Lỗi',
-                    text: `Đã xảy ra lỗi: ${error.message}`,
-                    icon: 'error',
-                });
-            }
+                message.success(response.data.message);
+                loadOrders();
+        } catch (error: any) {        
+            message.error(error.response.data.message);
         }
     };
-    
+
 
     const handleSelectReturnItem = (detail: any, quantity: number) => {
         setSelectedReturnItems(prevItems => {
@@ -151,12 +116,13 @@ const Orders: React.FC = () => {
         if (!selectedOrder) return;
 
         try {
-            await updateOrderStatus(selectedOrder.id, "processing");
+          const response =  await updateOrderStatus(selectedOrder.id, "processing");
             setOrders(prevOrders =>
                 prevOrders.map(order =>
                     order.id === selectedOrder.id ? { ...order, shipping_status: "processing" } : order
                 )
             );
+            message.success(response.data.message);
             setModalVisible(false);
         } catch (error) {
             console.error("Lỗi khi cập nhật trạng thái đơn hàng:", error);
@@ -167,23 +133,30 @@ const Orders: React.FC = () => {
         const itemsToRefund = Object.entries(selectedReturnItems).map(([id, quantity]) => ({
             order_detail_id: Number(id),
             quantity,
-            reason: returnReasons[id] || "" // lấy lý do từ returnReasons
+            reason: returnReasons[id] || ""
         }));
-    
+
         console.log("Dữ liệu gửi lên API:", JSON.stringify({ items: itemsToRefund }, null, 2));
-    
+
         try {
             const response = await returnOrderAPI(selectedOrder.id, { items: itemsToRefund });
-    
-            if (response.status === 200) {
-                console.log("Hoàn trả sản phẩm thành công", response.data);
-                setReturnModalVisible(false);
-            }
+
+            // if (response.status === 200) {
+            //     console.log("Hoàn trả sản phẩm thành công", response.data);
+            //     await Swal.fire({
+            //         title: 'Gửi yêu cầu hoàn trả thành công',
+            //         text: 'Vui lòng kiểm tra đơn hàng',
+            //         icon: 'success',
+            //     });
+            //     setReturnModalVisible(false);
+            // }
+            message.success(response.data.message);
         } catch (error) {
+            message.error(error.response.data.message);
             console.error("Lỗi khi hoàn trả sản phẩm:", error.response?.data || error);
         }
     };
-    
+
     const handleShowModal = (order: Order) => {
         setSelectedOrder(order);
         setStatus(order.shipping_status);
@@ -215,20 +188,20 @@ const Orders: React.FC = () => {
     };
 
     useEffect(() => {
-        const loadOrders = async () => {
-            setLoading(true);
-            try {
-                const params = activeTab !== "all" ? { tracking_status: activeTab } : {};
-                const response = await fetchOrders(params);
-                setOrders(response.data || []);
-            } catch (error) {
-                console.error("Lỗi khi lấy đơn hàng:", error);
-            }
-            setLoading(false);
-        };
-
+       
         loadOrders();
     }, [activeTab]);
+    const loadOrders = async () => {
+        setLoading(true);
+        try {
+            const params = activeTab !== "all" ? { tracking_status: activeTab } : {};
+            const response = await fetchOrders(params);
+            setOrders(response.data || []);
+        } catch (error) {
+            console.error("Lỗi khi lấy đơn hàng:", error);
+        }
+        setLoading(false);
+    };
 
 
     const showModal = (order: any) => {
@@ -251,31 +224,13 @@ const Orders: React.FC = () => {
 
             if (confirmResult.isConfirmed) {
                 const response = await updateOrderStatus(orderId, "cancelled");
-
-                if (response.status === 200) {
-                    setOrders(prevOrders =>
-                        prevOrders.map(order =>
-                            order.id === orderId ? { ...order, shipping_status: "cancelled" } : order
-                        )
-                    );
-
-                    await Swal.fire({
-                        title: 'Đã hủy!',
-                        text: 'Đơn hàng đã được hủy thành công.',
-                        icon: 'success',
-                        confirmButtonText: 'OK'
-                    });
-                }
+                console.log("response", response);
+                message.success(response.message);
+                loadOrders();
             }
 
         } catch (error) {
-            await Swal.fire({
-                title: 'Thất bại!',
-                text: 'Có lỗi xảy ra khi hủy đơn hàng.',
-                icon: 'error',
-                confirmButtonText: 'OK'
-            });
-
+          //  message.error(error.response.data.data.message);
             console.error("Lỗi khi hủy đơn hàng:", error);
         }
     };
@@ -292,12 +247,13 @@ const Orders: React.FC = () => {
 
     const handleConfirmReceived = async (orderId: number) => {
         try {
-            await updateOrderStatus(orderId, "completed");
+          const response =  await updateOrderStatus(orderId, "completed");
             setOrders(prevOrders =>
                 prevOrders.map(order =>
                     order.id === orderId ? { ...order, tracking_status: "completed" } : order
                 )
             );
+            message.success(response.data.message);
         } catch (error) {
             console.error("Lỗi khi xác nhận đơn hàng đã nhận:", error);
         }
@@ -393,8 +349,8 @@ const Orders: React.FC = () => {
                     <Tabs.TabPane tab="Tất cả" key="all" />
                     <Tabs.TabPane tab="Chờ xác nhận" key="pending" />
                     <Tabs.TabPane tab="Đang xử lý" key="processing" />
-                    <Tabs.TabPane tab="Đang giao" key="shipped" />
-                    <Tabs.TabPane tab="Đã giao" key="delivered" />
+                    <Tabs.TabPane tab="Đã gửi" key="shipped" />
+                    <Tabs.TabPane tab="Đang giao" key="delivered" />
                     <Tabs.TabPane tab="Hoàn tất" key="completed" />
                     <Tabs.TabPane tab="Đã hủy" key="cancelled" />
                     <Tabs.TabPane tab="Trả hàng" key="refunded" />
@@ -435,6 +391,16 @@ const Orders: React.FC = () => {
                                         {selectedOrder.tracking_status === 'completed' ? 'Hoàn tất' : 'Đang xử lý'}
                                     </Tag>
                                 </Descriptions.Item>
+                                <Descriptions.Item label="Trạng thanh toán">
+                                    {selectedOrder.payment_method === 'online' && selectedOrder.is_paid === 0 ? (
+                                        <Tag color="red">Chưa thanh toán</Tag>
+                                    ) : (
+                                        <Tag color={selectedOrder.payment_method === 'online' ? 'green' : 'orange'}>
+                                            {selectedOrder.tracking_status === 'completed' ? 'Hoàn tất' : 'Đang xử lý'}
+                                        </Tag>
+                                    )}
+                                </Descriptions.Item>
+
                             </Descriptions>
 
                             {/* Phần 2: Danh sách sản phẩm */}
@@ -551,7 +517,7 @@ const Orders: React.FC = () => {
                     />
                 </Modal>
                 <Modal
-                width={1100}
+                    width={1100}
                     title="Hoàn trả sản phẩm"
                     open={returnModalVisible}
                     onCancel={() => setReturnModalVisible(false)}
@@ -561,7 +527,7 @@ const Orders: React.FC = () => {
                     {selectedOrder && (
                         <div>
                             <h4>Chọn sản phẩm muốn hoàn:</h4>
-                            <Table 
+                            <Table
                                 columns={[
                                     {
                                         title: "Chọn",
@@ -616,12 +582,12 @@ const Orders: React.FC = () => {
                                         key: "reason",
                                         render: (_: any, detail: any) => (
                                             <Input
-                                            style={{ width: 200 }}
-                                            placeholder="Nhập lý do"
-                                            disabled={!selectedReturnItems[detail.id]}
-                                            value={returnReasons[detail.id] || ""}
-                                            onChange={(e) => setReason(detail.id, e.target.value)}
-                                        />                                        
+                                                style={{ width: 200 }}
+                                                placeholder="Nhập lý do"
+                                                disabled={!selectedReturnItems[detail.id]}
+                                                value={returnReasons[detail.id] || ""}
+                                                onChange={(e) => setReason(detail.id, e.target.value)}
+                                            />
                                         )
                                     },
                                     {

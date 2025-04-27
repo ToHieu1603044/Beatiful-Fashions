@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Table,Select , Button, Modal } from "antd";
+import { Table,Select , Button, Modal, message } from "antd";
 import { getOrderReturns } from "../../../services/orderService";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const OrderReturn: React.FC = () => {
     const [orders, setOrders] = useState<any[]>([]);
@@ -11,7 +12,7 @@ const OrderReturn: React.FC = () => {
     useEffect(() => {
         fetchOrders();
     }, []);
-
+    const navigate = useNavigate();
     const statusOptions = [
       { value: "pending", label: "Chờ xử lý" },
       { value: "approved", label: "Chấp nhận" },
@@ -44,11 +45,9 @@ const OrderReturn: React.FC = () => {
             )
         );
 
-        if(response.status === 200){
-            console.log("Cập nhật trạng thái thanh cong");
-        }
+        message.success(response.data.message);
     } catch (error) {
-        console.error("Lỗi cập nhật trạng thái:", error);
+        message.error(error.response.data.message);
     }
 };
   
@@ -58,6 +57,9 @@ const OrderReturn: React.FC = () => {
             console.log("Danh sách đơn hàng hoàn:", response.data.data);
             setOrders(response.data.data);
         } catch (error) {
+            if (error.response?.status === 403) {
+                navigate("/403");
+            }
             console.error("Lỗi lấy danh sách đơn hàng:", error);
         }
     };
@@ -186,6 +188,16 @@ const OrderReturn: React.FC = () => {
                                     render: (amount: number) =>
                                         Number(amount).toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
                                 },
+                                {
+                                    title: "Lý do hoàn trả",
+                                    dataIndex: "reason",
+                                    key: "reason",
+                                    render: (reason: string) => (
+                                        <div style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                            {reason}
+                                        </div>
+                                    ),
+                                }
                             ]}
                         />
                     </>

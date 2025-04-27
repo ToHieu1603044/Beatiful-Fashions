@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -86,4 +87,14 @@ class Discount extends Model
     //         'total_after_discount' => $totalAmount - $discountAmount,
     //     ];
     // }
+    public function getCreatedAtAttribute($date)
+    {
+        return Carbon::parse($date)->format('d-m-Y-H:i:s');
+    }
+
+    // Accessor to format the updated_at date automatically
+    public function getUpdatedAtAttribute($date)
+    {
+        return Carbon::parse($date)->format('d-m-Y-H:i:s');
+    }
 }

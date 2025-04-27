@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Setting extends Model
@@ -18,5 +19,14 @@ class Setting extends Model
     public static function set($key, $value)
     {
         return static::updateOrCreate(['key' => $key], ['value' => $value]);
+    }
+    public function getCreatedAtAttribute($date)
+    {
+        return Carbon::parse($date)->format('d-m-Y-H:i:s');
+    }
+
+    public function getUpdatedAtAttribute($date)
+    {
+        return Carbon::parse($date)->format('d-m-Y-H:i:s');
     }
 }

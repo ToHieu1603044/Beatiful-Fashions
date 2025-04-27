@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -10,7 +11,7 @@ class OrderReturnItem extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['order_return_id', 'order_detail_id', 'quantity', 'refund_amount'];
+    protected $fillable = ['order_return_id', 'order_detail_id', 'quantity', 'refund_amount', 'reason'];
 
    
     public function orderReturn()
@@ -22,5 +23,14 @@ class OrderReturnItem extends Model
     {
         return $this->belongsTo(OrderDetail::class);
     }
-    
+    public function getCreatedAtAttribute($date)
+    {
+        return Carbon::parse($date)->format('d-m-Y-H:i:s');
+    }
+
+    // Accessor to format the updated_at date automatically
+    public function getUpdatedAtAttribute($date)
+    {
+        return Carbon::parse($date)->format('d-m-Y-H:i:s');
+    }
 }

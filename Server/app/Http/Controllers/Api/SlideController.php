@@ -80,6 +80,7 @@ class SlideController extends Controller
 
             return response()->json([
                 'slide' => $slide,
+                'message' => __('messages.created'),
                 'banner' => $banner,
             ], 201);
         } catch (\Exception $e) {
@@ -107,29 +108,55 @@ class SlideController extends Controller
 
     public function update(Request $request, Slide $slide)
     {
+        \Log::info($request->all());
         try {
+            // Validate dữ liệu yêu cầu
             $validated = $request->validate([
                 'title' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
-                'images' => 'required|array',
-                'banners' => 'required|array',
+                'images' => 'nullable|array',
+                'banners' => 'nullable|array',
                 'banners.*' => 'string',
                 'images.*' => 'string',
             ]);
+    
+            // Xử lý ảnh nếu có
+            if ($request->hasFile('images')) {
+                $validated['images'] = [];  
+                foreach ($request->file('images') as $image) {
+                    $path = $image->store('slides', 'public');
+                    $validated['images'][] = asset('storage/' . $path);
+                }
+            }
 
             $slide->update($validated);
-
-            return response()->json($slide);
+    
+            // Xử lý banner nếu có
+            if ($request->hasFile('banners')) {
+                $validated['banners'] = []; 
+                foreach ($request->file('banners') as $banner) {
+                    $path = $banner->store('banners', 'public');
+                    $validated['banners'][] = asset('storage/' . $path);
+                }
+    
+                $banner = Banner::findOrFail($slide->banner_id);
+                $banner->update(['images' => $validated['banners']]);
+            }
+    
+            return response()->json([
+                'message' => __('messages.updated'),
+            ]);
         } catch (\Exception $e) {
             return $this->handleException($e);
         }
     }
+    
 
     public function destroy(Slide $slide)
     {
         try {
             $slide->delete();
-            return response()->json(['message' => 'Slide deleted successfully']);
+            return response()->json(['message' => __('messages.deleted')]);
         } catch (\Exception $e) {
             return $this->handleException($e);
         }
@@ -140,7 +167,7 @@ class SlideController extends Controller
         try {
             $banner = Banner::findOrFail($id);
             $banner->delete();
-            return response()->json(['message' => 'Banner deleted successfully']);
+            return response()->json(['message' => 'Banner'.__('messages.deleted')]);
         } catch (\Exception $e) {
             return $this->handleException($e);
         }
@@ -156,7 +183,7 @@ class SlideController extends Controller
             $slide->save();
 
             return response()->json([
-                'message' => 'Slide selected successfully',
+                'message' => __('messages.selected'),
                 'slide' => $slide
             ]);
         } catch (\Exception $e) {
@@ -174,7 +201,7 @@ class SlideController extends Controller
             $banners->save();
 
             return response()->json([
-                'message' => 'Banners selected successfully',
+                'message' => __('messages.selected'),
                 'banners' => $banners
             ]);
         } catch (\Exception $e) {
@@ -187,7 +214,6 @@ class SlideController extends Controller
     {
         Log::error($e);
         return response()->json([
-            'error' => 'Có lỗi xảy ra!',
             'message' => $e->getMessage(),
         ], 500);
     }

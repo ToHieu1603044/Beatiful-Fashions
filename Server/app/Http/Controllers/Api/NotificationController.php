@@ -56,7 +56,7 @@ class NotificationController
         event(new NewNotificationEvent($notification));
 
         return response()->json([
-            'message' => 'Thông báo đã được gửi đến tất cả người dùng!',
+            'message' => __('messages.created_successfully'),
             'notification' => $notification
         ], 201);
     }
@@ -72,13 +72,13 @@ class NotificationController
             ->first();
 
         if (!$notificationUser) {
-            return response()->json(['message' => 'Thông báo không tồn tại hoặc không thuộc về bạn'], 404);
+            return response()->json(['message' => __('messages.not_found')], 404);
         }
 
         $notificationUser->status = 'read';
         $notificationUser->save();
 
-        return response()->json(['message' => 'Cập nhật thông báo thành công']);
+        return response()->json(['message' => __('messages.mark_as_read')], 200);
     }
     public function deleteNotification($id)
     {
@@ -91,9 +91,9 @@ class NotificationController
         if ($notificationUser) {
             $notificationUser->deleted = true;
             $notificationUser->save();
-            return response()->json(['message' => 'Thông báo đã bị ẩn'], 200);
+            return response()->json(['message' => __('messages.deleted')], 200);
         }
 
-        return response()->json(['message' => 'Thông báo không tồn tại'], 404);
+        return response()->json(['message' => __('messages.not_found')], 404);
     }
 }

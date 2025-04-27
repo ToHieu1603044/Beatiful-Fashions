@@ -104,11 +104,11 @@ const ProductTrash = () => {
 
   const handleRestore = async (id: number) => {
     try {
-      await restoreProduct(id);
-      message.success("Khôi phục sản phẩm thành công!");
+     const response =  await restoreProduct(id);
+      message.success(response.data.message);
       fetchProducts();
     } catch (error: any) {
-      message.error("Lỗi khi khôi phục sản phẩm!");
+      message.error(error.response.data.message);
     }
   };
 
@@ -118,11 +118,11 @@ const ProductTrash = () => {
       content: "Bạn có chắc chắn muốn xóa sản phẩm này không?",
       onOk: async () => {
         try {
-          await deleteProduct(id);
-          message.success("Xóa sản phẩm thành công!");
+         const response = await deleteProduct(id);
+          message.success(response.data.message);
           fetchProducts();
         } catch (error: any) {
-          message.error("Không thể xóa sản phẩm!");
+          message.error(error.response.data.message);
         }
       },
     });

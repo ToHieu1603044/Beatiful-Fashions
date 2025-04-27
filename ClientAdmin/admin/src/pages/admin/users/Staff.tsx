@@ -13,6 +13,7 @@ import {
   Typography,
   Modal,
   Select,
+  Form,
 } from "antd";
 import {
   PlusOutlined,
@@ -20,6 +21,7 @@ import {
   DeleteOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
+import { getRoles } from "../../../services/roleService";
 
 const { Search } = Input;
 
@@ -32,12 +34,24 @@ const Staff = () => {
   const [selectedUser, setSelectedUser] = useState<IUsers | null>(null);
   const [filterType, setFilterType] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [form] = Form.useForm();
   const usersPerPage = 5;
   const navigate = useNavigate();
-
+  const [roles, setRoles] = useState<{ id: number; name: string }[]>([]);
   const showUserDetail = (user: IUsers) => {
     setSelectedUser(user);
     setIsModalVisible(true);
+    form.setFieldsValue({
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      city: user.city,
+      district: user.district,
+      ward: user.ward,
+      zipCode: user.zipCode,
+      role: user.role && user.role.length > 0 ? user.role[0].name : "",
+    });
   };
 
   const getAll = async (page: number = 1, type: string = "") => {
@@ -52,7 +66,8 @@ const Staff = () => {
           type,
         },
       });
-
+         const resRole = await getRoles();
+         setRoles(resRole.data);
       setUsers(response.data.data);
       setTotalUsers(response.data.page.total);
     } catch (error) {
@@ -62,25 +77,64 @@ const Staff = () => {
       setLoading(false);
     }
   };
+ useEffect(() => {
+   
+    const fetchRoles = async () => {
+      try {
+        const response = await getRoles();
+        setRoles(response.data);
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách roles:", error);
+      }
+    };
 
+    fetchRoles();
+  }, [navigate]);
   useEffect(() => {
     getAll(currentPage, filterType);
   }, [currentPage, filterType]);
 
   const handleDelete = async (id: string) => {
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/users/${id}`, {
+     const response = await axios.delete(`http://127.0.0.1:8000/api/users/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
       });
-      message.success("Xóa thành công!");
+      message.success(response.data.message || "Xóa người dùng thành công!");
       getAll(currentPage, filterType);
     } catch (error) {
       console.log(error);
-      message.error("Xóa thất bại!");
+      message.error(error.response.data.message);
     }
   };
+
+  const handleEditSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+     
+      const payload = {
+        ...values,
+        role: values.role ? [{ id: values.role, name: roles.find((r) => r.id === values.role)?.name }] : [],
+      };
+   const response =   await axios.put(
+        `http://127.0.0.1:8000/api/users/${selectedUser?.id}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        }
+      );
+      message.success(response.data.message || "Cập nhật người dùng thanh cong!");
+      setIsModalVisible(false);
+      getAll(currentPage, filterType);
+    } catch (error) {
+      console.log(error);
+      message.error(error.response.data.message);
+    }
+  };
+  
 
   const filteredUsers = users.filter(
     (user) =>
@@ -125,10 +179,6 @@ const Staff = () => {
       dataIndex: "ward",
     },
     {
-      title: "Mã Zip",
-      dataIndex: "zipCode",
-    },
-    {
       title: "Vai trò",
       dataIndex: "role",
       render: (role: any[]) => {
@@ -143,7 +193,7 @@ const Staff = () => {
           <Button icon={<EyeOutlined />} onClick={() => showUserDetail(record)} />
           <Button
             icon={<EditOutlined />}
-            onClick={() => navigate(`/admin/users/${record.id}/edit`)}
+            onClick={() => showUserDetail(record)} // Open modal with details
           />
           <Popconfirm
             title="Bạn có chắc muốn xóa?"
@@ -216,20 +266,86 @@ const Staff = () => {
           <Button key="close" onClick={() => setIsModalVisible(false)}>
             Đóng
           </Button>,
+          <Button key="edit" type="primary" onClick={handleEditSubmit}>
+            Cập nhật
+          </Button>,
         ]}
       >
         {selectedUser && (
-          <div>
-            <p><strong>Tên:</strong> {selectedUser.name}</p>
-            <p><strong>Email:</strong> {selectedUser.email}</p>
-            <p><strong>SĐT:</strong> {selectedUser.phone}</p>
-            <p><strong>Địa chỉ:</strong> {selectedUser.address}</p>
-            <p><strong>Thành phố:</strong> {selectedUser.city}</p>
-            <p><strong>Quận / Huyện:</strong> {selectedUser.district}</p>
-            <p><strong>Phường / Xã:</strong> {selectedUser.ward}</p>
-            <p><strong>Mã Zip:</strong> {selectedUser.zipCode}</p>
-            <p><strong>Vai trò:</strong> {selectedUser.role && selectedUser.role.length > 0 ? selectedUser.role.map((r) => r.name).join(", ") : "N/A"}</p>
-          </div>
+          <Form
+            form={form}
+            layout="vertical"
+            initialValues={{
+              name: selectedUser.name,
+              email: selectedUser.email,
+              phone: selectedUser.phone,
+              address: selectedUser.address,
+              city: selectedUser.city,
+              district: selectedUser.district,
+              ward: selectedUser.ward,
+              zipCode: selectedUser.zipCode,
+              role: selectedUser.role.length > 0 ? selectedUser.role[0].id : undefined, 
+            }}
+          >
+            <Form.Item
+              name="name"
+              label="Tên"
+              rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[{ required: true, message: "Vui lòng nhập email!" }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="phone"
+              label="SĐT"
+              rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item name="address" label="Địa chỉ">
+              <Input />
+            </Form.Item>
+            <Form.Item name="city" label="Thành phố">
+              <Input />
+            </Form.Item>
+            <Form.Item name="district" label="Quận / Huyện">
+              <Input />
+            </Form.Item>
+            <Form.Item name="ward" label="Phường / Xã">
+              <Input />
+            </Form.Item>
+            {/* <Form.Item name="zipCode" label="Mã Zip">
+              <Input />
+            </Form.Item> */}
+            {roles.length > 0 ? (
+              <Select
+              value={selectedUser?.role?.[0]?.id || ""} 
+                onChange={(value) => {
+                  if (selectedUser) {
+                    setSelectedUser({
+                      ...selectedUser,
+                      role: [{ id: value, name: roles.find((r) => r.id === value)?.name || "" }],
+                    });
+                  }
+                }}
+                style={{ width: "100%" }}
+              >
+                {roles.map((role) => (
+                  <Select.Option key={role.id} value={role.id}>
+                    {role.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            ) : (
+              <Typography.Text type="danger">Chưa có vai trò</Typography.Text>
+            )}
+          </Form>
         )}
       </Modal>
     </div>

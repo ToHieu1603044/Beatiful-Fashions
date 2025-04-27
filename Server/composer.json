@@ -36,7 +36,21 @@
             "Database\\Seeders\\": "database/seeders/"
         },
         "files": [
-            "app/Helpers/ApiResponse.php"
+            "app/Helpers/ApiResponse.php",
+            "app/Helpers/admin/TextSystemConst.php",
+            "app/Helpers/admin/TextLayoutConst.php",
+            "app/Helpers/admin/FormatNumber.php",
+            "app/Helpers/ArrayHelper.php",
+            "app/Helpers/StringHelper.php",
+            "app/Helpers/DateHelper.php",
+            "app/Helpers/HashHelper.php",
+            "app/Helpers/JsonHelper.php",
+            "app/Helpers/UtilityHelper.php",
+            "app/Helpers/FileHelper.php",
+            "app/Helpers/URLHelper.php",
+            "app/Helpers/RedisHelper.php",
+            "app/Helpers/CacheHelper.php"
+
         ]
         
     },

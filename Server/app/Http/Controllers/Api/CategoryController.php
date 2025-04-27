@@ -121,7 +121,7 @@ class CategoryController extends Controller
             'parent_id' => $request->parent_id,
         ]);
 
-        return response()->json(['message' => 'Danh mục đã được tạo!', 'category' => $category]);
+        return response()->json(['message' => __('messages.category_created')], 201);
     }
 
     public function update(Request $req, $id)
@@ -135,6 +135,7 @@ class CategoryController extends Controller
 
         // Tìm danh mục theo id
         $category = Category::findOrFail($id);
+        
         $this->authorize('update', $category);
         // Xử lý hình ảnh nếu có
         $image_url = null;
@@ -156,7 +157,7 @@ class CategoryController extends Controller
             'image' => $image_url,
         ]);
 
-        return response()->json(['message' => 'Danh mục đã được cập nhật thành công', 'data' => $category]);
+        return response()->json(['message' => __('messages.category_updated'), 'data' => $category]);
     }
     public function CategoryDelete(Request $request)
     {
@@ -187,7 +188,7 @@ class CategoryController extends Controller
       //  $this->authorize('view', $category);
 
         if (!$category) {
-            return response()->json(['message' => 'Danh mục không tồn tạioii'], 404);
+            return response()->json(['message' => __('messages.category_not_found')], 404);
         }
 
         return response()->json([
@@ -242,22 +243,21 @@ class CategoryController extends Controller
 
     public function destroy($id)
     {
-
         $category = Category::findOrFail($id);
-
-        $this->authorize('delete', $category);
-
+    
+        // Kiểm tra xem danh mục có con hay không
         if ($category->children()->count() > 0) {
-            return response()->json(['message' => 'Không thể xoá danh mục vì có danh mục con'], 400);
+            return response()->json([
+                'message' => __('messages.category_has_children'),
+                'success' => false
+            ], 400);
         }
-
-        if ($category->image && Storage::exists('public/' . $category->image)) {
-            Storage::delete('public/' . $category->image);
-        }
-
+    
         $category->delete();
-
-        return response()->json(['message' => 'Danh mục đã được xoá']);
+    
+        return response()->json([
+            'message' => __('messages.category_deleted')
+        ], 200);
     }
    
     public function restore($id)
@@ -269,7 +269,7 @@ class CategoryController extends Controller
 
         $category->restore();
 
-        return response()->json(['message' => 'Danh mục đã được khôi phục']);
+        return response()->json(['message' => __('messages.category_restored')]);
     }
     public function forceDelete($id)
     {
@@ -279,7 +279,7 @@ class CategoryController extends Controller
             return response()->json(['message' => 'Danh mục khong ton tai'], 404);
         }
         if($category->children()->count() > 0 || $category->products()->count() > 0){
-            return response()->json(['message' => 'Không thể xóa danh mục vì có danh mục con'], 400);
+            return response()->json(['message' => __('messages.deleted_failed')], 400);
         }
         $this->authorize('forceDelete', $category);
         if ($category->image && \Storage::exists('public/' . $category->image)) {
@@ -288,7 +288,7 @@ class CategoryController extends Controller
         
         $category->forceDelete();
 
-        return response()->json(['message' => 'Danh mục đã bị xóa vĩnh viễn']);
+        return response()->json(['message' => __('messages.force_deleted')]);
     }
     public function getProductsByCategory(Request $request, $id, $slug = null)
     {
@@ -335,7 +335,7 @@ class CategoryController extends Controller
         $products = $query->paginate(10);
 
         if ($products->isEmpty()) {
-            return response()->json(['message' => 'Không tìm thấy sản phẩm'], 404);
+            return response()->json(['message' => __('messages.not_found')], 404);
         }
 
         return ApiResponse::responsePage(ProductResource::collection($products));
@@ -349,7 +349,7 @@ class CategoryController extends Controller
             $category->active = $request->status;
 
             $category->save();
-            return response()->json(['message' => 'Trạng thái danh mục đã được cập nhật'], 200);
+            return response()->json(['message' => __('messages.category_status_updated')], 200);
         } catch (\Throwable $th) {
             return response()->json([
                 'message' => $th->getMessage()

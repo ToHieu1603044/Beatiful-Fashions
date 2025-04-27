@@ -260,7 +260,9 @@ const CheckOut = () => {
             const response = await axios.post("http://127.0.0.1:8000/api/discounts/apply", {
                 discountCode: formData.discount,
                 totalAmount: totalAmount,
-                cartData: products
+                priceShipping,
+                cartData: products,
+                selectedItems
 
             }, {
                 headers: { "Content-Type": "application/json" },
@@ -324,7 +326,7 @@ const CheckOut = () => {
                 setFormData({
                     ...formData,
                     used_points: response.data.used_points,
-                    
+
 
                 });
                 form.resetFields();
@@ -361,12 +363,13 @@ const CheckOut = () => {
             }
 
             if (response.status === 200) {
+
                 Swal.fire({
                     title: "Đặt hàng thành công",
                     icon: "success",
                     confirmButtonText: "OK",
                 }).then(() => {
-
+                    navigate("/orders");
                 });
             }
 
@@ -384,7 +387,7 @@ const CheckOut = () => {
     return (
         <>
             <div
-                className="w-100 d-flex"
+                className="w-100 d-flex container"
                 style={{
                     pointerEvents: !user ? "none" : "auto",
                     opacity: !user ? 0.6 : 1,
@@ -773,68 +776,156 @@ const CheckOut = () => {
                         ))}
                     </div>
                     <div className="py-3 pl-5" style={{ borderBottom: "1px solid #C0C0C0" }}>
-                        <form onSubmit={applyDiscount} className="d-flex flex-column" style={{ gap: "10px" }}>
-                            {/* Ô nhập mã giảm giá */}
-                            <button
-                                type="button"
-                                className="btn btn-outline-primary"
-                                style={{ height: "50px", width: "250px", textAlign: "left" }}
-                                onClick={() => setShowDiscountModal(true)}
-                            >
-                                {formData.discount ? `Đã chọn: ${formData.discount}` : "Chọn mã giảm giá"}
-                            </button>
+                        <form
+                            onSubmit={applyDiscount}
+                            className="d-flex flex-column"
+                            style={{ gap: "10px" }}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-outline-primary"
+                                    style={{ height: "50px", width: "250px", textAlign: "left" }}
+                                    onClick={() => setShowDiscountModal(true)}
+                                >
+                                    {formData.discount
+                                        ? `Đã chọn: ${formData.discount}`
+                                        : "Chọn mã giảm giá"}
+                                </button>
+                                {formData.discount && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-link text-danger"
+                                        onClick={() => {
+                                            setFormData({ ...formData, discount: null });
+                                            setPriceDiscount(0);
+                                            setDiscountedTotal(totalAmount); // <-- Thêm dòng này để reset giá
+                                        }}
+                                    >
+                                        Xóa mã
+                                    </button>
+                                )}
+
+                            </div>
+
                             <Button onClick={() => setShowPointsModal(true)}>Dùng điểm</Button>
+
                             {usedPoints > 0 && (
-                                <div style={{ marginTop: 10, padding: 10, background: "#f6ffed", border: "1px solid #b7eb8f", borderRadius: 4 }}>
-                                    <strong>{usedPoints.toLocaleString()}</strong> điểm đã dùng
-                                    — giảm giá <strong>{priceDiscount.toLocaleString()}₫</strong>
+                                <div
+                                    style={{
+                                        marginTop: 10,
+                                        padding: 10,
+                                        background: "#f6ffed",
+                                        border: "1px solid #b7eb8f",
+                                        borderRadius: 4,
+                                    }}
+                                >
+                                    <strong>{usedPoints.toLocaleString()}</strong> điểm đã dùng — giảm
+                                    giá <strong>{priceDiscount.toLocaleString()}₫</strong>
                                 </div>
                             )}
 
-                            {/* Select mã giảm giá có thể chọn */}
+                            {/* Modal chọn mã giảm giá */}
                             {showDiscountModal && (
-                                <div className="modal d-block" tabIndex={-1} style={{ background: "rgba(0,0,0,0.5)" }}>
+                                <div
+                                    className="modal d-block"
+                                    tabIndex={-1}
+                                    style={{ background: "rgba(0,0,0,0.5)" }}
+                                >
                                     <div className="modal-dialog modal-lg">
                                         <div className="modal-content">
                                             <div className="modal-header">
                                                 <h5 className="modal-title">Chọn mã giảm giá</h5>
-                                                <button type="button" className="btn-close" onClick={() => setShowDiscountModal(false)} />
+                                                <button
+                                                    type="button"
+                                                    className="btn-close"
+                                                    onClick={() => setShowDiscountModal(false)}
+                                                />
                                             </div>
                                             <div className="modal-body">
                                                 {discountOptions.length === 0 ? (
                                                     <p>Không có mã giảm giá khả dụng.</p>
                                                 ) : (
                                                     <div className="row">
+                                                        {/* Không dùng mã */}
+                                                        <div className="col-md-6 mb-3">
+                                                            <div
+                                                                className="card h-100 shadow-sm"
+                                                                style={{
+                                                                    cursor: "pointer",
+                                                                    border: !formData.discount
+                                                                        ? "2px solid #007bff"
+                                                                        : "",
+                                                                }}
+                                                                onClick={() => {
+                                                                    setFormData({ ...formData, discount: null });
+                                                                    setShowDiscountModal(false);
+                                                                }}
+                                                            >
+                                                                <div className="card-body">
+                                                                    <h5 className="card-title text-danger">
+                                                                        Không dùng mã giảm giá
+                                                                    </h5>
+                                                                    <p className="card-text">
+                                                                        Chọn nếu bạn không muốn áp dụng mã giảm giá nào.
+                                                                    </p>
+                                                                </div>
+                                                                <div className="card-footer text-end">
+                                                                    <button className="btn btn-sm btn-outline-danger">
+                                                                        {!formData.discount ? "Đã chọn" : "Chọn"}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Danh sách mã */}
                                                         {discountOptions.map((item) => (
                                                             <div key={item.id} className="col-md-6 mb-3">
                                                                 <div
                                                                     className="card h-100 shadow-sm"
-                                                                    style={{ cursor: "pointer", border: formData.discount === item.code ? "2px solid #007bff" : "" }}
+                                                                    style={{
+                                                                        cursor: "pointer",
+                                                                        border:
+                                                                            formData.discount === item.code
+                                                                                ? "2px solid #007bff"
+                                                                                : "",
+                                                                    }}
                                                                     onClick={() => {
                                                                         setFormData({ ...formData, discount: item.code });
                                                                         setShowDiscountModal(false);
                                                                     }}
                                                                 >
                                                                     <div className="card-body">
-                                                                        <h5 className="card-title text-primary">{item.name}</h5>
+                                                                        <h5 className="card-title text-primary">
+                                                                            {item.name}
+                                                                        </h5>
                                                                         <p className="card-text">
                                                                             <strong>Mã:</strong> {item.code} <br />
-                                                                            <strong>Giảm:</strong>{" "}
-                                                                            {item.value}
-                                                                            {item.discount_type === "percentage" ? "%" : " VNĐ"}{" "}
-                                                                            {item.max_discount && ` (Tối đa: ${item.max_discount.toLocaleString()}đ)`} <br />
+                                                                            <strong>Giảm:</strong> {item.value}
+                                                                            {item.discount_type === "percentage"
+                                                                                ? "%"
+                                                                                : " VNĐ"}{" "}
+                                                                            {item.max_discount &&
+                                                                                ` (Tối đa: ${item.max_discount.toLocaleString()}đ)`}{" "}
+                                                                            <br />
                                                                             {item.min_order_amount && (
                                                                                 <>
-                                                                                    <strong>Đơn tối thiểu:</strong> {item.min_order_amount.toLocaleString()}đ <br />
+                                                                                    <strong>Đơn tối thiểu:</strong>{" "}
+                                                                                    {item.min_order_amount.toLocaleString()}đ
+                                                                                    <br />
                                                                                 </>
                                                                             )}
-                                                                            <strong>Hiệu lực:</strong> {item.start_date} → {item.end_date} <br />
-                                                                            <strong>Đã dùng:</strong> {item.used_count}/{item.max_uses}
+                                                                            <strong>Hiệu lực:</strong> {item.start_date} →{" "}
+                                                                            {item.end_date} <br />
+                                                                            <strong>Đã dùng:</strong> {item.used_count}/
+                                                                            {item.max_uses}
                                                                         </p>
                                                                     </div>
                                                                     <div className="card-footer text-end">
                                                                         <button className="btn btn-sm btn-outline-primary">
-                                                                            {formData.discount === item.code ? "Đã chọn" : "Chọn"}
+                                                                            {formData.discount === item.code
+                                                                                ? "Đã chọn"
+                                                                                : "Chọn"}
                                                                         </button>
                                                                     </div>
                                                                 </div>
@@ -844,7 +935,11 @@ const CheckOut = () => {
                                                 )}
                                             </div>
                                             <div className="modal-footer">
-                                                <button type="button" className="btn btn-secondary" onClick={() => setShowDiscountModal(false)}>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-secondary"
+                                                    onClick={() => setShowDiscountModal(false)}
+                                                >
                                                     Đóng
                                                 </button>
                                             </div>
@@ -852,13 +947,17 @@ const CheckOut = () => {
                                     </div>
                                 </div>
                             )}
-                            {/* Nút áp dụng */}
-                            <button type="submit" className="btn btn-warning mt-2" style={{ width: "250px" }}>
+
+                            <button
+                                type="submit"
+                                className="btn btn-warning mt-2"
+                                style={{ width: "250px" }}
+                            >
                                 Áp Dụng
                             </button>
                         </form>
-
                     </div>
+
                     <div className="py-3 pl-5" style={{ borderBottom: "1px solid #C0C0C0" }}>
                         <div className="d-flex justify-content-between mb-3">
                             <p>Tạm Tính</p>
@@ -901,7 +1000,7 @@ const CheckOut = () => {
                             name="usedPoints"
                             rules={[{ required: true, message: "Vui lòng nhập số điểm" }]}
                         >
-                            
+
                             <InputNumber
                                 min={0}
                                 max={point}
@@ -909,7 +1008,7 @@ const CheckOut = () => {
                                 placeholder="Ví dụ: 100"
                             />
                         </Form.Item>
-                        
+
                     </Form>
                 </Modal>
             </div>

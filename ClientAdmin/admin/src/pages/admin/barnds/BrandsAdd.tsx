@@ -62,6 +62,9 @@ const BrandsAdd = () => {
       alert("Danh mục đã được thêm thành công!");
       navigate("/admin/brands", { state: { added: true } });
     } catch (error) {
+      if (error.response?.status === 403) {
+        navigate("/403");
+      }
       console.error("Lỗi khi thêm danh mục:", error);
       alert("Không thể thêm danh mục. Vui lòng thử lại.");
     } finally {
