@@ -36,15 +36,6 @@ class ProductSku extends Model
     {
         return $this->belongsTo(Product::class)->withTrashed(); // Lấy luôn sản phẩm đã bị xóa mềm
     }
-    public function getCreatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
-
-    // Accessor to format the updated_at date automatically
-    public function getUpdatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
+  
 
 }

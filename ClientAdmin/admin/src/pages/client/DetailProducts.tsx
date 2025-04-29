@@ -311,7 +311,6 @@ const DetailProducts: React.FC = () => {
   const handleSelectAttribute = (name: string, value: string) => {
     setSelectedAttributes((prev) => ({ ...prev, [name]: value }));
   };
-
   const handleSubmit = async () => {
     if (!selectedVariant) {
       Swal.fire({
@@ -320,7 +319,7 @@ const DetailProducts: React.FC = () => {
       });
       return;
     }
-
+  
     if (quantity <= 0) {
       Swal.fire({
         icon: "warning",
@@ -328,15 +327,17 @@ const DetailProducts: React.FC = () => {
       });
       return;
     }
-
+  
+    // Tạo dữ liệu gửi lên BE
     const data = {
       sku_id: selectedVariant.sku_id,
       quantity: quantity,
+      attributes: selectedAttributes, 
     };
-
+  
     try {
       const response = await storeCart(data);
-
+  
       if (response.status === 200) {
         Swal.fire({
           title: response.data.message,
@@ -373,6 +374,69 @@ const DetailProducts: React.FC = () => {
       }
     }
   };
+  
+
+  // const handleSubmit = async () => {
+  //   if (!selectedVariant) {
+  //     Swal.fire({
+  //       icon: "warning",
+  //       title: "Vui lòng chọn biến thể.",
+  //     });
+  //     return;
+  //   }
+
+  //   if (quantity <= 0) {
+  //     Swal.fire({
+  //       icon: "warning",
+  //       title: "Số lượng phải lớn hơn 0.",
+  //     });
+  //     return;
+  //   }
+
+  //   const data = {
+  //     sku_id: selectedVariant.sku_id,
+  //     quantity: quantity,
+  //   };
+
+  //   try {
+  //     const response = await storeCart(data);
+
+  //     if (response.status === 200) {
+  //       Swal.fire({
+  //         title: response.data.message,
+  //         icon: "success",
+  //         timer: 1500,
+  //         showConfirmButton: false,
+  //       });
+  //     } else {
+  //       Swal.fire({
+  //         icon: "error",
+  //         title: "Lỗi!",
+  //         text: "Vui lòng thử lại sau.",
+  //       });
+  //     }
+  //   } catch (error: any) {
+  //     console.error("Lỗi:", error);
+  //     if (error?.response?.status === 401) {
+  //       Swal.fire({
+  //         icon: "error",
+  //         title: "Bạn chưa đăng nhập!",
+  //         text: "Vui lòng đăng nhập để tiếp tục.",
+  //         confirmButtonText: "Đăng nhập",
+  //       }).then((result) => {
+  //         if (result.isConfirmed) {
+  //           window.location.href = "/login";
+  //         }
+  //       });
+  //     } else {
+  //       Swal.fire({
+  //         icon: "error",
+  //         title: "Lỗi!",
+  //         text: error.response.data.message,
+  //       });
+  //     }
+  //   }
+  // };
   const handleImageClick = (imageUrl: string) => {
     setMainImage(imageUrl);
   };

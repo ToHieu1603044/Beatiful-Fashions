@@ -12,6 +12,33 @@ html, body {
 		margin: 0 !important;
 	}
 }
+.carousel-inner .carousel-item {
+  height: 100%; /* Đảm bảo item có chiều cao bằng container */
+}
+
+.carousel-inner .carousel-item img {
+  width: 100%;  /* Đảm bảo ảnh chiếm toàn bộ chiều rộng */
+  height: 100%; /* Đảm bảo ảnh chiếm toàn bộ chiều cao */
+  object-fit: cover;  /* Đảm bảo ảnh được cắt và vừa khít mà không bị bóp méo */
+}
+.d-flex {
+  display: flex;
+}
+.flex-column {
+  flex-direction: column;
+}
+.gap-2 {
+  gap: 0.5rem;
+}
+.text-gray-500 {
+  color: #6b7280;
+}
+.align-items-center {
+  align-items: center;
+}
+.justify-content-center {
+  justify-content: center;
+}
 
 .main-container {
 	font-family: 'Lato';
@@ -272,4 +299,17 @@ h1 {
  display: flex;
  justify-content: flex-start;
  gap: 5px;
+}
+.placeholder-blur {
+  position: relative;
+  overflow: hidden;
+}
+
+.placeholder-blur img {
+  filter: blur(8px); /* Apply blur to placeholder images */
+  transition: filter 0.3s ease; /* Smooth transition when actual images load */
+}
+
+.carousel-item img:not(.placeholder-blur img) {
+  filter: none; /* Ensure actual images are not blurred */
 }

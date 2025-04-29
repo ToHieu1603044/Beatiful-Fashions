@@ -8,4 +8,29 @@
   .modal-backdrop {
     background-color: rgba(0, 0, 0, 0.2) !important; /* Giảm độ tối */
   }
+  .carousel-inner {
+    overflow: hidden; /* Ngăn không cho ảnh tràn ra ngoài */
+  }
   
+  .carousel-item {
+    display: flex;
+    justify-content: center; /* Căn giữa ảnh trong mỗi slide */
+    align-items: center; /* Căn giữa theo chiều dọc */
+    height: 500px; /* Đảm bảo mỗi slide có chiều cao cố định */
+  }
+  
+  .carousel-image {
+    object-fit: cover; /* Đảm bảo ảnh không bị co giãn hoặc biến dạng */
+    height: 100%; /* Đảm bảo ảnh chiếm hết chiều cao của carousel */
+    width: 100%; /* Đảm bảo ảnh chiếm hết chiều rộng của carousel */
+  }
+  /* Đảm bảo ảnh không bị tràn và vừa vặn trong carousel */
+.carousel-inner .carousel-item {
+  height: 400px;  /* Thiết lập chiều cao carousel */
+}
+
+.carousel-inner .carousel-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Cắt ảnh để vừa vặn với container */
+}

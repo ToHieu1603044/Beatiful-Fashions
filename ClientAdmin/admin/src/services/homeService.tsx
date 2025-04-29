@@ -7,13 +7,6 @@ const getAuthToken = () => localStorage.getItem("access_token");
 const token = getAuthToken();
 export const getProducts = async (params?: {
   search?: string;
-  category_id?: string;
-  brand?: string;
-  date?: string;
-  price?: number;
-  min_price?: number;
-  max_price?: number;
-  price_range?: string
 }) => {
   return await axios.get(`${API_BASE_URL}/products/web`, { params });
 };
@@ -42,9 +35,8 @@ export const getCategories = async (params?: { search?: string; parent_id?: numb
   return await axios.get(`${API_BASE_URL}/categories/web`, { params });
 };
 export const getProductSales = async (params?: { search?: string; parent_id?: number }) => {
-  return await axios.get(`${API_BASE_URL}/flash-sales`, { params });
+  return await axios.get(`${API_BASE_URL}/flash-sales-web`, { params });
 };
-
 
 export const getCategoryById = async (id: number) => {
   return await axios.get(`${API_BASE_URL}/categories/web/${id}`);
@@ -188,7 +180,7 @@ export const exportPdf = async () => {
 
 export const getCartCount = async () => {
   const token = getAuthToken();
-  return await axios.get(`${API_BASE_URL}/carts/count`, {
+  return await axios.get(`${API_BASE_URL}/carts/count-cart`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 };

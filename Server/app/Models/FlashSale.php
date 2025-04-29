@@ -35,9 +35,14 @@ class FlashSale extends Model
     {
         return $this->start_time <= now() && $this->end_time >= now();
     }
-    public function getCreatedAtAttribute($date)
+    public function getCreatedAtAttribute($value)
     {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
+        return Carbon::parse($value)->format('Y-m-d H:i:s');  
+    }
+    
+    public function getUpdatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->format('Y-m-d H:i:s');
     }
 
 }

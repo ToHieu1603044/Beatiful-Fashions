@@ -47,16 +47,7 @@ class OrderReturn extends Model
     {
         return $this->belongsTo(OrderReturn::class, 'order_return_id');
     }
-    public function getCreatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
 
-    // Accessor to format the updated_at date automatically
-    public function getUpdatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
     
 
 }
