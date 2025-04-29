@@ -17,12 +17,15 @@ const BannerSlideFormUpdate: React.FC = () => {
       try {
         const response = await axios.get(`http://127.0.0.1:8000/api/slides/${id}`);
         const slideData = response.data;
+        console.log(slideData);
+
+        // Set form values
         form.setFieldsValue({
           title: slideData.title,
           description: slideData.description,
         });
 
-        // Set images and banners with the existing URLs
+        // Set images
         setImages(slideData.images.map((url: string, index: number) => ({
           uid: `old-${index}`,
           name: `image-${index}.jpg`,
@@ -30,12 +33,17 @@ const BannerSlideFormUpdate: React.FC = () => {
           url,
         })));
 
-        setBanners(slideData.banners.map((url: string, index: number) => ({
-          uid: `old-banner-${index}`,
-          name: `banner-${index}.jpg`,
-          status: 'done',
-          url,
-        })));
+        // Set banners (access banners from slideData.banners[0].banners)
+        if (slideData.banners && slideData.banners.length > 0 && slideData.banners[0].banners) {
+          setBanners(slideData.banners[0].banners.map((url: string, index: number) => ({
+            uid: `old-banner-${index}`,
+            name: `banner-${index}.jpg`,
+            status: 'done',
+            url,
+          })));
+        } else {
+          setBanners([]);
+        }
       } catch (error) {
         message.error('Không thể tải dữ liệu slide!');
       }
@@ -82,8 +90,8 @@ const BannerSlideFormUpdate: React.FC = () => {
     const updatedSlideData = {
       title: values.title,
       description: values.description,
-      images: images.filter((file) => file.base64).map((file: any) => file.base64), // Use base64 for new images
-      banners: banners.filter((file) => file.base64).map((file: any) => file.base64), // Use base64 for new banners
+      images: images.map((file: any) => file.base64 || file.url), // Use base64 for new images, or URL for existing ones
+      banners: banners.map((file: any) => file.base64 || file.url), // Use base64 for new banners, or URL for existing ones
     };
 
     try {
@@ -96,24 +104,34 @@ const BannerSlideFormUpdate: React.FC = () => {
 
       message.success(response.data.message);
       console.log(response.data);
+      navigate('/admin/slider'); 
     } catch (err) {
       console.error(err);
-      message.error(err.response.data.message);
+      message.error(err.response?.data?.message || 'Cập nhật slide thất bại!');
     }
   };
 
   return (
     <div className="container">
+      <h2>Cập nhật Slide</h2>
       <Form layout="vertical" form={form} onFinish={handleFinish}>
-        <Form.Item name="title" label="Tiêu đề">
-          <Input />
+        <Form.Item
+          name="title"
+          label="Tiêu đề"
+          rules={[{ required: true, message: 'Vui lòng nhập tiêu đề!' }]}
+        >
+          <Input placeholder="Nhập tiêu đề slide" />
         </Form.Item>
 
-        <Form.Item name="description" label="Mô tả">
-          <Input.TextArea rows={4} />
+        <Form.Item
+          name="description"
+          label="Mô tả"
+          rules={[{ required: true, message: 'Vui lòng nhập mô tả!' }]}
+        >
+          <Input.TextArea rows={4} placeholder="Nhập mô tả slide" />
         </Form.Item>
 
-        <Form.Item label="Ảnh slide (tối đa 5 ảnh)">
+        <Form.Item label="Ảnh slide (tối đa 7 ảnh)">
           <Upload
             listType="picture-card"
             beforeUpload={() => false}
@@ -121,7 +139,7 @@ const BannerSlideFormUpdate: React.FC = () => {
             multiple
             onChange={handleUploadChange('images')}
           >
-            {images.length >= 5 ? null : (
+            {images.length >= 7 ? null : (
               <div>
                 <PlusOutlined />
                 <div style={{ marginTop: 8 }}>Tải lên</div>
@@ -130,7 +148,7 @@ const BannerSlideFormUpdate: React.FC = () => {
           </Upload>
         </Form.Item>
 
-        <Form.Item label="Ảnh banner (nhiều ảnh)">
+        <Form.Item label="Ảnh banner (tối đa 4 ảnh)">
           <Upload
             listType="picture-card"
             beforeUpload={() => false}
@@ -138,10 +156,12 @@ const BannerSlideFormUpdate: React.FC = () => {
             multiple
             onChange={handleUploadChange('banners')}
           >
-            <div>
-              <PlusOutlined />
-              <div style={{ marginTop: 8 }}>Tải lên</div>
-            </div>
+            {banners.length >= 4 ? null : (
+              <div>
+                <PlusOutlined />
+                <div style={{ marginTop: 8 }}>Tải lên</div>
+              </div>
+            )}
           </Upload>
         </Form.Item>
 

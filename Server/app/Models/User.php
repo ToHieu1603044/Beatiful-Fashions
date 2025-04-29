@@ -123,14 +123,6 @@ class User extends Authenticatable
 
         $this->save();
     }
-    public function getCreatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
 
-    public function getUpdatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
 
 }

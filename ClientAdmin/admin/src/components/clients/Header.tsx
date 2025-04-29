@@ -111,6 +111,7 @@ const Header = () => {
       try {
         const response = await getCartCount();
         setCartCount(response.data.data);
+        console.log("response", response);
       } catch (error) {
         console.error("Lỗi khi lấy số lượng giỏ hàng:", error);
       }

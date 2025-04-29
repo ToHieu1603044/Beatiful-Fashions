@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,6 +19,15 @@ class CartResource extends JsonResource
 
         $is_deleted = $product && $product->trashed();
         $is_inactive = $product && !$product->active;
+        $validFlashSale = $product?->flashSales
+            ->filter(function ($flashSale) {
+                $now = Carbon::now();
+                return $flashSale->status === 'active'
+                    && $flashSale->start_time <= $now
+                    && $flashSale->end_time >= $now
+                    && $flashSale->pivot?->quantity > 0;
+            })
+            ->first();
         return [
             'id' => $this->id,
             'product' => $this->sku->product ?? 'Sản phẩm không tồn tại',
@@ -29,7 +39,7 @@ class CartResource extends JsonResource
                 : ($is_inactive
                     ? 'Sản phẩm hiện đang tạm ẩn'
                     : 'Sản phẩm hoạt động'),
-            'sale_price' => $this->sku->product->flashSales->first()?->pivot->discount_price,
+            'sale_price' => $validFlashSale?->pivot->discount_price,
             'price' => $this->sku->price,
             'attributes' => $this->sku->attributeOptions->map(function ($option) {
                 return [

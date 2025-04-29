@@ -237,6 +237,7 @@ return [
     'something_went_wrong' => 'Something went wrong. Please try again later.',
     'unauthorized' => 'You are not authorized to perform this action.',
     'not_found' => 'The requested resource was not found.',
+    'attribute_not_selected' => 'The required attribute was not selected.',
     'validation_error' => 'There was a problem with your submission. Please check your inputs.',
     'status_invalid' => 'The status value is invalid.',
     // Cart Messages

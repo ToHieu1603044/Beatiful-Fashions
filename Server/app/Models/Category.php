@@ -26,14 +26,5 @@ class Category extends Model
     public function parent(){
         return $this->belongsTo(Category::class, 'parent_id');
     }
-    public function getCreatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y');
-    }
 
-    // Accessor to format the updated_at date automatically
-    public function getUpdatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y');
-    }
 }

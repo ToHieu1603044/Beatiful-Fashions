@@ -5,14 +5,19 @@ namespace App\Http\Controllers\Api;
 use App\Events\OrderCreated;
 use App\Mail\OrderPaidMail;
 use App\Models\Cart;
+use App\Models\FlashSaleProduct;
 use App\Models\Order;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Redis;
 
 class MomoController
 {
+
     public function callback(Request $request)
     {
         \Log::info('MoMo Callback:', $request->all());
@@ -29,34 +34,75 @@ class MomoController
         $userId = $order->user_id;
         $session_id = session()->getId();
     
+        // Giải mã extraData
+        $extraData = json_decode($request->extraData, true);
+        $cartIds = $extraData['cart_ids'] ?? [];
+        $flashSaleData = $extraData['flash_sale_data'] ?? [];
+    
         switch ($request->resultCode) {
             case 0: // Giao dịch thành công
-                $order->update(['status' => 'pending', 'is_paid' => true]);
+                DB::beginTransaction();
+                try {
+                    $order->update(['status' => 'pending', 'is_paid' => true]);
     
-                // Xoá giỏ hàng
-                $extraData = json_decode($request->extraData, true);
-                $cartIds = $extraData['cart_ids'] ?? [];
+                    // Cập nhật số lượng tồn kho flash sale và flash_sale_products
+                    foreach ($flashSaleData as $flashSaleItem) {
+                        $productId = $flashSaleItem['product_id'];
+                        $flashSaleId = $flashSaleItem['flash_sale_id'];
+                        $discountAppliedQty = $flashSaleItem['discount_applied_qty'];
     
-                if (!empty($cartIds)) {
-                    Cart::where(function ($query) use ($userId, $session_id) {
-                        if ($userId) {
-                            $query->where('user_id', $userId);
-                        } else {
-                            $query->where('session_id', $session_id);
+                        if ($discountAppliedQty > 0) {
+                            // Giảm tồn kho flash sale trong Redis
+                            $reduceResult = InventoryService::reduceFlashSaleStock($productId, $discountAppliedQty);
+                          
+                            if ($reduceResult === -2) {
+                                DB::rollBack();
+                                return response()->json(['message' => 'Flash Sale không đồng bộ'], 400);
+                            } elseif ($reduceResult === -1) {
+                                DB::rollBack();
+                                return response()->json(['message' => 'Flash Sale hết hàng'], 400);
+                            }
+    
+                            Redis::incrby("flash_sale_purchased:{$productId}", $discountAppliedQty);
+                            \Log::info("Đã áp dụng flash sale cho {$discountAppliedQty} sản phẩm ID {$productId}.");
+    
+                            // Cập nhật số lượng trong flash_sale_products
+                            $updated = DB::table('flash_sale_products')
+                                ->where('flash_sale_id', $flashSaleId)
+                                ->where('product_id', $productId)
+                                ->decrement('quantity', $discountAppliedQty);
+    
+                            if ($updated === 0) {
+                                DB::rollBack();
+                                \Log::error("Không thể cập nhật flash_sale_products cho sản phẩm {$productId}");
+                                return response()->json(['message' => 'Lỗi cập nhật flash sale'], 400);
+                            }
                         }
-                    })->whereIn('id', $cartIds)->delete();
+                    }
+    
+                    // Xóa giỏ hàng
+                    if (!empty($cartIds)) {
+                        Cart::where(function ($query) use ($userId, $session_id) {
+                            if ($userId) {
+                                $query->where('user_id', $userId);
+                            } else {
+                                $query->where('session_id', $session_id);
+                            }
+                        })->whereIn('id', $cartIds)->delete();
+                    }
+    
+                    DB::commit();
+                    OrderCreated::dispatch($order);
+                    return redirect()->to(env('FRONTEND_URL') . "/order/success");
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    \Log::error('Lỗi xử lý callback: ' . $e->getMessage());
+                    return response()->json(['message' => 'Lỗi xử lý callback'], 500);
                 }
-    
-                OrderCreated::dispatch($order);
-    
-                return redirect()->to(env('FRONTEND_URL') . "/order/success");
     
             case 7002:
                 $order->update(['status' => 'pending', 'is_paid' => false]);
-
-                $extraData = json_decode($request->extraData, true);
-                $cartIds = $extraData['cart_ids'] ?? [];
-    
+                // Không cần rollback flash sale vì chưa giảm
                 if (!empty($cartIds)) {
                     Cart::where(function ($query) use ($userId, $session_id) {
                         if ($userId) {
@@ -73,12 +119,8 @@ class MomoController
             case 9003:
             case 9004:
             default:
-             
                 $order->update(['status' => 'cancelled', 'is_paid' => false]);
-
-                $extraData = json_decode($request->extraData, true);
-                $cartIds = $extraData['cart_ids'] ?? [];
-    
+                // Không cần rollback flash sale vì chưa giảm
                 if (!empty($cartIds)) {
                     Cart::where(function ($query) use ($userId, $session_id) {
                         if ($userId) {
@@ -91,6 +133,7 @@ class MomoController
                 return redirect()->to(env('FRONTEND_URL') . "/order/failed");
         }
     }
+    
     public function refund(Request $request)
     {
         // Lấy thông tin từ request
