@@ -7,10 +7,14 @@ const Permission = () => {
   const navigate = useNavigate();
   const [permissions, setPermissions] = useState<permission[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+
   const getAll = async () => {
     try {
       const response = await axios.get("http://127.0.0.1:8000/api/permissions");
-      console.log(response.data);
+      // console.log(response.data);
       setPermissions(response.data);
     } catch (error) {
       console.log(error);
@@ -21,8 +25,7 @@ const Permission = () => {
     getAll();
   }, []);
   const handleDelete = async (id: string) => {
-    console.log(id);
-
+    // console.log(id);
     const result = await Swal.fire({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
@@ -35,7 +38,7 @@ const Permission = () => {
 
     if (result.isConfirmed) {
       try {
-        await axios.delete(`http://localhost:3000/permissions/${id}`);
+        await axios.delete(`http://127.0.0.1:8000/api/permissions/${id}`);
         await Swal.fire({
           title: "Deleted!",
           text: "Your file has been deleted.",
@@ -58,10 +61,13 @@ const Permission = () => {
     (item.name?.toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   return (
     <>
       <div className="container mt-4">
-
         <>
           <div className="d-flex align-items-center mb-3">
             <h2 className="mb-0">Danh sách Permissions</h2>
@@ -93,7 +99,7 @@ const Permission = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((permission: any) => (
+                {currentItems.map((permission) => (
                   <tr key={permission.id}>
                     <td>{permission.id}</td>
                     <td>{permission.name}</td>
@@ -101,7 +107,7 @@ const Permission = () => {
                     <td>{permission.created_at}</td>
                     <td>{permission.updated_at}</td>
                     <td>
-                      <Link to={`/admin/permissions/${permission.id}/edit`} className="btn btn-sm btn-primary me-2" >Sửa</Link>
+                      <Link to={`/admin/permissions/${permission.id}/edit`} className="btn btn-sm btn-primary me-2">Sửa</Link>
                       <button className="btn btn-sm btn-danger" onClick={() => handleDelete(permission.id)}>Xóa</button>
                     </td>
                   </tr>
@@ -111,6 +117,20 @@ const Permission = () => {
           </div>
         </>
       </div>
+      {/* Phân trang Bootstrap */}
+      {totalPages > 1 && (
+        <nav>
+          <ul className="pagination justify-content-center mt-3">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+              <li key={number} className={`page-item ${currentPage === number ? "active" : ""}`}>
+                <button onClick={() => setCurrentPage(number)} className="page-link">
+                  {number}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
     </>
   )
 }

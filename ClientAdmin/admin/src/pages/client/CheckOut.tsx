@@ -51,6 +51,8 @@ const CheckOut = () => {
         points: 0
 
     });
+    console.log("formData", formData);
+    
     const navigate = useNavigate();
 
     // useEffect(() => {
@@ -314,7 +316,7 @@ const CheckOut = () => {
                 selectedItems
 
             });
-            console.log(response.data);
+            // console.log(response.data);
             const discount = response.data.points_discount;
             const newTotal = Math.max(totalAmount - discount, 0);
             setUsedPoints(response.data.used_points);
@@ -397,7 +399,7 @@ const CheckOut = () => {
                 {/* left */}
                 <div
                     className=""
-                    style={{ width: "65%", paddingLeft: "170px" }}
+                    style={{ width: "65%", paddingLeft: "10px" }}
                 >
                     {/* logo shop */}
                     <div className="w-100">
@@ -482,6 +484,7 @@ const CheckOut = () => {
                                     </div>
                                     {/* tỉnh thành */}
                                     <div className="mb-3">
+                                        {/*  
                                         <select
                                             value={selectedProvince}
                                             onChange={(e) => {
@@ -504,11 +507,18 @@ const CheckOut = () => {
                                                 </option>
                                             ))}
                                         </select>
-
+                                        */}
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Số điện thoại"
+                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            value={formData.city}
+                                        />
                                     </div>
                                     {/* Quận Huyện */}
                                     <div className="mb-3">
-                                        <select
+                                        {/* <select
                                             value={selectedDistrict}
                                             onChange={(e) => {
                                                 const districtId = parseInt(e.target.value);
@@ -530,12 +540,18 @@ const CheckOut = () => {
                                                     {district.DistrictName}
                                                 </option>
                                             ))}
-                                        </select>
-
+                                        </select> */}
+                                         <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Số điện thoại"
+                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            value={formData.district}
+                                        />
                                     </div>
                                     {/* Phường xã */}
                                     <div className="mb-3">
-                                        <select
+                                        {/* <select
                                             value={selectedWard}
                                             onChange={(e) => {
                                                 const wardCode = e.target.value;
@@ -556,8 +572,14 @@ const CheckOut = () => {
                                                     {ward.WardName}
                                                 </option>
                                             ))}
-                                        </select>
-
+                                        </select> */}
+                                         <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Số điện thoại"
+                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            value={formData.ward}
+                                        />
                                     </div>
                                     {/* Địa chỉ */}
                                     <div className="mb-3">
