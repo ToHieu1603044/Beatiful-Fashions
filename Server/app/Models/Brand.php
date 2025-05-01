@@ -23,5 +23,13 @@ class Brand extends Model
     public function products(){
         return $this->hasMany(Product::class);
     }
-
+    public function getCreatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->format('Y-m-d H:i:s');  
+    }
+    
+    public function getUpdatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->format('Y-m-d H:i:s');
+    }
 }

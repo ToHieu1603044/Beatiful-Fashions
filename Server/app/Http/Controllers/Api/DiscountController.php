@@ -22,7 +22,6 @@ class DiscountController
     {
         try {
             $discounts = Discount::with('products')
-                ->where('is_redeemable', false)
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
 
@@ -36,8 +35,7 @@ class DiscountController
 
     public function fetchDiscount(Request $request)
     {
-        $discounts = Discount::where('is_redeemable', false)
-            ->where('is_global', 1)
+        $discounts = Discount::where('is_global', 1)
             ->where('active', 1)
             ->where('start_date', '<=', Carbon::now())
             ->where('end_date', '>=', Carbon::now())
@@ -140,14 +138,14 @@ class DiscountController
             return response()->json(['message' => __('messages.insufficient_ranking')], 400);
         }
     
-        if ($discount->is_redeemable) {
-            $redeemed = PointRedemption::where('user_id', $user->id)
-                ->where('discount_id', $discount->id)
-                ->exists();
-            if (!$redeemed) {
-                return response()->json(['message' => __('messages.not_redeemed')], 400);
-            }
-        }
+        // if ($discount->is_redeemable) {
+        //     $redeemed = PointRedemption::where('user_id', $user->id)
+        //         ->where('discount_id', $discount->id)
+        //         ->exists();
+        //     if (!$redeemed) {
+        //         return response()->json(['message' => __('messages.not_redeemed')], 400);
+        //     }
+        // }
     
         $used = DiscountUsage::where('user_id', $user->id)
             ->where('discount_id', $discount->id)
@@ -383,8 +381,25 @@ class DiscountController
                     'required_ranking' => __('messages.required_ranking'),
                 ]);
             }
-
-            $discount->update($validated);
+            $discountData = [
+                'name' => $validated['name'],
+                'code' => $validated['code'],
+                'discount_type' => $validated['discount_type'],
+                'value' => $validated['value'],
+                'start_date' => Carbon::parse($validated['start_date'])->format('Y-m-d H:i:s'),
+                'end_date' => Carbon::parse($validated['end_date'])->format('Y-m-d H:i:s'),
+                'max_uses' => $validated['max_uses'] ?? null,
+                'is_global' => $validated['is_global'],
+                'required_ranking' => $validated['required_ranking'] ?? null,
+                'is_first_order' => $validated['is_first_order'] ?? false,
+                'is_redeemable' => $validated['is_redeemable'] ?? false,
+                'can_be_redeemed_with_points' => $validated['can_be_redeemed_with_points'] ?? null,
+                'max_discount' => $validated['max_discount'] ?? null,
+                'min_order_amount' => $validated['min_order_amount'] ?? null,
+                'active' => true,
+                'used_count' => 0,
+            ];
+            $discount->update($discountData);
 
             // Nếu có product_ids thì sync lại bảng pivot
             if (!empty($request->product_ids)) {

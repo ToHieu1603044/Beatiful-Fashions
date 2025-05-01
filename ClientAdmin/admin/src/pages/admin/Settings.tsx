@@ -5,18 +5,17 @@ import {
   Input,
   Button,
   message,
-  Avatar,
-  Upload,
   Switch,
   Modal,
   Divider,
   Row,
   Col,
+  Select,
 } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
 import { getUserProfile, changePassword, updateSystemSettings, getMaintenanceStatus } from "../../services/homeService";
-import type { RcFile } from "antd/es/upload";
+import axios from "axios";
 
+const { Option } = Select;
 const { TabPane } = Tabs;
 
 const Settings = () => {
@@ -26,75 +25,140 @@ const Settings = () => {
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
-  const [maintenanceModalVisible, setMaintenanceModalVisible] = useState(false);
+  const [user, setUser] = useState({});
+  const [site, setSite] = useState({});
 
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const maintaince = await getMaintenanceStatus()
+        const maintenance = await getMaintenanceStatus();
         const response = await getUserProfile();
         const data = response.data.data;
         form.setFieldsValue(data);
-        setAvatarUrl(data.avatar || "");
+        setUser(data);
         setTwoFactorEnabled(data.two_factor_enabled || false);
-        setIsMaintenance(data.maintenance || false);
-        setMaintenanceMessage(data.maintenance_message || "");
-        systemForm.setFieldsValue({
-          site_name: data.site_name,
-          support_email: data.support_email,
-          hotline: data.hotline,
-        });
       } catch (error) {
         message.error("Không thể tải thông tin.");
       }
     };
     fetchUserInfo();
-  }, [form, systemForm]);
+  }, [form]);
 
-  const handleUpload = (file: RcFile) => {
-    const url = URL.createObjectURL(file);
-    setAvatarUrl(url);
-    return false;
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get("http://127.0.0.1:8000/api/site-setting", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+         
+        });
+        const siteData = response.data.data;
+        console.log("Site settings:", siteData);
+        console.log('Lang', response.data.language);
+        setSite(siteData);
+        setIsMaintenance(siteData.maintenance === "true");
+        setMaintenanceMessage(siteData.maintenance_message || "");
+        systemForm.setFieldsValue({
+          site_name: siteData.site_name || "",
+          support_email: siteData.support_email || "",
+          hotline: siteData.hotline || "",
+          language: siteData.language || "vi", 
+          logo: siteData.logo || "",
+        });
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu:", error);
+        message.error("Không thể tải cài đặt hệ thống.");
+      }
+    };
+    fetchData();
+  }, [systemForm]);
 
   const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword) {
+    if (!currentPassword || !newPassword || !passwordConfirmation) {
       return message.error("Vui lòng nhập đầy đủ thông tin.");
     }
-
+    if (newPassword !== passwordConfirmation) {
+      return message.error("Mật khẩu mới và xác nhận mật khẩu không khớp.");
+    }
     try {
       setLoading(true);
-      await changePassword({ currentPassword, newPassword });
-      message.success("Đổi mật khẩu thành công!");
+      const response = await changePassword({
+        old_password: currentPassword,
+        password: newPassword,
+        password_confirmation: passwordConfirmation,
+      });
+      message.success(response.data.message);
       setPasswordModalVisible(false);
       setCurrentPassword("");
       setNewPassword("");
+      setPasswordConfirmation("");
     } catch (error) {
-      message.error("Đổi mật khẩu thất bại.");
+      const errorMessage = error.response?.data?.message || "Đổi mật khẩu thất bại.";
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateSystemSettings = async (values: any) => {
+  const handleUpdateProfile = async (values) => {
     try {
       setLoading(true);
-      await updateSystemSettings({
-        ...values,
-        maintenance: isMaintenance,
-        maintenance_message: maintenanceMessage,
-      });
-      message.success("Đã cập nhật cài đặt hệ thống!");
+      const data = {
+        name: values.name,
+        email: values.email,
+        phone: values.phone || "",
+        address: values.address || "",
+        city: values.city || "",
+        district: values.district || "",
+        ward: values.ward || "",
+      };
+
+      const response = await axios.put("http://127.0.0.1:8000/api/users", data, { headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` } });;
+      message.success(response.data.message || "Đã cập nhật thông tin cá nhân.");
+      const userResponse = await getUserProfile();
+      form.setFieldsValue(userResponse.data.data);
+      setUser(userResponse.data.data);
     } catch (error) {
-      message.error("Lỗi khi cập nhật.");
+      console.error("Profile update error:", error.response);
+      const errorMessage = error.response?.data?.message || "Cập nhật thông tin thất bại.";
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleUpdateSystemSettings = async (values) => {
+    console.log("Form values:", values);
+    try {
+      setLoading(true);
+      const data = {
+        ...values,
+        maintenance: isMaintenance,
+        maintenance_message: maintenanceMessage,
+      };
+      console.log("Data sent to backend:", data);
+  
+      const response = await updateSystemSettings(data);
+      message.success(response.data.message || "Đã cập nhật cài đặt hệ thống!");
+  
+      if (values.language && values.language !== site.language) {
+        site.language = values.language;
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("System settings update error:", error.response);
+      const errorMessage = error.response?.data?.message || "Lỗi khi cập nhật cài đặt hệ thống.";
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
 
   return (
     <div className="container mt-4">
@@ -102,48 +166,75 @@ const Settings = () => {
       <Divider />
 
       <Tabs defaultActiveKey="account">
-        {/* TAB: Thông tin tài khoản */}
         <TabPane tab="Tài khoản" key="account">
           <Row gutter={24}>
-            <Col span={6}>
-              <Avatar size={120} src={avatarUrl} />
-              <Upload beforeUpload={handleUpload} showUploadList={false}>
-                {/* <Button icon={<UploadOutlined />} className="mt-2">Tải ảnh đại diện</Button> */}
-              </Upload>
-            </Col>
-
             <Col span={18}>
               <Form
+                
                 form={form}
                 layout="vertical"
-                onFinish={(values) => message.success("Đã cập nhật thông tin cá nhân.")}
+                onFinish={handleUpdateProfile}
               >
-                <Form.Item name="name" label="Họ và tên" rules={[{ required: true }]}>
+                <Form.Item
+                  name="name"
+                  label="Họ và tên"
+                  rules={[{ required: true, message: "Vui lòng nhập họ và tên" }]}
+                >
                   <Input />
                 </Form.Item>
-                <Form.Item name="email" label="Email">
+                <Form.Item
+                  name="email"
+                  label="Email"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập email" },
+                    { type: "email", message: "Email không hợp lệ" },
+                  ]}
+                >
                   <Input disabled />
                 </Form.Item>
-                <Form.Item name="phone" label="Số điện thoại">
+                <Form.Item
+                  name="phone"
+                  label="Số điện thoại"
+                  rules={[
+                    { max: 20, message: "Số điện thoại không được vượt quá 20 ký tự" },
+                    { pattern: /^[0-9]*$/, message: "Số điện thoại chỉ được chứa số" },
+                  ]}
+                >
                   <Input />
                 </Form.Item>
-                <Form.Item name="city" label="Thành phố">
+                <Form.Item
+                  name="address"
+                  label="Địa chỉ"
+                  rules={[{ max: 500, message: "Địa chỉ không được vượt quá 500 ký tự" }]}
+                >
+                  <Input.TextArea rows={3} />
+                </Form.Item>
+                <Form.Item
+                  name="city"
+                  label="Thành phố"
+                >
                   <Input />
                 </Form.Item>
-                <Form.Item name="district" label="Quận/Huyện">
+                <Form.Item
+                  name="district"
+                  label="Quận/Huyện"
+                >
                   <Input />
                 </Form.Item>
-                <Form.Item name="ward" label="Phường/Xã">
+                <Form.Item
+                  name="ward"
+                  label="Phường/Xã"
+                >
                   <Input />
                 </Form.Item>
-
-                {/* <Form.Item label="Xác thực 2 yếu tố">
-                  <Switch checked={twoFactorEnabled} onChange={setTwoFactorEnabled} />
-                </Form.Item> */}
-
                 <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={loading}>Cập nhật</Button>
-                  <Button className="ms-2" onClick={() => setPasswordModalVisible(true)}>
+                  <Button type="primary" htmlType="submit" loading={loading}>
+                    Cập nhật
+                  </Button>
+                  <Button
+                    className="ms-2"
+                    onClick={() => setPasswordModalVisible(true)}
+                  >
                     Đổi mật khẩu
                   </Button>
                 </Form.Item>
@@ -152,23 +243,42 @@ const Settings = () => {
           </Row>
         </TabPane>
 
-        {/* TAB: Cài đặt bảo mật */}
         <TabPane tab="Bảo mật" key="security">
           <Form layout="vertical">
             <Form.Item label="Xác thực 2 yếu tố">
-              <Switch checked={twoFactorEnabled} onChange={setTwoFactorEnabled} />
+              <Switch
+                checked={twoFactorEnabled}
+                onChange={setTwoFactorEnabled}
+              />
             </Form.Item>
-            <Button type="primary" onClick={() => setPasswordModalVisible(true)}>
+            <Button
+              type="primary"
+              onClick={() => setPasswordModalVisible(true)}
+            >
               Thay đổi mật khẩu
             </Button>
           </Form>
         </TabPane>
 
-        {/* TAB: Cấu hình hệ thống */}
         <TabPane tab="Cấu hình hệ thống" key="system">
-          <Form form={systemForm} layout="vertical" onFinish={handleUpdateSystemSettings}>
+          <Form
+            form={systemForm}
+            layout="vertical"
+            onFinish={handleUpdateSystemSettings}
+          >
             <Form.Item label="Tên website" name="site_name">
               <Input />
+            </Form.Item>
+            <Form.Item
+              label="Ngôn ngữ"
+              name="language"
+          
+              rules={[{ required: true, message: "Vui lòng chọn ngôn ngữ" }]}
+            >
+              <Select>
+                <Option value="vi">Tiếng Việt</Option>
+                <Option value="en">Tiếng Anh</Option>
+              </Select>
             </Form.Item>
             <Form.Item label="Email hỗ trợ" name="support_email">
               <Input />
@@ -176,16 +286,21 @@ const Settings = () => {
             <Form.Item label="Hotline" name="hotline">
               <Input />
             </Form.Item>
-
             <Form.Item label="Bảo trì hệ thống">
-              <Switch checked={isMaintenance} onChange={setIsMaintenance} />
+              <Switch
+                checked={isMaintenance}
+                onChange={setIsMaintenance}
+              />
             </Form.Item>
             {isMaintenance && (
               <Form.Item label="Thông báo bảo trì">
-                <Input.TextArea rows={4} value={maintenanceMessage} onChange={(e) => setMaintenanceMessage(e.target.value)} />
+                <Input.TextArea
+                  rows={4}
+                  value={maintenanceMessage}
+                  onChange={(e) => setMaintenanceMessage(e.target.value)}
+                />
               </Form.Item>
             )}
-
             <Form.Item>
               <Button type="primary" htmlType="submit" loading={loading}>
                 Lưu thay đổi
@@ -194,13 +309,14 @@ const Settings = () => {
           </Form>
         </TabPane>
 
-        {/* TAB: Cài đặt Email */}
         <TabPane tab="Gửi Email" key="email">
-          <p>👉 Phần này bạn có thể mở rộng theo nhu cầu như SMTP config, test mail, Mailgun, v.v.</p>
+          <p>
+            👉 Phần này bạn có thể mở rộng theo nhu cầu như SMTP config, test
+            mail, Mailgun, v.v.
+          </p>
         </TabPane>
       </Tabs>
 
-      {/* Modal đổi mật khẩu */}
       <Modal
         title="Thay đổi mật khẩu"
         open={passwordModalVisible}
@@ -212,10 +328,22 @@ const Settings = () => {
       >
         <Form layout="vertical">
           <Form.Item label="Mật khẩu hiện tại">
-            <Input.Password value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+            <Input.Password
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
           </Form.Item>
           <Form.Item label="Mật khẩu mới">
-            <Input.Password value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            <Input.Password
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </Form.Item>
+          <Form.Item label="Xác nhận mật khẩu mới">
+            <Input.Password
+              value={passwordConfirmation}
+              onChange={(e) => setPasswordConfirmation(e.target.value)}
+            />
           </Form.Item>
         </Form>
       </Modal>

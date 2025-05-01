@@ -164,25 +164,36 @@ class AuthController extends Controller
   // Doi mat khau
   public function resetPassword(Request $request)
   {
-    $request->validate([
-      'old_password' => 'required|string|min:6',
-      'password' => 'required|string|min:6|confirmed',
-    ]);
-
-    $user = Auth::user();
-
-    if (Hash::check($request->old_password, $user->password)) {
-      $user->update([
-        'password' => Hash::make($request->password),
-        'last_password_changed_at' => now(),
+      \Log::info($request->all());
+      $request->validate([
+          'old_password' => 'required|string|min:6',
+          'password' => 'required|string|min:6|confirmed',
       ]);
-
-      $user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
-      return ApiResponse::responseObject(new UserResource($user), 200, __('messages.change_password_success'));
-    }
-    return ApiResponse::errorResponse('Old password is incorrect', 400);
-
+  
+      try {
+          $user = Auth::user();
+  
+          if (!$user) {
+              return ApiResponse::errorResponse(410, TextSystemConst::USER_NOT_FOUND);
+          }
+  
+          if (Hash::check($request->old_password, $user->password)) {
+              $user->update([
+                  'password' => Hash::make($request->password),
+                  'last_password_changed_at' => now(),
+              ]);
+  
+              $user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
+              return ApiResponse::responseObject(new UserResource($user), 200, __('messages.change_password_success'));
+          }
+  
+          return ApiResponse::errorResponse(400, __('messages.old_password_not_match'));
+      } catch (\Throwable $th) {
+          return ApiResponse::errorResponse(500, $th->getMessage());
+      }
   }
+
+
   // Quen mat khaukhau
   public function forgotPassword(Request $request)
   {

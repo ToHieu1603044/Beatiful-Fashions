@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Table, Modal, Button, Select, Pagination, Input, message } from "antd";
-import { confirmOrder, getOrder, getOrderReturns, getOrders, updateOrderStatus } from "../../../services/orderService";
+import { confirmOrder, getOrder, getOrderReturns, getOrders, updateOrderStatus, updateOrderStatusAdmin } from "../../../services/orderService";
 import Swal from 'sweetalert2'
 import EditOrderModal from "./EditOrderModal";
 import OrderDetailModal from "../../../components/OrderDetailModal ";
@@ -91,7 +91,7 @@ const Orders: React.FC = () => {
   };
   const handleUpdateStatusInline = async (orderId: number, newStatus: string) => {
     try {
-    const response =  await updateOrderStatus(orderId, newStatus);
+    const response =  await updateOrderStatusAdmin(orderId, newStatus);
       message.success(response.message);
       fetchOrders(currentPage, filterStatus);
     } catch (error) {

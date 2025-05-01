@@ -22,14 +22,14 @@ class Attribute extends Model
         return $this->hasMany(AttributeOption::class, 'attribute_id');
     }
     
-    // public function getCreatedAtAttribute($value)
-    // {
-    //     return Carbon::parse($value)->format('Y-m-d H:i:s');  
-    // }
+    public function getCreatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->format('Y-m-d H:i:s');  
+    }
     
-    // public function getUpdatedAtAttribute($value)
-    // {
-    //     return Carbon::parse($value)->format('Y-m-d H:i:s');
-    // }
+    public function getUpdatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->format('Y-m-d H:i:s');
+    }
     
 }

@@ -58,7 +58,12 @@ class OrderReturnController
         \Log::info($request->all());
 
         $order = Order::findOrFail($id);
-
+        if ($order->status === 'completed' && $order->orderReturn()->exists()) {
+            return response()->json([
+                'message' => __('messages.order_already_returned'),
+                'status' => $order->status
+            ], 400);
+        }
         if ($order->status === 'completed' && now()->diffInDays($order->updated_at) > 7) {
             return response()->json([
                 'message' => __('messages.order_return_completed_7_days'),
@@ -143,21 +148,29 @@ class OrderReturnController
                 'pending' => 0,
                 'approved' => 1,
                 'rejected' => 1,
-                'received' => 2,
-                'refunded' => 3,
-                'completed' => 4,
+                'shipping' => 2,
+                'received' => 3,
+                'refunded' => 4,
+                'completed' => 5,
             ];
     
             $current = $statusOrder[$orderReturn->status] ?? -1;
             $next = $statusOrder[$request->status] ?? -1;
-    
+            
+            if ($request->status === 'received' && $orderReturn->status !== 'shipping') {
+                return response()->json([
+                    'message' => __('messages.order_return_status_must_be_shipping_to_receive'),
+                    'status' => $orderReturn->status
+                ], 400);
+            }
+
             if ($next < $current) {
                 return response()->json([
                     'message' => __('messages.order_return_status_invalid'),
                     'status' => $orderReturn->status
                 ], 400);
             }
-    
+            
             DB::transaction(function () use ($orderReturn, $request) {
                 $orderReturn->update(['status' => $request->status]);
     

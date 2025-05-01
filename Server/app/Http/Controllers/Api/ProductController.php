@@ -21,11 +21,19 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Validator;
-
+/**
+ * @OA\Info(
+ *     title="Product API",
+ *     version="1.0.0",
+ *     description="API for managing products"
+ * )
+ */
 class ProductController extends Controller
 {
     use ApiDataTrait;
     use AuthorizesRequests;
+
+    
     public function index(Request $request)
     {
         try {
