@@ -259,7 +259,8 @@ Route::middleware(['auth:sanctum', 'role:admin|manager', 'api'])->group(function
 
     // Route::post('/roles/{id}/assign-all-permissions', [RolePermissionController::class, 'assignAllPermissionsToRole']);
 
-    Route::post('/roles/{id}/update-permissions', [RolePermissionController::class, 'updatePermissions'])->middleware('role:admin');
+    Route::get('permission/{id}', [RolePermissionController::class, 'showPermission'])->middleware('role:admin');
+    Route::put('/roles/{id}/update-permissions', [RolePermissionController::class, 'updatePermissions'])->middleware('role:admin');
 
     Route::post('/roles/remove-all-permissions', [RolePermissionController::class, 'removeAllPermissionsFromRole'])->middleware('role:admin');
 

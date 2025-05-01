@@ -53,7 +53,11 @@ class RolePermissionController extends Controller
 
         return response()->json($role, 200);
     }
+    public function showPermission($id){
+        $permission = Permission::findOrFail($id);
 
+        return response()->json($permission, 200);
+    }
     public function createPermission(Request $request)
     {
         $request->validate([
@@ -146,10 +150,12 @@ class RolePermissionController extends Controller
     }
     public function updatePermissions(Request $request, $id)
     {
-        $role = Role::findOrFail($id);
+        $role = Permission::findOrFail($id);
 
-        $role->syncPermissions($request->permissions ?? []);
-
+        // $role->syncPermissions($request->permissions ?? []);
+        $role->update([
+            'name' => $request->name
+        ]);
         return response()->json(
             ['message' => __('messages.updated')]
             ,
