@@ -111,6 +111,7 @@ const Header = () => {
       try {
         const response = await getCartCount();
         setCartCount(response.data.data);
+        console.log("response", response);
       } catch (error) {
         console.error("Lỗi khi lấy số lượng giỏ hàng:", error);
       }
@@ -139,11 +140,12 @@ const Header = () => {
       <div className="container d-flex align-items-center justify-content-start">
         <a className="navbar-brand me-3 text-white" href="/">
           <img
-            src={`http://127.0.0.1:8000/storage/${site.logo}`}
+            src={"../../../src/assets/logo.png"}
             alt={site.site_name || "Logo"}
             className="img-fluid"
-            style={{ maxWidth: '170px' }}
+            style={{ width: '50px', height: '50px', objectFit: 'contain' }}
           />
+
         </a>
 
         <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -191,10 +193,11 @@ const Header = () => {
             <li className="nav-item position-relative">
               <a className="nav-link text-white" href="#" onClick={() => setIsNotificationsOpen(true)}>
                 <Badge count={unreadCount}>
-                  <Bell size={20} />
+                  <Bell size={25} style={{ color: 'white' }} />
                 </Badge>
               </a>
             </li>
+
           </ul>
         </div>
       </div>

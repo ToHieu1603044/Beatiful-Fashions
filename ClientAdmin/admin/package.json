@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/charts": "^2.2.7",
     "@ckeditor/ckeditor5-react": "^9.5.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -20,7 +21,7 @@
     "@mui/material": "^6.4.4",
     "@tanstack/react-query": "^5.68.0",
     "antd": "^5.24.1",
-    "axios": "^1.7.7",
+    "axios": "^1.9.0",
     "bootstrap": "^5.3.3",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
@@ -48,6 +49,7 @@
     "react-toastify": "^11.0.5",
     "recharts": "^2.15.1",
     "slugify": "^1.6.6",
+    "styled-components": "^6.1.17",
     "sweetalert2": "^11.17.2",
     "swiper": "^11.2.5",
     "zod": "^3.24.2"

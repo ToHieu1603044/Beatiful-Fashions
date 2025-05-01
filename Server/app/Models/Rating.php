@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -15,6 +16,7 @@ class Rating extends Model
         'rating',
         'order_detail_id',
         'review',  
+        'parent_id',
     ];
     
 
@@ -31,5 +33,12 @@ class Rating extends Model
     {
         return $this->belongsTo(OrderDetail::class);
     }
+    public function replies(){
+        return $this->hasMany(Rating::class, 'parent_id');
+    }
+    public function parent(){
+        return $this->belongsTo(Rating::class, 'parent_id');
+    }
+
     
 }

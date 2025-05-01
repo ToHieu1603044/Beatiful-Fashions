@@ -5,18 +5,19 @@ import moment from 'moment';
 import { createDiscount } from '../../../services/discountsService';
 import { getProducts } from '../../../services/productService';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 interface Discount {
-    id: number; // hoặc string, tùy thuộc vào kiểu dữ liệu của bạn
+    id: number;
     name: string;
     code: string;
     discount_type: string;
     value: number;
     max_discount: number;
     min_order_amount: number;
-    start_date: string; // hoặc Date
-    end_date: string; // hoặc Date
+    start_date: string;
+    end_date: string;
     max_uses: number;
-    products: { id: number; name: string }[]; // Giả sử đây là mảng sản phẩm
+    products: { id: number; name: string }[];
     is_global: boolean;
     required_ranking: number;
     is_first_order: boolean;
@@ -24,6 +25,7 @@ interface Discount {
     can_be_redeemed_with_points: number;
 }
 const Discount = () => {
+
     const [discounts, setDiscounts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -33,16 +35,17 @@ const Discount = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingDiscount, setEditingDiscount] = useState<Discount | null>(null);
     console.log("editingDiscount", editingDiscount);
-    
+
     const handleEditDiscount = (record) => {
         setIsEditMode(true);
         setEditingDiscount(record.id);
         console.log("Editing Discount ID:", record.id);
-        // Populate the form with existing record data
+
         form.setFieldsValue({
             name: record.name,
             code: record.code,
-            record_type: record.record_type,
+            discount_type: record.discount_type,
+
             value: record.value,
             max_record: record.max_record,
             min_order_amount: record.min_order_amount,
@@ -50,7 +53,8 @@ const Discount = () => {
             end_date: moment(record.end_date),
             max_uses: record.max_uses,
             product_ids: record.products?.map(p => p.id) || [],
-            is_global: record.is_global,
+            is_global: Boolean(record.is_global),
+
             required_ranking: record.required_ranking,
             is_first_order: record.is_first_order,
             is_redeemable: record.is_redeemable,
@@ -61,6 +65,7 @@ const Discount = () => {
         setIsRedeemable(record.is_redeemable);
         setIsModalVisible(true);
     };
+
     const handleOk = async () => {
         try {
             const data = await form.validateFields();
@@ -68,25 +73,30 @@ const Discount = () => {
                 ...data,
                 product_ids: selectedProducts,
             };
+
             console.log("requestData", requestData);
-            
-            
+
+
             if (isEditMode && editingDiscount) {
                 console.log("requestData", editingDiscount);
                 const response = await axios.put(`http://127.0.0.1:8000/api/discounts/${editingDiscount}`, requestData);
                 console.log("response", response);
-                
-                if (response.status === 200) {
-                    message.success("Cập nhật mã giảm giá thành công!");
-                } else {
-                    message.error("Cập nhật thất bại.");
+
+                try {
+                    message.success(response.data.message);
+                }
+                catch (error) {
+                    handleApiError(error);
+                    return;
                 }
             } else {
-                const response = await createDiscount(requestData);
-                if (response.status == 201) {
-                    message.success("Tạo mã giảm giá thành công!");
-                } else {
-                    message.error("Tạo mã giảm giá thất bại.");
+                try {
+                    const response = await createDiscount(requestData);
+                    message.success(response.data.message);
+                } catch (error) {
+                    message.error(error.response.data.message);
+                    handleApiError(error);
+                    return;
                 }
             }
 
@@ -97,9 +107,36 @@ const Discount = () => {
             setIsEditMode(false);
         } catch (error) {
             console.error("Lỗi khi lưu mã giảm giá:", error);
-            message.error("Có lỗi xảy ra khi lưu.");
+            Swal.fire("Lỗi!", "Có lỗi xảy ra khi lưu dữ liệu form.", "error");
         }
     };
+    const handleApiError = (error: any) => {
+        if (error.response) {
+            const response = error.response;
+
+            if (typeof response.data.message === 'string') {
+                Swal.fire("Lỗi!", response.data.message, "error");
+            }
+
+            else if (response.data.errors) {
+                const errorList = Object.values(response.data.errors)
+                    .flat()
+                    .map(msg => `<li>${msg}</li>`)
+                    .join("");
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi xác thực dữ liệu:',
+                    html: `<ul style="text-align: left;">${errorList}</ul>`,
+                });
+            } else {
+                Swal.fire("Lỗi!", "Đã xảy ra lỗi không xác định.", "error");
+            }
+        } else {
+            Swal.fire("Lỗi!", "Không thể kết nối đến máy chủ.", "error");
+        }
+    };
+
     const handleCancel = () => {
         setIsModalVisible(false);
         setEditingDiscount(null);
@@ -114,27 +151,34 @@ const Discount = () => {
         try {
             const response = await axios.delete(`http://127.0.0.1:8000/api/discounts/${id}`);
             if (response.status === 200 || response.status === 204) {
-                message.success('Xoá thành công!');
+                message.success(response.data.message);
                 setDiscounts(prev => prev.filter(discount => discount.id !== id));
-            } else {
-                message.error('Xoá thất bại');
             }
         } catch (error) {
-            console.error('Lỗi xoá:', error);
-            alert('Đã xảy ra lỗi khi xoá. Vui lòng thử lại.');
+            message.error(error.response.data.message);
         }
     }
     const handleToggleStatus = async (discounts) => {
         try {
             const newStatus = discounts.active ? 0 : 1;
-            await axios.put(`http://127.0.0.1:8000/api/discounts/${discounts.id}`, newStatus);
-            message.success("Cập nhật trạng thái thành công!");
+            console.log("discounts", discounts.id);
+            console.log("newStatus", newStatus);
+
+            // Send the status as part of the body
+            const resStatus = await axios.put(
+                `http://127.0.0.1:8000/api/discounts/${discounts.id}/status`,
+                { status: newStatus } // Sending status as an object
+            );
+
+            message.success(resStatus.data.message);
             fetchProducts();
+            fetchDiscounts();
         } catch (error) {
             console.error("Lỗi khi cập nhật trạng thái:", error);
-            message.error("Lỗi khi cập nhật trạng thái!");
+            message.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
+
 
 
     const columns = [
@@ -226,7 +270,7 @@ const Discount = () => {
             key: "actions",
             render: (record: any) => (
                 <Button.Group>
-                   <Button type="primary" onClick={() => handleEditDiscount(record)}>Edit</Button>
+                    <Button type="primary" onClick={() => handleEditDiscount(record)}>Edit</Button>
                     <Button danger onClick={() => handleDeleteDiscount(record.id)}>Delete</Button>
 
                 </Button.Group>
@@ -271,14 +315,14 @@ const Discount = () => {
 
     const [products, setProducts] = useState([]);
     const [selectedProducts, setSelectedProducts] = useState([]);
-
+    const [searchKeyword, setSearchKeyword] = useState(''); // Lưu từ khóa tìm kiếm
     useEffect(() => {
-        fetchProducts();
-    }, []);
+        fetchProducts(searchKeyword);
+    }, [searchKeyword]);
 
-    const fetchProducts = async () => {
+    const fetchProducts = async (search) => {
         try {
-            const response = await getProducts();
+            const response = await getProducts({ search });
             if (Array.isArray(response.data.data)) {
                 setProducts(response.data.data);
             }
@@ -286,9 +330,16 @@ const Discount = () => {
             console.error("Error fetching products:", error);
         }
     };
-
+    const rankingOptions = [
+        { label: 'Đồng', value: "bronze" },
+        { label: 'Bạc', value: "silver" },
+        { label: 'Vàng', value: "gold" },
+        { label: 'Bạch kim', value: "platinum" },
+    ];
+    const discountType = Form.useWatch('discount_type', form);
+    const isGlobal = Form.useWatch('is_global', form);
     return (
-        <div style={{ padding: '20px' }}>
+        <div className="container">
             <h1 className="text-center pt-5">Danh sách Mã Giảm Giá</h1>
 
             <div style={{ marginBottom: '16px', textAlign: 'right' }}>
@@ -315,9 +366,8 @@ const Discount = () => {
                 </Card>
             )}
 
-            {/* Modal to add a discount */}
             <Modal
-                title="Tạo Mã Giảm Giá"
+                title="Mã Giảm Giá"
                 visible={isModalVisible}
                 onCancel={handleCancel}
                 onOk={handleOk}
@@ -353,9 +403,12 @@ const Discount = () => {
                                     max={form.getFieldValue("discount_type") === "percentage" ? 100 : 10000000}
                                 />
                             </Form.Item>
-                            <Form.Item label="Giảm Tối Đa" name="max_discount">
-                                <InputNumber min={0} />
-                            </Form.Item>
+                            {discountType === 'percentage' && (
+                                <Form.Item label="Giảm Tối Đa" name="max_discount">
+                                    <InputNumber min={0} />
+                                </Form.Item>
+                            )}
+
 
                             <Form.Item label="Số Tiền Đơn Hàng Tối Thiểu" name="min_order_amount">
                                 <InputNumber min={0} />
@@ -364,13 +417,14 @@ const Discount = () => {
                             <Form.Item label="Ngày Bắt Đầu" name="start_date" rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}>
                                 <DatePicker format="YYYY-MM-DD" />
                             </Form.Item>
+                            <Form.Item label="Ngày Kết Thúc" name="end_date" rules={[{ required: true, message: 'Vui lòng chọn ngày kết thúc!' }]}>
+                                <DatePicker format="YYYY-MM-DD" />
+                            </Form.Item>
                         </Col>
 
                         {/* Cột 2 */}
                         <Col xs={24} md={12}>
-                            <Form.Item label="Ngày Kết Thúc" name="end_date" rules={[{ required: true, message: 'Vui lòng chọn ngày kết thúc!' }]}>
-                                <DatePicker format="YYYY-MM-DD" />
-                            </Form.Item>
+
 
                             <Form.Item label="Số Lượng Sử Dụng Tối Đa" name="max_uses">
                                 <InputNumber min={1} />
@@ -386,8 +440,11 @@ const Discount = () => {
                                         value: product.id
                                     }))}
                                     onChange={(values) => setSelectedProducts(values)}
+                                    showSearch 
+                                    filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())}
                                 />
                             </Form.Item>
+
 
                             <Form.Item label="Là Mã Toàn Quốc?" name="is_global">
                                 <Select>
@@ -396,28 +453,13 @@ const Discount = () => {
                                 </Select>
                             </Form.Item>
 
-                            <Form.Item label="Cần Ranking Tối Thiểu" name="required_ranking">
-                                <InputNumber
-                                    min={1}
-                                    max={4}
-                                    step={1}
-                                    defaultValue={1}
-                                    formatter={(value) => {
-                                        if (value === 1) return 'Bronze';
-                                        if (value === 2) return 'Silver';
-                                        if (value === 3) return 'Gold';
-                                        if (value === 4) return 'Platinum';
-                                        return value;
-                                    }}
-                                    parser={(value) => {
-                                        if (value === 'Bronze') return 1;
-                                        if (value === 'Silver') return 2;
-                                        if (value === 'Gold') return 3;
-                                        if (value === 'Platinum') return 4;
-                                        return value;
-                                    }}
-                                />
-                            </Form.Item>
+
+                            {!isGlobal && (
+                                <Form.Item label="Cần Ranking Tối Thiểu" name="required_ranking">
+                                    <Select options={rankingOptions} placeholder="Chọn cấp bậc" />
+                                </Form.Item>
+                            )}
+
 
                             <Form.Item label="Có thể tân thủ?" name="is_first_order" valuePropName="checked">
                                 <Checkbox>Cho mã tân thủ</Checkbox>
@@ -426,7 +468,7 @@ const Discount = () => {
                             <Form.Item label="Có thể đổi bằng điểm?" name="is_redeemable" valuePropName="checked">
                                 <Checkbox onChange={(e) => setIsRedeemable(e.target.checked)}>Cho phép đổi điểm</Checkbox>
                             </Form.Item>
-                            
+
                             {isRedeemable && (
                                 <Form.Item label="Số điểm cần để đổi" name="can_be_redeemed_with_points" rules={[{ required: true, message: 'Vui lòng nhập số điểm!' }]}>
                                     <InputNumber min={1} />

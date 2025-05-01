@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Events\RatingCreated;
+use Illuminate\Support\Facades\DB;
 
 class RatingController extends Controller
 {
@@ -16,49 +17,65 @@ class RatingController extends Controller
 
     public function index(Request $request)
     {
-        // Khởi tạo truy vấn với quan hệ user và product (nếu cần)
-        $query = Rating::with(['user', 'product']);
+        $query = Rating::with(['user', 'product', 'replies.user'])
+            ->withCount('replies')
+            ->whereNull('parent_id')
+            ->orderBy('created_at', 'desc');
 
-        // Lọc theo rating (nếu có truyền, ví dụ ?rating=4)
         if ($request->has('rating')) {
             $query->where('rating', $request->rating);
         }
 
-        // Tìm kiếm trong trường review nếu có tham số q (ví dụ: ?q=good)
         if ($request->has('q')) {
             $q = $request->q;
             $query->where('review', 'like', '%' . $q . '%');
         }
 
-        // Sắp xếp theo thời gian
-        // Nếu có truyền tham số sort = newest hoặc oldest, nếu không mặc định là newest
         if ($request->has('sort')) {
             $sort = $request->sort;
             if ($sort === 'oldest') {
                 $query->orderBy('created_at', 'asc');
             } else {
-                // newest hoặc giá trị khác mặc định là newest
+
                 $query->orderBy('created_at', 'desc');
             }
         } else {
             $query->orderBy('created_at', 'desc');
         }
 
-        // Nếu cần phân trang:
-        // $ratings = $query->paginate(10);
-        // return response()->json($ratings);
-
         $ratings = $query->get();
 
         return response()->json([
             'code' => 200,
-            'message' => 'success',
+            'message' => __('messages.success'),
             'data' => $ratings
+        ]);
+    }
+    public function reply(Request $request, $id)
+    {
+        $request->validate([
+            'content' => 'required|string',
+        ]);
+
+        $rating = Rating::findOrFail($id);
+
+        $reply = Rating::create([
+            'user_id' => auth()->id(), // admin hoặc seller
+            'product_id' => $rating->product_id,
+            'review' => $request->content,
+            'parent_id' => $rating->id,
+            'rating' => null,
+        ]);
+
+        return response()->json([
+            'code' => 200,
+            'message' => __('messages.success'),
         ]);
     }
 
     public function store(Request $request)
     {
+        \Log::info($request->all());
         $request->validate([
             'product_id' => 'required|exists:products,id',
             'rating' => 'required|integer|min:1|max:5',
@@ -67,24 +84,25 @@ class RatingController extends Controller
         ]);
 
         $user = Auth::user();
-
+        \Log::info($user);
         $hasPurchased = \DB::table('orders')
             ->join('order_details', 'orders.id', '=', 'order_details.order_id')
             ->where('orders.user_id', $user->id)
             ->where('order_details.product_id', $request->product_id)
-            ->where('orders.status', 'completed') 
+            ->where('orders.tracking_status', '=', 'completed')
             ->exists();
+        \Log::info($hasPurchased);
         $isRating = \DB::table('ratings')
             ->where('user_id', $user->id)
             ->where('product_id', $request->product_id)
             ->where('order_detail_id', $request->order_detail_id)
             ->exists();
-        if($isRating){
-            return response()->json(['message' => 'Bạn đã đánh giá sản phẩm này rồi'], 400);
+        if ($isRating) {
+            return response()->json(['message' => __('messages.already_rated')], 400);
         }
 
         if (!$hasPurchased) {
-            return response()->json(['message' => 'Bạn chỉ có thể đánh giá sản phẩm đã mua.'], 403);
+            return response()->json(['message' => __('messages.only_rate_purchased_product')], 403);
         }
 
         // Thêm đánh giá mới
@@ -99,7 +117,7 @@ class RatingController extends Controller
         event(new RatingCreated($rating));
 
         return response()->json([
-            'message' => 'Đánh giá thành công!',
+            'message' => __('messages.rating_success'),
             'data' => $rating
         ], 201);
     }
@@ -109,37 +127,69 @@ class RatingController extends Controller
         return Rating::with(['user', 'product'])->findOrFail($id);
     }
 
-    public function update(Request $request, Rating $rating)
+    public function update(Request $request, $id)
     {
-        $this->authorize('update', $rating);
-
-        $request->validate([
-            'rating' => 'integer|min:1|max:5',
-            'review' => 'nullable|string',
-        ]);
-
-        $rating->update($request->only('rating', 'review'));
-
-        return response()->json($rating);
-    }
-
-    public function destroy($id)
-    {
+        $rating = Rating::findOrFail($id);
 
         $user = Auth::user();
 
-        $rating = Rating::findOrFail($id);
-
-        if ($rating->user_id !== $user->id) {
-            return response()->json(['message' => 'Bạn không có quyền xóa đánh giá này.'], 403);
+        if ($user->hasRole('admin') && $rating->user_id !== $user->id) {
+            return response()->json(['message' => __('messages.unauthorized')], 403);
+        }
+        if (!$user->hasRole('admin') && $rating->user_id !== $user->id) {
+            return response()->json(['message' => __('messages.unauthorized')], 403);
         }
 
+        $request->validate([
+            'rating' => 'integer|min:1|max:5',
+            'review' => 'nullable|string|max:1000',
+        ]);
+        $createdAt = $rating->created_at;
+        $currentDate = now();
 
-        $rating->delete();
+        if ($currentDate->diffInDays($createdAt) > 1) {
+            return response()->json(['message' => __('messages.comment_edit_time_expired')], 403);
+        }
+        $rating->update($request->only('rating', 'review'));
 
         return response()->json([
-            'message' => 'Xóa đánh giá thành công!'
-        ], 204);
+            'message' => __('messages.updated'),
+        ], 200);
+    }
+
+
+    public function destroy($id)
+    {
+        $user = Auth::user();
+
+        DB::beginTransaction();
+
+        try {
+            $rating = Rating::findOrFail($id);
+
+
+            if ($user->role !== 'admin' && $rating->user_id !== $user->id) {
+                return response()->json(['message' => __('messages.unauthorized')], 403);
+            }
+
+            Rating::where('parent_id', $rating->id)->delete();
+
+            $rating->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => __('messages.deleted')
+            ], 204);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => __('messages.error'),
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function ratingByProduct($id)
@@ -149,7 +199,7 @@ class RatingController extends Controller
         $ratings = $product->ratings()->with(['user'])->get();
         return response()->json([
             'code' => 200,
-            'message' => 'success',
+            'message' => __('messages.success'),
             'data' => $ratings
         ]);
     }

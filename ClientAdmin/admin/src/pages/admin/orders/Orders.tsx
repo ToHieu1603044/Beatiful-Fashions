@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Table, Modal, Button, Select, Pagination, Input } from "antd";
-import { confirmOrder, getOrder, getOrderReturns, getOrders, updateOrderStatus } from "../../../services/orderService";
+import { Table, Modal, Button, Select, Pagination, Input, message } from "antd";
+import { confirmOrder, getOrder, getOrderReturns, getOrders, updateOrderStatus, updateOrderStatusAdmin } from "../../../services/orderService";
 import Swal from 'sweetalert2'
 import EditOrderModal from "./EditOrderModal";
 import OrderDetailModal from "../../../components/OrderDetailModal ";
 import { exportPdf } from "../../../services/homeService";
+import { useNavigate } from "react-router-dom";
 
 const Orders: React.FC = () => {
   const [orders, setOrders] = useState([]);
@@ -16,15 +17,16 @@ const Orders: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [editOrder, setEditOrder] = useState(null);
-
+  const navigate = useNavigate();
   useEffect(() => {
     fetchOrders(currentPage, filterStatus);
   }, [currentPage, filterStatus]);
 
   const handleEditOrder = async (order) => {
     try {
+      console.log("order", order.id);
       const response = await getOrder(order.id);
-
+      console.log("response", response);
       console.log("Chi tiết đơn hàng:---", response.data.data);
       setEditOrder(response.data.data);
     } catch (error) {
@@ -45,6 +47,9 @@ const Orders: React.FC = () => {
       setCurrentPage(response.data.page.currentPage);
       setLastPage(response.data.page.lastPage);
     } catch (error) {
+      if (error.response?.status === 403) {
+        navigate("/403");
+      }
       console.error("Lỗi lấy danh sách đơn hàng:", error);
     } finally {
       setLoading(false);
@@ -65,8 +70,8 @@ const Orders: React.FC = () => {
 
     if (result.isConfirmed) {
       try {
-        await confirmOrder(selectedOrder.id);
-        Swal.fire("Thành công!", "Đơn hàng đã được xác nhận.", "success");
+       const response = await confirmOrder(selectedOrder.id);
+        Swal.fire(response.data.message, "", "success");
         fetchOrders(currentPage);
       } catch (error) {
         console.error("Lỗi xác nhận đơn hàng:", error);
@@ -74,7 +79,7 @@ const Orders: React.FC = () => {
       }
     }
   };
-  const handleShowModal = (order: Order) => {
+  const handleShowModal = (order: order) => {
     setSelectedOrder(order);
     setStatus(order.shipping_status);
     setModalVisible(true);
@@ -86,12 +91,12 @@ const Orders: React.FC = () => {
   };
   const handleUpdateStatusInline = async (orderId: number, newStatus: string) => {
     try {
-      await updateOrderStatus(orderId, newStatus);
-      Swal.fire("Cập nhật thành công", "Trạng thái đơn hàng đã được cập nhật.", "success");
+    const response =  await updateOrderStatusAdmin(orderId, newStatus);
+      message.success(response.message);
       fetchOrders(currentPage, filterStatus);
     } catch (error) {
       console.error("Lỗi cập nhật trạng thái:", error);
-      Swal.fire("Lỗi", "Không thể cập nhật trạng thái đơn hàng.", "error");
+      message.error(error.response.data.message);
     }
   };
   const handleMarkAsPaid = async (orderId: number) => {
@@ -108,8 +113,8 @@ const Orders: React.FC = () => {
 
     if (result.isConfirmed) {
       try {
-        await confirmOrder(orderId);
-        Swal.fire("Thành công", "Đã đánh dấu là đã nhận tiền.", "success");
+      const response =  await confirmOrder(orderId);
+        message.success(response.data.message);
         fetchOrders(currentPage);
       } catch (error) {
         console.error("Lỗi khi đánh dấu đã nhận tiền:", error);
@@ -123,9 +128,10 @@ const Orders: React.FC = () => {
     if (!selectedOrder) return;
 
     try {
-      console.log("Du lieu gui di", selectedOrder.id, status);
 
-      await updateOrderStatus(selectedOrder.id, status);
+    const response =  await updateOrderStatus(selectedOrder.id, status);
+
+    console.log("response", response);
       Swal.fire("Thành công!", "Cập nhật trạng thái đơn hàng thành công.", "success");
 
       handleCloseModal();
@@ -145,14 +151,13 @@ const Orders: React.FC = () => {
     completed: "Hoàn thành"
   };
 
-  const handleExportPDF = async () => {
-    try {
-      const response = await exportPdf({
-        responseType: "blob",
-      });
+  const [exporting, setExporting] = useState(false);
 
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      const response = await exportPdf({ responseType: "blob" });
       if (response.status === 200) {
-        // Tạo URL từ Blob
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement("a");
         link.href = url;
@@ -160,12 +165,13 @@ const Orders: React.FC = () => {
         document.body.appendChild(link);
         link.click();
         link.remove();
-
-        alert("Xuất PDF thành công! 📄");
+        Swal.fire("Xuất thành công", "Tập tin PDF đã được tải về.", "success");
       }
     } catch (error) {
       console.error("Lỗi khi xuất PDF:", error);
-      alert("Có lỗi xảy ra khi xuất PDF!");
+      Swal.fire("Lỗi", "Không thể xuất file PDF.", "error");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -180,10 +186,11 @@ const Orders: React.FC = () => {
         amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
     },
     {
-      title: "Trạng thái giao hàng",
-      dataIndex: "tracking_status",
-      key: "tracking_status",
-      render: (status: string) => trackingStatusMap[status] || "Không xác định",
+      title: "Discount",
+      dataIndex: "discount_amount",
+      key: "discount_amount",
+      render: (amount: number) =>
+        amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
     },
     {
       title: "Phương thức thanh toán ",
@@ -286,8 +293,9 @@ const Orders: React.FC = () => {
             setFilterStatus(value || null);
             fetchOrders(1, value || null);
           }}
-          disabled={selectedOrder?.tracking_status === 'completed'} 
+          disabled={!!selectedOrder}
         >
+          <Select.Option value="">Tất cả</Select.Option>
           <Select.Option value="pending">Chờ xử lý</Select.Option>
           <Select.Option value="processing">Đã xác nhận</Select.Option>
           <Select.Option value="shipped">Đã gửi</Select.Option>
@@ -295,12 +303,9 @@ const Orders: React.FC = () => {
           <Select.Option value="cancelled">Đã hủy</Select.Option>
           <Select.Option value="completed">Giao hàng thành công</Select.Option>
         </Select>
-
-
         <div className="text-end mb-3">
-          <Button danger onClick={handleExportPDF}>📄 Export PDF</Button>
+          <Button loading={exporting} onClick={handleExportPDF}>Xuất PDF</Button>
         </div>
-
       </div>
 
       <Table columns={columns} dataSource={orders} loading={loading} pagination={false} rowKey="id" />
@@ -323,8 +328,8 @@ const Orders: React.FC = () => {
         visible={modalVisible}
         onClose={handleCloseModal}
         status={status}
-        setStatus={setStatus} // Để cập nhật trạng thái
-        onConfirmOrder={handleUpdateStatus} // Cập nhật trạng thái khi xác nhận
+        setStatus={setStatus}
+        onConfirmOrder={handleUpdateStatus}
         confirmOrder={handleMarkAsPaid}
       />
 

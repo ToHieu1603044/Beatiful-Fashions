@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal, Button, Form } from "react-bootstrap";
-import { getsales, getCategories, getProductSales, getProducts } from "../../services/homeService";
+import { getsales, getCategories, getProductSales, getProducts, storeCart } from "../../services/homeService";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/navigation";
@@ -13,9 +13,11 @@ import videoSrc from "../../assets/slider-video.mp4";
 import ImageCollection from "../ImageCollection";
 import CountDown from "../CountDown";
 import axios from "axios";
-// import { ToastContainer } from 'react-toastify';
-// import 'react-toastify/dist/ReactToastify.css';
 import { toast } from 'react-toastify';
+import Swal from "sweetalert2";
+import Carousel from "../Carousel ";
+import Post from "../Post";
+
 const MainContent = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -28,6 +30,8 @@ const MainContent = () => {
   const navigate = useNavigate();
   const [sales, setSales] = useState([]);
   const [favoriteProductIds, setFavoriteProductIds] = useState([]);
+  const [displayedProducts, setDisplayedProducts] = useState<Product[]>([]); // Sản phẩm hiển thị
+  const [showAll, setShowAll] = useState(false);
 
   const handleIncrease = () => {
     if (selectedVariant && quantity < selectedVariant.stock) {
@@ -49,11 +53,12 @@ const MainContent = () => {
         getProductSales(),
       ]);
 
-      setProducts(productsRes.data.data || []);
-      console.log("Danh sách san pham:", productsRes.data.data);
+      const fetchedProducts = productsRes.data.data || [];
+      setProducts(fetchedProducts);
+      setDisplayedProducts(fetchedProducts.slice(0, 4)); // Chỉ hiển thị 4 sản phẩm đầu tiên
       setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
-      setSales(salesRes.data.message || []);
-      console.log("Danh sách khuyen mai:", salesRes.data.message);
+      setSales(salesRes.data.data || []);
+      console.log("Danh sách khuyen mai:", salesRes.data);
 
       const token = localStorage.getItem("access_token");
       if (token) {
@@ -75,16 +80,90 @@ const MainContent = () => {
     fetchData();
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedVariant) {
-      alert("Vui lòng chọn biến thể.");
+      Swal.fire({
+        icon: "warning",
+        title: "Vui lòng chọn biến thể.",
+      });
       return;
     }
-    console.log("Dữ liệu gửi đi:", { sku_id: selectedVariant.sku_id });
+
+    const missingAttributes = [];
+    Object.keys(availableOptions).forEach((attributeName) => {
+      if (!selectedAttributes[attributeName]) {
+        missingAttributes.push(attributeName);
+      }
+    });
+
+    if (missingAttributes.length > 0) {
+      Swal.fire({
+        icon: "warning",
+        title: `Vui lòng chọn ${missingAttributes.join(", ")}.`,
+      });
+      return;
+    }
+
+    if (quantity <= 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Số lượng phải lớn hơn 0.",
+      });
+      return;
+    }
+
+    const data = {
+      sku_id: selectedVariant.sku_id,
+      quantity: quantity,
+      attributes: selectedAttributes,
+    };
+
+    console.log("Dữ liệu gửi đi:", data);
+
+    try {
+      const response = await storeCart(data);
+      console.log("Phản hồi từ API:", response.data);
+
+      if (response.status === 200) {
+        Swal.fire({
+          title: "Thêm giỏ hàng thành công!",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Lỗi!",
+          text: "Vui lòng thử lại sau.",
+        });
+      }
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        Swal.fire({
+          icon: "error",
+          title: "Bạn chưa đăng nhập!",
+          text: "Vui lòng đăng nhập để tiếp tục.",
+          confirmButtonText: "Đăng nhập"
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = "/login";
+          }
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Lỗi!",
+          text: error?.response?.data?.message || "Đã có lỗi xảy ra, vui lòng thử lại!",
+        });
+      }
+    }
   };
+
   const handleCategoryClick = (id: number, slug: string) => {
     navigate(`/category/${id}/${slug}`);
   };
+
   const handleAddToFavorites = async (product) => {
     try {
       const token = localStorage.getItem("access_token");
@@ -132,11 +211,9 @@ const MainContent = () => {
   const handleShowModal = (product) => {
     setSelectedProduct(product);
     setSelectedVariant(null);
+    setQuantity(1);
 
     const allAttributes = [...new Set(product.variants.flatMap((variant) => variant.attributes.map((attr) => attr.name)))];
-    // Loc tat ca variants va lay ra ten cac thuoc tinh -> dung Set de ne cac truong giong nhau-> chuyen thnanh mang
-
-    const initialSelectedAttributes = Object.fromEntries(allAttributes.map((attr) => [attr, null]));
 
     const initialAvailableOptions = {};
     allAttributes.forEach((attrName) => {
@@ -151,8 +228,20 @@ const MainContent = () => {
       ];
     });
 
+    const initialSelectedAttributes = {};
+    allAttributes.forEach((attrName) => {
+      initialSelectedAttributes[attrName] = initialAvailableOptions[attrName][0] || null;
+    });
+
+    const matchedVariant = product.variants.find((variant) =>
+      variant.attributes.every(
+        (attr) => initialSelectedAttributes[attr.name] === attr.value
+      )
+    );
+
     setSelectedAttributes(initialSelectedAttributes);
     setAvailableOptions(initialAvailableOptions);
+    setSelectedVariant(matchedVariant || null);
   };
 
   const handleCloseModal = () => {
@@ -163,7 +252,7 @@ const MainContent = () => {
 
   const handleSelectAttribute = (attributeName, attributeValue) => {
     setSelectedAttributes((prev) => {
-      const newSelectedAttributes = { ...prev, [attributeName]: attributeValue }
+      const newSelectedAttributes = { ...prev, [attributeName]: attributeValue };
 
       const matchedVariant = selectedProduct.variants.find((variant) =>
         variant.attributes.every(
@@ -176,143 +265,142 @@ const MainContent = () => {
       return newSelectedAttributes;
     });
   };
+
   const handleProductClick = (id: number) => {
     navigate(`/products/${id}/detail`);
+  };
+
+  const handleShowMore = () => {
+    setDisplayedProducts(products); // Hiển thị tất cả sản phẩm
+    setShowAll(true);
   };
 
   return (
     <div className="container mt-4">
       <div className="row mb-5 g-4">
-        {/* <Swiper
-          modules={[Navigation, Pagination, Autoplay]}
-          spaceBetween={10}
-          slidesPerView={1}
-          navigation
-          pagination={{ clickable: true }}
-          autoplay={{ delay: 6000, disableOnInteraction: false }}
-          className="w-100"
-          style={{ maxWidth: "100%", height: "500px" }}
-        >
-          <SwiperSlide>
-            <div className="position-relative">
-              <video src={videoSrc} autoPlay muted playsInline loop className="w-100" style={{ height: "500px", objectFit: "cover", borderRadius: "10px" }}></video>
-              <div className="position-absolute top-50 start-50 translate-middle text-white text-center"
-                style={{ backgroundColor: "rgba(0,0,0,0.5)", padding: "20px", borderRadius: "10px" }}>
-                <h2>Khám phá sản phẩm mới</h2>
-                <h4 className="text-warning">Ưu đãi hấp dẫn hôm nay!</h4>
-              </div>
-            </div>
-          </SwiperSlide>
-
-        </Swiper> */}
-        <div id="carouselExampleIndicators" className="carousel slide" data-bs-ride="carousel" data-bs-interval="2000">
-          <div className="carousel-indicators">
-            <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" className="active" aria-current="true" aria-label="Slide 1"></button>
-            <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1" aria-label="Slide 2"></button>
-            <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2" aria-label="Slide 3"></button>
-          </div>
-          <div className="carousel-inner">
-            <div className="carousel-item active">
-              <img src="https://intphcm.com/data/upload/dung-luong-banner-thoi-trang.jpg" className="d-block w-100" alt="First slide" />
-            </div>
-            <div className="carousel-item">
-              <img src="https://cotton4u.vn/files/news/2025/04/17/851111a46c6ea8ee79e5a465a91aa3c7.webp" className="d-block w-100" alt="Second slide" />
-            </div>
-            <div className="carousel-item">
-              <img className="d-block w-100" src="https://cotton4u.vn/files/news/2025/04/15/63fbae2cbd8adde79d504aafcfe92eee.webp" alt="Third slide" />
-            </div>
-          </div>
-          <button className="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
-            <span className="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span className="visually-hidden">Previous</span>
-          </button>
-          <button className="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="next">
-            <span className="carousel-control-next-icon" aria-hidden="true"></span>
-            <span className="visually-hidden">Next</span>
-          </button>
-        </div>
-
+        <Carousel />
       </div>
-      < ImageCollection />
-      <h2 className="mb-4 text-center text-uppercase mt-5">--Tất cả sản phẩm--</h2>
+
+      <h2 className="mb-5 text-center text-uppercase mt-5 text-secondary">--Tất cả sản phẩm--</h2>
       <div className="row justify-content-center gap-4 mb-5">
-        {products.length === 0 ? (
-          <p className="text-center">Không có sản phẩm nào.</p>
+        {displayedProducts.length === 0 ? (
+          <p className="mb-5 text-center text-uppercase mt-5">Không có sản phẩm nào.</p>
         ) : (
-          products.map((product) => (
+          displayedProducts.map((product) => (
             <div key={product.id} className="col-auto">
               <div
-                className="card h-100 shadow-sm hover-card position-relative mx-auto mb-4"
+                className="card h-100 border-0 position-relative mx-auto mb-4"
                 style={{
-                  width: "260px", // Card rộng bằng ảnh + khoảng trống
-                  transition: "transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "scale(1.05)";
-                  e.currentTarget.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.2)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                  e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
+                  width: "260px",
+                  background: "transparent",
                 }}
               >
-                {/* Icon trái tim */}
                 <div
-                  className="position-absolute top-0 end-0 m-2 p-2 rounded-circle bg-white shadow-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddToFavorites(product);
-                  }}
-                  style={{
-                    cursor: "pointer",
-                    zIndex: 10,
-                    transition: "color 0.2s ease-in-out",
-                  }}
+                  className="position-absolute top-0 end-0 d-flex flex-column m-2 gap-2"
+                  style={{ zIndex: 10 }}
                 >
-                  <i
-                    className={`fas fa-heart ${favoriteProductIds.includes(product.id) ? "text-danger" : "text-muted"}`}
-                    style={{ fontSize: "1.2rem" }}
-                  ></i>
+                  <div
+                    className="rounded-circle bg-white d-flex align-items-center justify-content-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToFavorites(product);
+                    }}
+                    style={{
+                      cursor: "pointer",
+                      width: "32px",
+                      height: "32px",
+                      transition: "background 0.2s ease",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f0f0")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+                  >
+                    <i
+                      className={`fas fa-heart ${favoriteProductIds.includes(product.id) ? "text-danger" : "text-gray-500"}`}
+                      style={{ fontSize: "1rem" }}
+                    ></i>
+                  </div>
+                  <div
+                    className="rounded-circle bg-white d-flex align-items-center justify-content-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShowModal(product);
+                    }}
+                    style={{
+                      cursor: "pointer",
+                      width: "32px",
+                      height: "32px",
+                      transition: "background 0.2s ease",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f0f0")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+                  >
+                    <i className="fas fa-eye text-gray-500" style={{ fontSize: "1rem" }}></i>
+                  </div>
                 </div>
+
+                {/* Product Image */}
                 <div
                   onClick={() => handleProductClick(product.id)}
                   style={{ cursor: "pointer" }}
                 >
                   <div className="image-container">
                     <img
-                      src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://placehold.co/260x320"}
+                      src={
+                        product.images
+                          ? `http://127.0.0.1:8000/storage/${product.images}`
+                          : "https://placehold.co/260x320"
+                      }
                       className="card-img-top"
                       alt={product.name}
                       style={{
                         height: "320px",
                         width: "260px",
                         objectFit: "cover",
-                        borderTopLeftRadius: "10px",
-                        borderTopRightRadius: "10px",
+                        borderRadius: "0",
                       }}
                     />
                   </div>
-                  <div className="card-body text-center">
-                    <h5 className="card-title text-truncate fw-bold">{product.name}</h5>
+
+                  <div className="card-body text-center px-0 py-2">
+                    <h5
+                      className="card-title text-truncate"
+                      style={{ fontSize: "1rem", fontWeight: "400", color: "#000" }}
+                    >
+                      {product.name}
+                    </h5>
                     <div className="price-container">
-                      <h6 className="text-danger fw-bold mb-1">{product.price.toLocaleString()} VND</h6>
-                      {product.old_price && (
-                        <small className="text-muted text-decoration-line-through">
-                          {product.old_price.toLocaleString()} VND
-                        </small>
-                      )}
+                      <h6
+                        className="fw-bold mb-0"
+                        style={{ fontSize: "1rem", color: "#000" }}
+                      >
+                        ${product.price.toLocaleString()}
+                      </h6>
                     </div>
                   </div>
                 </div>
+
+                {/* Quick Add Button */}
                 <div className="card-footer bg-transparent border-0 text-center pb-3">
                   <button
-                    className="btn btn-primary w-100 rounded-pill"
+                    className="btn w-100"
+                    style={{
+                      background: "#000",
+                      color: "#fff",
+                      fontSize: "0.75rem",
+                      fontWeight: "500",
+                      textTransform: "uppercase",
+                      padding: "8px 0",
+                      borderRadius: "0",
+                      transition: "background 0.2s ease",
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleShowModal(product);
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#333")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#000")}
                   >
-                    Mua ngay
+                    Quick Add
                   </button>
                 </div>
               </div>
@@ -320,6 +408,23 @@ const MainContent = () => {
           ))
         )}
       </div>
+      {!showAll && products.length > 4 && (
+        <div className="text-center mt-4">
+          <Button
+            variant="primary"
+            onClick={handleShowMore}
+            style={{
+              background: "#000",
+              border: "none",
+              textTransform: "uppercase",
+              padding: "10px 20px",
+            }}
+          >
+            Xem thêm
+          </Button>
+        </div>
+      )}
+
       {sales.length > 0 && (
         <>
           <h2 className="mb-4 text-center text-uppercase mt-5">--Sản phẩm khuyến mại--</h2>
@@ -327,64 +432,87 @@ const MainContent = () => {
             {sales.map((sale) => (
               <div key={sale.id} className="col-auto">
                 <div
-                  className="card h-100 shadow-sm hover-card position-relative mx-auto mb-4"
+                  className="card h-100 border-0 position-relative mx-auto mb-4"
                   style={{
                     width: "260px",
-                    transition: "transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "scale(1.05)";
-                    e.currentTarget.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.2)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "scale(1)";
-                    e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
+                    background: "transparent",
                   }}
                 >
-                  {/* Icon trái tim */}
-                  {/* <div
-                    className="position-absolute top-0 end-0 m-2 p-2 rounded-circle bg-white shadow-sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddToFavorites(sale);
-                    }}
+                  {/* Discount Tag */}
+                  <div
+                    className="discount-tag position-absolute top-0 start-0 m-2 p-2 text-white fw-bold"
                     style={{
-                      cursor: "pointer",
-                      zIndex: 10,
-                      transition: "color 0.2s ease-in-out",
+                      background: "linear-gradient(135deg, #ff4d4d, #cc0000)",
+                      clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%, 20% 50%)",
+                      fontSize: "0.85rem",
+                      lineHeight: "1.2",
+                      padding: "6px 12px",
+                      transform: "rotate(-10deg)",
+                      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+                      zIndex: 2,
                     }}
                   >
-                    <i
-                      className={`fas fa-heart ${sale.is_favorite ? "text-danger" : "text-muted"}`}
-                      style={{ fontSize: "1.2rem" }}
-                    ></i>
-                  </div> */}
+                    -{((sale.sale_price / sale.old_price) * 100).toFixed(0)}%
+                  </div>
 
+                  {/* Icons on the right */}
+                  <div
+                    className="position-absolute top-0 end-0 d-flex flex-column m-2 gap-2"
+                    style={{ zIndex: 1 }}
+                  >
+                    <div
+                      className="rounded-circle bg-white d-flex align-items-center justify-content-center"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShowModal(sale);
+                      }}
+                      style={{
+                        cursor: "pointer",
+                        width: "32px",
+                        height: "32px",
+                        transition: "background 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f0f0")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+                    >
+                      <i className="fas fa-eye text-gray-500" style={{ fontSize: "1rem" }}></i>
+                    </div>
+                  </div>
+
+                  {/* Product Image */}
                   <div
                     onClick={() => handleProductClick(sale.id)}
                     style={{ cursor: "pointer" }}
                   >
                     <div className="image-container">
                       <img
-                        src={sale.images ? `http://127.0.0.1:8000/storage/${sale.images}` : "https://placehold.co/260x320"}
+                        src={
+                          sale.images
+                            ? `http://127.0.0.1:8000/storage/${sale.images}`
+                            : "https://placehold.co/260x320"
+                        }
                         className="card-img-top"
                         alt={sale.name}
                         style={{
                           height: "320px",
                           width: "260px",
                           objectFit: "cover",
-                          borderTopLeftRadius: "10px",
-                          borderTopRightRadius: "10px",
+                          borderRadius: "0",
                         }}
                       />
                     </div>
-                    <div className="card-body text-center">
-                      <h5 className="card-title text-truncate fw-bold">{sale.name}</h5>
+
+                    <div className="card-body text-center px-0 py-2">
+                      <h5
+                        className="card-title text-truncate"
+                        style={{ fontSize: "1rem", fontWeight: "400", color: "#000" }}
+                      >
+                        {sale.name}
+                      </h5>
                       <div className="price-container">
                         <h6 className="text-danger fw-bold mb-1">
                           {(sale.price - sale.sale_price).toLocaleString()} VND
                         </h6>
-
                         {sale.old_price && (
                           <small className="text-muted text-decoration-line-through">
                             {sale.old_price.toLocaleString()} VND
@@ -393,15 +521,29 @@ const MainContent = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Quick Add Button */}
                   <div className="card-footer bg-transparent border-0 text-center pb-3">
                     <button
-                      className="btn btn-primary w-100 rounded-pill"
+                      className="btn w-100"
+                      style={{
+                        background: "#000",
+                        color: "#fff",
+                        fontSize: "0.75rem",
+                        fontWeight: "500",
+                        textTransform: "uppercase",
+                        padding: "8px 0",
+                        borderRadius: "0",
+                        transition: "background 0.2s ease",
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleShowModal(sale);
                       }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#333")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "#000")}
                     >
-                      Mua ngay
+                      Quick Add
                     </button>
                   </div>
                 </div>
@@ -416,6 +558,10 @@ const MainContent = () => {
       )}
 
       <CountDown />
+      <div>
+        <Post/>
+      </div>
+
       {selectedProduct && (
         <Modal
           show={!!selectedProduct}
@@ -556,4 +702,4 @@ const MainContent = () => {
   );
 };
 
-export default MainContent;
+export default MainContent; 

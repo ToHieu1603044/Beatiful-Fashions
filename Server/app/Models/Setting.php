@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Setting extends Model
@@ -19,4 +20,5 @@ class Setting extends Model
     {
         return static::updateOrCreate(['key' => $key], ['value' => $value]);
     }
+
 }

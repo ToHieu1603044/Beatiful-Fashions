@@ -1,13 +1,12 @@
-
 import React, { useEffect, useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 import { getProductByCategory, storeCart } from "../../services/homeService";
 import { Link, useParams } from "react-router-dom";
 import Swal from 'sweetalert2'
+import { message } from "antd";
 
 const ProductCategories = () => {
-  const { id } = useParams<{ id: number }>();
-  // console.log(id);
+  const { id } = useParams();
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -17,18 +16,22 @@ const ProductCategories = () => {
   const [price, setPrice] = useState("");
   const [priceRange, setPriceRange] = useState("");
   const [pagination, setPagination] = useState({ currentPage: 1, lastPage: 1, totalItems: 0 });
+  const [quantity, setQuantity] = useState(1);
+  const [productsPerRow, setProductsPerRow] = useState(4); // Số sản phẩm trên 1 dòng, mặc định là 4
+  const [showFilterModal, setShowFilterModal] = useState(false); // Trạng thái hiển thị modal filter
+
   const handleIncrease = () => {
     if (selectedVariant && quantity < selectedVariant.stock) {
       setQuantity(quantity + 1);
     }
   };
-  const [quantity, setQuantity] = useState(1);
 
   const handleDecrease = () => {
     if (quantity > 1) {
       setQuantity(quantity - 1);
     }
   };
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -50,25 +53,24 @@ const ProductCategories = () => {
       }
     };
     fetchProducts();
-  }, [sortBy, price, priceRange, pagination.currentPage]);
+  }, [id, sortBy, price, priceRange, pagination.currentPage]);
+
   const handlePriceRangeChange = (event) => {
     setPriceRange(event.target.value);
   };
 
-  // console.log(priceRange);
   const handlePageChange = (page) => {
     if (page >= 1 && page <= pagination.lastPage) {
       setPagination((prev) => ({ ...prev, currentPage: page }));
     }
   };
+
   const handleShowModal = (product) => {
     setSelectedProduct(product);
     setSelectedVariant(null);
+    setQuantity(1);
 
     const allAttributes = [...new Set(product.variants.flatMap((variant) => variant.attributes.map((attr) => attr.name)))];
-    // Loc tat ca variants va lay ra ten cac thuoc tinh -> dung Set de ne cac truong giong nhau-> chuyen thnanh mang
-
-    const initialSelectedAttributes = Object.fromEntries(allAttributes.map((attr) => [attr, null]));
 
     const initialAvailableOptions = {};
     allAttributes.forEach((attrName) => {
@@ -83,8 +85,20 @@ const ProductCategories = () => {
       ];
     });
 
+    const initialSelectedAttributes = {};
+    allAttributes.forEach((attrName) => {
+      initialSelectedAttributes[attrName] = initialAvailableOptions[attrName][0] || null;
+    });
+
+    const matchedVariant = product.variants.find((variant) =>
+      variant.attributes.every(
+        (attr) => initialSelectedAttributes[attr.name] === attr.value
+      )
+    );
+
     setSelectedAttributes(initialSelectedAttributes);
     setAvailableOptions(initialAvailableOptions);
+    setSelectedVariant(matchedVariant || null);
   };
 
   const handleCloseModal = () => {
@@ -95,7 +109,7 @@ const ProductCategories = () => {
 
   const handleSelectAttribute = (attributeName, attributeValue) => {
     setSelectedAttributes((prev) => {
-      const newSelectedAttributes = { ...prev, [attributeName]: attributeValue }
+      const newSelectedAttributes = { ...prev, [attributeName]: attributeValue };
 
       const matchedVariant = selectedProduct.variants.find((variant) =>
         variant.attributes.every(
@@ -108,11 +122,27 @@ const ProductCategories = () => {
       return newSelectedAttributes;
     });
   };
+
   const handleSubmit = async () => {
     if (!selectedVariant) {
       Swal.fire({
         icon: "warning",
         title: "Vui lòng chọn biến thể.",
+      });
+      return;
+    }
+
+    const missingAttributes = [];
+    Object.keys(availableOptions).forEach((attributeName) => {
+      if (!selectedAttributes[attributeName]) {
+        missingAttributes.push(attributeName);
+      }
+    });
+
+    if (missingAttributes.length > 0) {
+      Swal.fire({
+        icon: "warning",
+        title: `Vui lòng chọn ${missingAttributes.join(", ")}.`,
       });
       return;
     }
@@ -127,218 +157,310 @@ const ProductCategories = () => {
 
     const data = {
       sku_id: selectedVariant.sku_id,
-      quantity: quantity
+      quantity: quantity,
+      attributes: selectedAttributes,
     };
-
-    console.log("Dữ liệu gửi đi:", data);
 
     try {
       const response = await storeCart(data);
-      console.log("Phản hồi từ API:", response.data);
-
-      if (response.status === 200) {
-        Swal.fire({
-          title: "Thêm giỏ hàng thành công!",
-          icon: "success",
-          timer: 1500,
-          showConfirmButton: false
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Lỗi!",
-          text: "Vui lòng thử lại sau.",
-        });
-      }
-    } catch (error: any) {
-
+      message.success(response.data.message);
+    } catch (error) {
       if (error?.response?.status === 401) {
         Swal.fire({
           icon: "error",
           title: "Bạn chưa đăng nhập!",
           text: "Vui lòng đăng nhập để tiếp tục.",
-          confirmButtonText: "Đăng nhập"
+          confirmButtonText: "Đăng nhập",
         }).then((result) => {
           if (result.isConfirmed) {
             window.location.href = "/login";
           }
         });
       } else {
-
-        Swal.fire({
-          icon: "error",
-          title: "Lỗi!",
-          text: error?.response?.data?.message || "Đã có lỗi xảy ra, vui lòng thử lại!",
-        });
+        mess.error(error.response.data.message);
       }
     }
   };
-  return (
-    <div className="container mt-4">
 
+  const getColumnClass = () => {
+    switch (productsPerRow) {
+      case 4:
+        return "col-12 col-md-4 col-lg-3";
+      case 6:
+        return "col-12 col-md-4 col-lg-2";
+      case 8:
+        return "col-12 col-md-3 col-lg-15"; 
+      default:
+        return "col-12 col-md-4 col-lg-3";
+    }
+  };
+
+  // Hàm render dấu chấm theo lưới
+  const renderDots = (count, isActive, onClick) => {
+    const rows = 2;
+    let cols;
+    switch (count) {
+      case 4:
+        cols = 2; // 2x2
+        break;
+      case 6:
+        cols = 3; // 2x3
+        break;
+      case 8:
+        cols = 4; // 2x4
+        break;
+      default:
+        cols = 2;
+    }
+
+    const dots = [];
+    for (let i = 0; i < count; i++) {
+      dots.push(
+        <span
+          key={i}
+          className={`dot ${isActive ? 'active' : ''}`}
+          style={{ margin: "2px" }}
+        ></span>
+      );
+    }
+
+    return (
+      <div
+        className="d-flex flex-wrap"
+        style={{ width: `${cols * 14}px`, cursor: "pointer" }}
+        onClick={onClick}
+      >
+        {dots.map((dot, index) => (
+          <div key={index} style={{ width: "14px", height: "14px" }}>
+            {dot}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="container py-5">
+      <style>
+        {`
+          @media (min-width: 992px) {
+            .col-lg-15 {
+              flex: 0 0 12.5%;
+              max-width: 12.5%;
+            }
+          }
+          .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ccc;
+            display: inline-block;
+          }
+          .dot.active {
+            background-color: #000;
+          }
+        `}
+      </style>
+
+      {/* Breadcrumb */}
       <nav aria-label="breadcrumb">
         <ol className="breadcrumb">
           <li className="breadcrumb-item">
             <a href="/">Trang chủ</a>
           </li>
           <li className="breadcrumb-item active" aria-current="page">
-                Danh mục
+            Danh mục
           </li>
         </ol>
       </nav>
 
-      <div className="container mt-4">
-        {/* Thanh lọc sản phẩm và danh sách sản phẩm */}
-        <div className="row">
-          {/* Bộ lọc bên trái */}
-          <div className="col-md-3">
-            <div className="p-3 border rounded">
-              <h5 className="mb-3">Bộ lọc</h5>
+      {/* Tiêu đề */}
+      <h4 className="text-center mb-4">Shop through our latest selection of Mens</h4>
 
-              {/* Select sắp xếp bên trên phải */}
-              <Form.Select onChange={(e) => {
-                const value = e.target.value;
-                if (value === "asc" || value === "desc") {
-                  setPrice(value);
-                } else {
-                  setSortBy(value);
-                }
-              }}>
-                <option value="">Chọn bộ lọc</option>
+      <div className="row">
+        {/* Danh sách sản phẩm */}
+        <div className="col-12">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div className="d-flex align-items-center">
+              <Button
+                variant="outline-secondary"
+                className="d-flex align-items-center"
+                onClick={() => setShowFilterModal(true)}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  className="bi bi-filter me-2"
+                  viewBox="0 0 16 16"
+                >
+                  <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+                </svg>
+                FILTER
+              </Button>
+            </div>
+            <div className="d-flex align-items-center">
+              <div className="d-flex me-3">
+                {renderDots(4, productsPerRow === 4, () => setProductsPerRow(4))}
+                <div className="mx-2">
+                  {renderDots(6, productsPerRow === 6, () => setProductsPerRow(6))}
+                </div>
+                {renderDots(8, productsPerRow === 8, () => setProductsPerRow(8))}
+              </div>
+              <Form.Select
+                className="w-auto me-3"
+                aria-label="Sắp xếp theo"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "asc" || value === "desc") {
+                    setPrice(value);
+                    setSortBy("");
+                  } else {
+                    setSortBy(value);
+                    setPrice("");
+                  }
+                }}
+              >
+                <option value="">Featured</option>
                 <option value="newest">Ngày mới nhất</option>
                 <option value="oldest">Ngày cũ nhất</option>
                 <option value="asc">Giá thấp đến cao</option>
                 <option value="desc">Giá cao đến thấp</option>
               </Form.Select>
-
-              {/* Bộ lọc giá */}
-              <h6 className="mb-2">Khoảng giá</h6>
-              <Form>
-                <Form.Check
-                  type="radio"
-                  name="priceRange"
-                  id="price-100k-200k"
-                  value="100000-200000"
-                  label="100K - 200K"
-                  onChange={(e) => handlePriceRangeChange(e)}
-                />
-                <Form.Check
-                  type="radio"
-                  name="priceRange"
-                  id="price-200k-400k"
-                  value="200000-400000"
-                  label="200K - 400K"
-                  onChange={(e) => handlePriceRangeChange(e)}
-                />
-                <Form.Check
-                  type="radio"
-                  name="priceRange"
-                  id="price-400k-1000k"
-                  value="400000-1000000"
-                  label="400K - 1M"
-                  onChange={(e) => handlePriceRangeChange(e)}
-                />
-              </Form>
-
-              {/* Nút Reset */}
-              <Button
-                variant="outline-secondary"
-                className="mt-3 w-100"
-                onClick={() => {
-                  setPrice("");
-                  setPriceRange("");
-                  setSortBy("");
-                  setPagination((prev) => ({ ...prev, currentPage: 1 }));
-                  fetchProducts();                  
-                }}
-              >
-                Reset bộ lọc
-              </Button>
+              <span className="text-muted">{pagination.currentPage} of {pagination.lastPage}</span>
             </div>
           </div>
 
-          {/* Danh sách sản phẩm bên phải */}
-          <div className="col-md-9">
-            <Form.Select
-              className="mb-3 "
-              aria-label="Sắp xếp theo"
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value.startsWith("date_")) {
-                  setDate(value.replace("date_", ""));
-                  setPrice("");
-                } else if (value.startsWith("price_")) {
-                  setPrice(value.replace("price_", ""));
-                  setDate("");
-                }
-              }}
-            >
-              <option value="">Chọn bộ lọc</option>
-              <option value="date_desc">Ngày mới nhất</option>
-              <option value="date_asc">Ngày cũ nhất</option>
-              <option value="price_desc">Giá cao đến thấp</option>
-              <option value="price_asc">Giá thấp đến cao</option>
-            </Form.Select>
-
-            <div className="row mt-3">
-              {products.length > 0 ? (
-                products.map((product) => (
-                  <div key={product.id} className="col-md-4 mb-4">
-                    <div className="card">
-                      <Link to={`/products/${product.id}/detail`}>
-                        <img
-                          src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://placehold.co/50x50"}
-                          className="card-img-top"
-                          alt={product.name}
-                          style={{ height: "250px", objectFit: "cover" }}
-                        />
+          <div className="row g-4">
+            {products.length > 0 ? (
+              products.map((product) => (
+                <div key={product.id} className={getColumnClass()}>
+                  <div className="card border-0 shadow-sm">
+                    <Link to={`/products/${product.id}/detail`}>
+                      <img
+                        src={product.images ? `http://127.0.0.1:8000/storage/${product.images}` : "https://via.placeholder.com/400x500?text=Product+Image"}
+                        alt={product.name}
+                        className="card-img-top"
+                        style={{ height: "300px", objectFit: "cover" }}
+                      />
+                    </Link>
+                    <div className="card-body text-center">
+                      <Link to={`/products/${product.id}/detail`} className="text-decoration-none text-dark">
+                        <h6 className="card-title">{product.name}</h6>
                       </Link>
-                      <div className="card-body">
-                        <Link to={`/products/${product.id}/detail`}>{product.name}</Link>
-                        <p className="text-muted">
-                          Thương hiệu: {product.brand?.name} | Danh mục: {product.category?.name}
-                        </p>
-                        <p className="card-text fw-bold text-danger fs-5" >Giá: {product.price} đ</p>
-                        {product.old_price ? (
-                          <p>
-                            <del>Giá cũ: {product.old_price.toLocaleString()} đ</del>
-                          </p>
-                        ) : ""}
-                        <button className="btn btn-primary btn-sm" onClick={() => handleShowModal(product)}>
-                          Mua ngay
-                        </button>
-                      </div>
+                      <p className="card-text fw-bold mb-2">
+                        {product.price} đ
+                        {product.old_price && (
+                          <span className="text-muted ms-2">
+                            <del>{product.old_price.toLocaleString()} đ</del>
+                          </span>
+                        )}
+                      </p>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleShowModal(product)}
+                      >
+                        Mua ngay
+                      </Button>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p>Không có sản phẩm nào.</p>
-              )}
-            </div>
-            <div className="d-flex justify-content-center mt-4">
-              <Button
-                variant="primary"
-                disabled={pagination.currentPage === 1}
-                onClick={() => handlePageChange(pagination.currentPage - 1)}
-              >
-                {"<"}
-              </Button>
-              <span className="mx-3">
-                {pagination.currentPage} of {pagination.lastPage}
-              </span>
-              <Button
-                variant="primary"
-                disabled={pagination.currentPage === pagination.lastPage}
-                onClick={() => handlePageChange(pagination.currentPage + 1)}
-              >
-                {">"}
-              </Button>
-            </div>
-            <br />
+                </div>
+              ))
+            ) : (
+              <p>Không có sản phẩm nào.</p>
+            )}
+          </div>
+
+          {/* Phân trang */}
+          <div className="d-flex justify-content-center mt-4">
+            <Button
+              variant="primary"
+              disabled={pagination.currentPage === 1}
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+              className="me-2"
+            >
+              {"<"}
+            </Button>
+            <span className="align-self-center mx-3">
+              {pagination.currentPage} of {pagination.lastPage}
+            </span>
+            <Button
+              variant="primary"
+              disabled={pagination.currentPage === pagination.lastPage}
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+            >
+              {">"}
+            </Button>
           </div>
         </div>
       </div>
 
+      {/* Modal Filter */}
+      <Modal show={showFilterModal} onHide={() => setShowFilterModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Filter</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <h6 className="mb-2">Khoảng giá</h6>
+          <Form>
+            <Form.Check
+              type="radio"
+              name="priceRange"
+              id="price-100k-200k"
+              value="100000-200000"
+              label="100K - 200K"
+              onChange={(e) => handlePriceRangeChange(e)}
+              checked={priceRange === "100000-200000"}
+            />
+            <Form.Check
+              type="radio"
+              name="priceRange"
+              id="price-200k-400k"
+              value="200000-400000"
+              label="200K - 400K"
+              onChange={(e) => handlePriceRangeChange(e)}
+              checked={priceRange === "200000-400000"}
+            />
+            <Form.Check
+              type="radio"
+              name="priceRange"
+              id="price-400k-1000k"
+              value="400000-1000000"
+              label="400K - 1M"
+              onChange={(e) => handlePriceRangeChange(e)}
+              checked={priceRange === "400000-1000000"}
+            />
+          </Form>
+          <h6 className="mt-4 mb-2">Số sản phẩm trên một dòng</h6>
+          <div className="d-flex align-items-center">
+            {renderDots(4, productsPerRow === 4, () => setProductsPerRow(4))}
+            <div className="mx-3">
+              {renderDots(6, productsPerRow === 6, () => setProductsPerRow(6))}
+            </div>
+            {renderDots(8, productsPerRow === 8, () => setProductsPerRow(8))}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="outline-secondary"
+            onClick={() => {
+              setPrice("");
+              setPriceRange("");
+              setSortBy("");
+              setPagination((prev) => ({ ...prev, currentPage: 1 }));
+            }}
+          >
+            Reset bộ lọc
+          </Button>
+          <Button variant="primary" onClick={() => setShowFilterModal(false)}>
+            Áp dụng
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Modal Sản phẩm */}
       {selectedProduct && (
         <Modal
           show={!!selectedProduct}

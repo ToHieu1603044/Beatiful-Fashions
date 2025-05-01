@@ -7,13 +7,19 @@ import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { FcGoogle } from "react-icons/fc";
 
+// ======== Cấu hình API ========
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 axios.defaults.baseURL = API_BASE_URL;
 
+// ======== Kiểm tra token còn hiệu lực ========
 const token = localStorage.getItem("access_token");
-if (token) {
+const tokenExpiry = localStorage.getItem("access_token_expiry");
+
+if (token && tokenExpiry && new Date().getTime() < Number(tokenExpiry)) {
   axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 } else {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("access_token_expiry");
   delete axios.defaults.headers.common["Authorization"];
 }
 
@@ -28,13 +34,12 @@ const Login = () => {
     handleSubmit,
     formState: { errors },
     setError,
-  } = useForm({
-    resolver: zodResolver(schema),
-  });
+  } = useForm({ resolver: zodResolver(schema) });
 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -46,30 +51,35 @@ const Login = () => {
     }
   }, [location]);
 
+  // ======== Gọi API login ========
   const login = async (email, password) => {
     return axios.post("/login", { email, password }).then((res) => res.data);
   };
+
 
   const googleLogin = () => {
     window.location.href = `${API_BASE_URL}/auth/google`;
   };
 
+  // ======== Gửi form ========
   const onSubmit = async (data) => {
-   
-    console.log("Data:", data);
-    
     setLoading(true);
     try {
       const response = await login(data.email, data.password);
-      console.log(response);
-      
       if (response.access_token) {
+        const expiresAt = new Date().getTime() + 24 * 60 * 60 * 1000; // 1 ngày
+
         localStorage.setItem("access_token", response.access_token);
+        localStorage.setItem("userId", JSON.stringify(response.user.id));
+        localStorage.setItem("access_token_expiry", expiresAt.toString());
         localStorage.setItem("users", JSON.stringify(response.user));
+
+        const userRoles = response.user.roles?.map(role => role.name) || response.role || [];
+        localStorage.setItem("roles", JSON.stringify(userRoles));
         axios.defaults.headers.common["Authorization"] = `Bearer ${response.access_token}`;
-        const userRoles = response.user.roles?.map(role => role.name);
-  
-        if (userRoles && userRoles.includes("admin")) {
+
+        // Điều hướng theo vai trò
+        if (userRoles.includes("admin")) {
           navigate("/admin");
         } else {
           navigate("/");
@@ -77,12 +87,10 @@ const Login = () => {
       }
     } catch (error) {
       if (error.response?.status === 429) {
-        // Thông báo khi vượt quá số lần đăng nhập
         const message = error.response?.data?.message || "Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau vài phút.";
         setError("email", { message });
         setError("password", { message: "" });
       } else {
-        // Lỗi đăng nhập thông thường
         setError("email", { message: "Email hoặc mật khẩu không đúng" });
         setError("password", { message: "Vui lòng kiểm tra lại" });
       }
@@ -90,18 +98,28 @@ const Login = () => {
       setLoading(false);
     }
   };
-  
+
+  // ======== (Tuỳ chọn) Tự động logout khi token hết hạn ========
+  /*
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const expiry = localStorage.getItem("access_token_expiry");
+      if (expiry && new Date().getTime() > Number(expiry)) {
+        localStorage.clear();
+        window.location.href = "/login";
+      }
+    }, 60000); // kiểm tra mỗi phút
+    return () => clearInterval(interval);
+  }, []);
+  */
 
   return (
     <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
-      <div className="card shadow-lg border-0 p-4 rounded-4" style={{ width: "380px", background: "rgba(255, 255, 255, 0.85)", backdropFilter: "blur(10px)" }}>
+<div className="card shadow-lg border-0 p-4 rounded-4" style={{ width: "380px", background: "rgba(255, 255, 255, 0.85)", backdropFilter: "blur(10px)" }}>
         <div className="text-center mb-4">
           <h2 className="fw-bold text-dark">Đăng nhập</h2>
         </div>
-        <button
-          className="btn btn-light w-100 d-flex align-items-center justify-content-center border rounded-3 mb-3"
-          onClick={googleLogin}
-        >
+        <button className="btn btn-light w-100 d-flex align-items-center justify-content-center border rounded-3 mb-3" onClick={googleLogin}>
           <FcGoogle className="me-2" size={20} /> Đăng nhập với Google
         </button>
         <hr />

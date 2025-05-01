@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Table,Select , Button, Modal } from "antd";
+import { Table,Select , Button, Modal, message } from "antd";
 import { getOrderReturns } from "../../../services/orderService";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const OrderReturn: React.FC = () => {
     const [orders, setOrders] = useState<any[]>([]);
@@ -11,7 +12,7 @@ const OrderReturn: React.FC = () => {
     useEffect(() => {
         fetchOrders();
     }, []);
-
+    const navigate = useNavigate();
     const statusOptions = [
       { value: "pending", label: "Chờ xử lý" },
       { value: "approved", label: "Chấp nhận" },
@@ -20,6 +21,21 @@ const OrderReturn: React.FC = () => {
       { value: "refunded", label: "Đã hoàn tiền" },
       { value: "completed", label: "Hoàn tất" },
   ];
+  const getAvailableStatusOptions = (currentStatus: string) => {
+    const statusFlow: { [key: string]: string[] } = {
+        pending: ["approved", "rejected"],
+        approved: ["received"],
+        received: ["refunded"],
+        refunded: ["completed"],
+        rejected: [],
+        completed: [],
+        shipping: ['received'],
+    };
+
+    const allowed = statusFlow[currentStatus] || [];
+    return statusOptions.filter(option => allowed.includes(option.value));
+};
+
   const updateStatus = async (id: number, newStatus: string) => {
     try {
       const response =  await axios.patch(`http://127.0.0.1:8000/api/order-returns/${id}/status`, { status: newStatus });
@@ -29,11 +45,9 @@ const OrderReturn: React.FC = () => {
             )
         );
 
-        if(response.status === 200){
-            console.log("Cập nhật trạng thái thanh cong");
-        }
+        message.success(response.data.message);
     } catch (error) {
-        console.error("Lỗi cập nhật trạng thái:", error);
+        message.error(error.response.data.message);
     }
 };
   
@@ -43,6 +57,9 @@ const OrderReturn: React.FC = () => {
             console.log("Danh sách đơn hàng hoàn:", response.data.data);
             setOrders(response.data.data);
         } catch (error) {
+            if (error.response?.status === 403) {
+                navigate("/403");
+            }
             console.error("Lỗi lấy danh sách đơn hàng:", error);
         }
     };
@@ -62,18 +79,24 @@ const OrderReturn: React.FC = () => {
         { title: "Tên khách hàng", dataIndex: ["order", "name"], key: "name" },
         { title: "Số điện thoại", dataIndex: ["order", "phone"], key: "phone" },
         {
-          title: "Trạng thái",
-          dataIndex: "status",
-          key: "status",
-          render: (status: string, record: any) => (
-              <Select
-                  value={status}
-                  onChange={(newStatus) => updateStatus(record.id, newStatus)}
-                  style={{ width: 150 }}
-                  options={statusOptions}
-              />
-          ),
-      },
+            title: "Trạng thái",
+            dataIndex: "status",
+            key: "status",
+            render: (status: string, record: any) => {
+                const matchedOption = statusOptions.find(option => option.value === status);
+              
+                return (
+                  <Select
+                    value={{ value: status, label: matchedOption?.label }}
+                    labelInValue
+                    onChange={(selected) => updateStatus(record.id, selected.value)}
+                    style={{ width: 150 }}
+                    options={getAvailableStatusOptions(status)}
+                  />
+                );
+              }              
+          },
+                  
         {
             title: "Hành động",
             key: "action",
@@ -165,6 +188,16 @@ const OrderReturn: React.FC = () => {
                                     render: (amount: number) =>
                                         Number(amount).toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
                                 },
+                                {
+                                    title: "Lý do hoàn trả",
+                                    dataIndex: "reason",
+                                    key: "reason",
+                                    render: (reason: string) => (
+                                        <div style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                            {reason}
+                                        </div>
+                                    ),
+                                }
                             ]}
                         />
                     </>

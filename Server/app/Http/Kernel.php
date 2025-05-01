@@ -15,6 +15,7 @@ class Kernel extends HttpKernel
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         \App\Http\Middleware\Cors::class,
         \App\Http\Middleware\CheckMaintenanceMode::class,
+        \App\Http\Middleware\LanguageMiddleware::class
 
     ];
 
@@ -26,6 +27,7 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class, // Chỉ cần nếu có form POST
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\LanguageMiddleware::class
         ],
 
 
@@ -33,6 +35,9 @@ class Kernel extends HttpKernel
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            'rebuy.limit' => \App\Http\Middleware\RebuyRateLimiter::class,
+            \App\Http\Middleware\LanguageMiddleware::class
+
         ],
     ];
 }

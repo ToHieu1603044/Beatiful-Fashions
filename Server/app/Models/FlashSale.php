@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class FlashSale extends Model
@@ -13,6 +14,7 @@ class FlashSale extends Model
         'name',  // Tên chương trình Flash Sale
         'start_time', 
         'end_time',
+        'image',
         'status',  // Trạng thái chương trình (active, inactive)
     ];
 
@@ -33,5 +35,14 @@ class FlashSale extends Model
     {
         return $this->start_time <= now() && $this->end_time >= now();
     }
+    public function getCreatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->format('Y-m-d H:i:s');  
+    }
     
+    public function getUpdatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->format('Y-m-d H:i:s');
+    }
+
 }

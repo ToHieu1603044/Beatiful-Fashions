@@ -89,7 +89,7 @@ const Attributes = () => {
           })
           .then(() => {
             setAttributes((prev) => prev.filter((attr) => attr.id !== id));
-            message.success("Đã xóa thành công.");
+            message.success("Xóa thành công.");
           })
           .catch((error) => {
             console.error("Error deleting attribute:", error);

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,10 +26,12 @@ class Order extends Model
         'district',
         'city',
         'is_paid',
+        'price_shipped',
         'payment_method',
         'note',
         'discount_amount',
-        'discount_code'
+        'discount_code',
+        'used_points'
     ];
     protected $casts = [
         'variant_details' => 'array',
@@ -64,4 +67,5 @@ class Order extends Model
     {
         return $this->hasMany(OrderStatusHistory::class);
     }
+
 }

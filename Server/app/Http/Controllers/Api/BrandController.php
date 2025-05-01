@@ -15,11 +15,22 @@ class BrandController extends Controller
 {
 
     use AuthorizesRequests;
-    public function index()
+    public function index(Request $request)
     {
         $this->authorize('viewAny', Brand::class);
 
-        $brands = Brand::all();
+        $data = Brand::query();
+
+        if($request->has('name')) {
+            $data->where('name', 'like', '%' . $request->name . '%');
+        }
+
+        if($request->has('status')) {
+            $data->where('status', $request->status);
+        }
+
+        $brands = $data->get();
+        
         return response()->json(['data' => $brands], 200);
     }
 
@@ -38,7 +49,7 @@ class BrandController extends Controller
 
         $brand = Brand::create($validator->validated());
 
-        return response()->json(['message' => 'Thêm thành công', 'data' => $brand], 201);
+        return response()->json(['message' =>__('messages.created'), 'data' => $brand], 201);
     }
 
     // Cập nhật thương hiệu
@@ -58,7 +69,7 @@ class BrandController extends Controller
 
         $brand->update($validator->validated());
 
-        return response()->json(['message' => 'Cập nhật thành công', 'data' => $brand], 200);
+        return response()->json(['message' => __('messages.updated'), 'data' => $brand], 200);
     }
 
     // Xóa thương hiệu
@@ -69,7 +80,7 @@ class BrandController extends Controller
         $this->authorize('delete', $brand);
         $brand->delete();
 
-        return response()->json(['message' => 'Xóa thành công'], 200);
+        return response()->json(['message' =>__('messages.deleted')], 200);
     }
 
     public function show($id)
@@ -91,7 +102,7 @@ class BrandController extends Controller
 
         $brand->restore();
 
-        return response()->json(['message' => 'Thu hoan thanh cong']);
+        return response()->json(['message' => __('messages.restored')]);
     }
     public function forceDelete($id){
         $this->authorize('forceDelete', Brand::class);
@@ -100,7 +111,7 @@ class BrandController extends Controller
 
         $brand->forceDelete();
 
-        return response()->json(['message' => 'Xoa thanh cong']);
+        return response()->json(['message' => __('messages.force_deleted')],200);
     }
 }
 

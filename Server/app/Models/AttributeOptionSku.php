@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class AttributeOptionSku extends Model
@@ -18,4 +19,5 @@ class AttributeOptionSku extends Model
     public function attributeOption(){
         return $this->belongsTo(AttributeOption::class);
     }
+
 }

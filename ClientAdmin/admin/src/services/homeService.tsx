@@ -7,13 +7,6 @@ const getAuthToken = () => localStorage.getItem("access_token");
 const token = getAuthToken();
 export const getProducts = async (params?: {
   search?: string;
-  category_id?: string;
-  brand?: string;
-  date?: string;
-  price?: number;
-  min_price?: number;
-  max_price?: number;
-  price_range?: string
 }) => {
   return await axios.get(`${API_BASE_URL}/products/web`, { params });
 };
@@ -42,9 +35,8 @@ export const getCategories = async (params?: { search?: string; parent_id?: numb
   return await axios.get(`${API_BASE_URL}/categories/web`, { params });
 };
 export const getProductSales = async (params?: { search?: string; parent_id?: number }) => {
-  return await axios.get(`${API_BASE_URL}/flash-sales`, { params });
+  return await axios.get(`${API_BASE_URL}/flash-sales-web`, { params });
 };
-
 
 export const getCategoryById = async (id: number) => {
   return await axios.get(`${API_BASE_URL}/categories/web/${id}`);
@@ -93,9 +85,9 @@ export const getUserProfile = async () => {
 // Hàm đổi mật khẩu
 
 
-export const changePassword = async (data: { oldPassword: string; newPassword: string; newPassword_confirmation: string }) => {
+export const changePassword = async (data: { old_password: string; password: string; password_confirmation: string }) => {
   const token = localStorage.getItem("access_token"); // Đồng nhất với các API khác
-  return await axios.post(`${API_BASE_URL}/change-password`, data, {
+  return await axios.post(`${API_BASE_URL}/resetPassword`, data, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -185,10 +177,17 @@ export const exportPdf = async () => {
     responseType: "blob"  // Đảm bảo response trả về dạng blob
   });
 };
+export const exportPdfUser = async (id: number) => {
+  const token = getAuthToken();
+  return await axios.get(`${API_BASE_URL}/pdf-invoice/${id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    responseType: "blob"  
+  });
+};
 
 export const getCartCount = async () => {
   const token = getAuthToken();
-  return await axios.get(`${API_BASE_URL}/carts/count`, {
+  return await axios.get(`${API_BASE_URL}/carts/count-cart`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 };
@@ -362,10 +361,47 @@ export const ratings = async (data: any) => {
   }
 };
 export const updateSystemSettings = async (data: any) => {
-  const token = getAuthToken();
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
-  return axios.put(`${API_BASE_URL}/system-settings`, data, { headers });
+  try {
+    // Lấy token từ localStorage hoặc cookie (tùy vào cách bạn lưu token)
+    const token = getAuthToken();
+    
+    // Kiểm tra xem token có tồn tại không
+    if (!token) {
+      throw new Error('Token không hợp lệ hoặc hết hạn.');
+    }
+
+    // Thiết lập header Authorization với token
+    const headers = { Authorization: `Bearer ${token}` };
+
+    // Gửi yêu cầu PUT để cập nhật cài đặt hệ thống
+    const response = await axios.put(`${API_BASE_URL}/system-settings`, data, {
+      headers,
+      withCredentials: true, // Đảm bảo cookie được gửi đi (nếu cần)
+    });
+
+    // Trả về dữ liệu từ response (nếu cần)
+    return response.data;
+
+  } catch (error) {
+    console.error("Lỗi khi cập nhật cài đặt hệ thống:", error);
+
+    // Xử lý lỗi chi tiết nếu có
+    if (error.response) {
+      // Lỗi từ phía server (ví dụ 500, 404)
+      console.error("Lỗi từ server:", error.response.data);
+      throw new Error(error.response.data.message || 'Lỗi từ server.');
+    } else if (error.request) {
+      // Lỗi không nhận được phản hồi (ví dụ mất kết nối)
+      console.error("Không nhận được phản hồi từ server:", error.request);
+      throw new Error('Không nhận được phản hồi từ server.');
+    } else {
+      // Lỗi phát sinh trong quá trình thiết lập yêu cầu
+      console.error("Lỗi khi thiết lập yêu cầu:", error.message);
+      throw new Error(error.message);
+    }
+  }
 };
+
 
 export const getAvgProduct = async (id: number) => {
   const token = getAuthToken();

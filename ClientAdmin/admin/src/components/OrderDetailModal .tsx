@@ -50,19 +50,12 @@ const OrderDetailModal = ({ order, visible, onClose, status, setStatus, onConfir
             pagination={false}
             bordered
             columns={[
-              { title: "Tên sản phẩm", dataIndex: "product_name", key: "product_name" },
-              { title: "Số lượng", dataIndex: "quantity", key: "quantity" },
               {
-                title: "Giá",
-                dataIndex: "price",
-                key: "price",
-                render: (price) => price.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
-              },
-              {
-                title: "Product_id",
+                title: "Id",
                 dataIndex: "product_id",
                 key: "product_id",
               },
+              { title: "Tên sản phẩm", dataIndex: "product_name", key: "product_name" },
               {
                 title: "Biến thể",
                 key: "variants",
@@ -73,6 +66,16 @@ const OrderDetailModal = ({ order, visible, onClose, status, setStatus, onConfir
                       .join(", ")
                     : "Không có biến thể",
               },
+             
+              { title: "Số lượng", dataIndex: "quantity", key: "quantity" },
+              {
+                title: "Giá",
+                dataIndex: "price",
+                key: "price",
+                render: (price) => price.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
+              },
+
+
               {
                 title: "Tổng cộng",
                 key: "total",
@@ -92,6 +95,11 @@ const OrderDetailModal = ({ order, visible, onClose, status, setStatus, onConfir
                 {order.total_amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
               </Text>
             </Descriptions.Item>
+            <Descriptions.Item label="Tổng tiền giảm">
+              <Text type="danger" strong>
+                {order.discount_amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+              </Text>
+            </Descriptions.Item>
             <Descriptions.Item label="Phương thức thanh toán">
               <Text strong>{order.payment_method.toUpperCase()}</Text>
             </Descriptions.Item>
@@ -101,23 +109,23 @@ const OrderDetailModal = ({ order, visible, onClose, status, setStatus, onConfir
 
           {/* Cập nhật trạng thái đơn hàng */}
           <Title level={5}>Cập nhật trạng thái đơn hàng</Title>
-          <Select value={status} onChange={setStatus} className="w-full">
+          {/* <Select value={status} onChange={setStatus} className="w-full">
             <Select.Option value="pending" disabled={disabledStatuses.includes("pending")}>Chờ xử lý</Select.Option>
             <Select.Option value="processing" disabled={disabledStatuses.includes("processing")}>Đang xử lý</Select.Option>
             <Select.Option value="shipped" disabled={disabledStatuses.includes("shipped")}>Đã gửi hàng</Select.Option>
             <Select.Option value="delivered" disabled={disabledStatuses.includes("delivered")}>Đang giao</Select.Option>
             <Select.Option value="cancelled" disabled={disabledStatuses.includes("cancelled")}>Đã hủy</Select.Option>
             <Select.Option value="completed" disabled={disabledStatuses.includes("completed")}>Giao hàng thành công</Select.Option>
-          </Select>
+          </Select> */}
 
           <div className="mt-3 flex gap-2">
             <Button onClick={onClose}>Đóng</Button>
-            <Button type="primary" onClick={onConfirmOrder}>Xác nhận đơn hàng</Button>
+            {/* <Button type="primary" onClick={onConfirmOrder}>Xác nhận đơn hàng</Button> */}
             <br />
             <br />
-            <Button key="confirm" type="" onClick={confirmOrder}>
+            {/* <Button key="confirm" type="" onClick={confirmOrder}>
               Đã nhận tiền
-            </Button>
+            </Button> */}
           </div>
         </Col>
 

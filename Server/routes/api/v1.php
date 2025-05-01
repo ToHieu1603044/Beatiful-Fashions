@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\OrderReturnController;
 use App\Http\Controllers\Api\PdfController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProductSkuController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\UserController;
@@ -51,6 +52,16 @@ Route::get('/categories/web/{id}/', [CategoryController::class, 'categoryDetail'
 Route::get('slide-banner', [SlideController::class, 'slides']);
 Route::get('site-setting', [SettingController::class, 'siteName']);
 Route::get('avg-rating/{id}', [ProductController::class, 'getAverageRating']);
+
+Route::get('/flash-sales', [FlashSaleController::class, 'index']);
+Route::get('/flash-sales-web', [FlashSaleController::class, 'saleWeb']);
+Route::get('/count-down', [FlashSaleController::class, 'countDown']);
+Route::get('/ratings', [RatingController::class, 'index']);
+Route::get('/ratings/{rating}', [RatingController::class, 'show']);
+Route::get('/ratings/product/{id}', [RatingController::class, 'ratingByProduct']);
+Route::get('/ratings/user/{user_id}', [RatingController::class, 'getByUser']);
+
+
 //Discount
 Route::get('/provinces', function () {
     $response = Http::get("https://provinces.open-api.vn/api/p/");
@@ -84,19 +95,39 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name('password.reset');
 
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('carts/count-cart', [CartController::class, 'countCart']);
+    Route::put('/system-settings', [SettingController::class, 'update']);
+    
+    Route::middleware(['web'])->post('/settings', [SettingController::class, 'update']);
+
+    Route::get('/devices', [AuthController::class, 'myDevices']);
+    Route::delete('/devices/{id}', [AuthController::class, 'revokeDevice']);
+    Route::put('/users/{id}/profile', [UserController::class, 'updateUser']);
+    Route::put('/orders/{id}/update-status-user', [OrderController::class, 'updateStatusUser']);
+    Route::post('/ratings', [RatingController::class, 'store']);
+    Route::put('ratings/{id}', [RatingController::class, 'update']);
+    Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
+
+    Route::apiResource('banners', BannerController::class);
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/wishlist', [WishlistController::class, 'store']);
+    Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']);
+    Route::get('/check-favorite', [WishlistController::class, 'checkFavorite']);
 
     // Google OAuth
     Route::get('google/login', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
     Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
-
-    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
-    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
+    Route::post('discounts/apply', [DiscountController::class, 'applyDiscount']);
+    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy'])->middleware('throttle:2,1');
+    //Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
+    Route::post('orders/apply-points', [OrderController::class, 'applyPoints']);
+    Route::post('orders', [OrderController::class, 'store']);
     Route::get('/orders/invoice', [PdfController::class, 'index']);
-    Route::get('carts/count', [CartController::class, 'countCart']);
+    Route::get('pdf-invoice/{id}', [PdfController::class, 'exportPdf']);
     Route::apiResource('carts', CartController::class);
     Route::delete('carts', [CartController::class, 'clearCart']);
+    Route::get('discounts/usegeder', [DiscountController::class, 'fetchDiscount']);
 
-    Route::post('discounts/apply', [DiscountController::class, 'applyDiscount']);
     Route::get('/orders/{id}/return-details', [OrderController::class, 'fetchReturnDetails']);
     Route::post('redeem-points', [DiscountController::class, 'redeemPointsForVoucher']);
     Route::post('resetPassword', [AuthController::class, 'resetPassword']);
@@ -115,6 +146,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //order
     Route::patch('/order-returns/{id}/status/user', [OrderReturnController::class, 'updateStatusUser']);
     Route::get('/orders/returns/user', [OrderReturnController::class, 'returnItemUser']);
+    Route::post('/orders/{orderId}/return', [OrderReturnController::class, 'returnItem']);
     Route::delete('/orders/{id}/cancel', [OrderReturnController::class, 'cancelOrderReturn']);
     Route::get('/orders/list', [OrderController::class, 'orderUser']);
 
@@ -125,28 +157,34 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/notifications', [NotificationController::class, 'store']);
 });
 
-Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin|manager', 'api'])->group(function () {
 
-    Route::get('discounts/usegeder', [DiscountController::class, 'fetchDiscount']);
+    Route::get('/products/sku', [ProductSkuController::class, 'index']);
+    Route::post('/ratings/{id}/reply', [RatingController::class, 'reply']);
     Route::get('discounts', [DiscountController::class, 'index']);
+    Route::put('discounts/{id}/status', [DiscountController::class, 'updateStatus']);
     Route::post('discounts', [DiscountController::class, 'store']);
     Route::put('discounts/{id}', [DiscountController::class, 'update']);
     Route::delete('discounts/{id}', [DiscountController::class, 'destroy']);
     Route::get('orders/returns', [OrderReturnController::class, 'index']);
+    Route::get('orders', [OrderController::class, 'index']);
+    Route::delete('orders/{id}', [OrderController::class, 'destroy']);
+    Route::get('orders/{id}', [OrderController::class, 'show']);
+    Route::put('orders/{id}', [OrderController::class, 'update']);
     Route::patch('/order-returns/{id}/status', [OrderReturnController::class, 'updateStatus']);
 
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/revenue', [DashboardController::class, 'revenueStats']);
 
-    Route::apiResource('slides', SlideController::class); //Slide
+    Route::apiResource('slides', SlideController::class);
     // User
-    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/listUsers', [UserController::class, 'index']);
 
-    Route::post('/users', [UserController::class, 'store']); // Thêm user mới
-    Route::get('/users/{id}', [UserController::class, 'show']); // Xem chi tiết user
-    Route::put('/users/{id}', [UserController::class, 'update']); // Cập nhật user
-    Route::delete('/users/{id}', [UserController::class, 'destroy']); // Xóa user
-    Route::get('/listUsers', [App\Http\Controllers\Api\AuthController::class, 'listUser']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
+    Route::put('/users', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    //    Route::get('/listUsers', [App\Http\Controllers\Api\AuthController::class, 'listUser']);
     Route::get('/banners', [SlideController::class, 'banners']);
     // Route::get('/users', [App\Http\Controllers\Api\AuthController::class, 'index']);
 
@@ -173,7 +211,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
 
     Route::apiResource('brands', BrandController::class);
-   // Route::get('brands/trashed', [BrandController::class, 'trashed']);
+    // Route::get('brands/trashed', [BrandController::class, 'trashed']);
     Route::post('brands/restore/{id}', [BrandController::class, 'restore']);
     Route::delete('brands/force-delete/{id}', [BrandController::class, 'forceDelete']);
 
@@ -184,17 +222,16 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::apiResource('attribute-options', AttributeOptionController::class);
 
     //Cart
-    Route::apiResource('carts', CartController::class);
+
 
     //Order
-    Route::apiResource('orders', OrderController::class);
     Route::get('/orders/list-deleted', [OrderController::class, 'listDeleted']);
     Route::get('/orders/restore/{id}', [OrderController::class, 'restore']);
     Route::delete('/orders/force-delete/{id}', [OrderController::class, 'forceDelete']);
     Route::put('/orders/{id}/update-status', [OrderController::class, 'updateStatus']);
+
     Route::put('/orders/{id}/canceled', [OrderController::class, 'destroys']);
     Route::put('/orders/{id}/confirm-order', [OrderController::class, 'confirmOrder']);
-    Route::post('/orders/{orderId}/return', [OrderReturnController::class, 'returnItem']);
     Route::get('/product-sku/{id}', [AttributeController::class, 'productSku']);
     Route::get('/sku', [AttributeController::class, 'sku']);
 
@@ -205,6 +242,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
 
     // Tạo role & permission
     Route::post('/roles', [RolePermissionController::class, 'createRole'])->middleware('role:admin');
+    Route::put('/roles/{id}', [RolePermissionController::class, 'updateRole'])->middleware('role:admin');
     Route::post('/permissions', [RolePermissionController::class, 'createPermission'])->middleware('role:admin');
 
     // Gán & xóa permission cho role
@@ -216,7 +254,7 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::post('/users/remove-role', [RolePermissionController::class, 'removeRoleFromUser'])->middleware('role:admin');
 
     // Xóa role & permission
-    Route::delete('/roles/{role}', [RolePermissionController::class, 'deleteRole'])->middleware('role:admin');
+    Route::delete('/roles/{id}', [RolePermissionController::class, 'deleteRole'])->middleware('role:admin');
     Route::delete('/permissions/{id}', [RolePermissionController::class, 'deletePermission'])->middleware('role:admin');
 
     // Route::post('/roles/{id}/assign-all-permissions', [RolePermissionController::class, 'assignAllPermissionsToRole']);
@@ -233,52 +271,23 @@ Route::middleware(['auth:sanctum', 'role:admin|manager'])->group(function () {
     Route::put('banners/{id}', [SlideController::class, 'updateBanner']);
     Route::get('banners/{id}', [SlideController::class, 'showBanner']);
     Route::delete('banners/{id}', [SlideController::class, 'deleteBanner']);
-
+    Route::put('sales/{id}/toggle-status', [FlashSaleController::class, 'updateStatus']);
     Route::put('sales/{id}', [FlashSaleController::class, 'update']);
     Route::delete('sales/{id}', [FlashSaleController::class, 'destroy']);
 
+    Route::post('/flash-sales', [FlashSaleController::class, 'store']);
+    Route::get('/flash-sales/products', [FlashSaleController::class, 'getNameProduct']);
+    Route::get('/sales', [FlashSaleController::class, 'sales']);
 
 
 });
-Route::get('/flash-sales', [FlashSaleController::class, 'index']);
-Route::get('/count-down', [FlashSaleController::class, 'countDown']);
-Route::post('/flash-sales', [FlashSaleController::class, 'store']);
-Route::get('/sales', [FlashSaleController::class, 'sales']);
-Route::get('/flash-sales/products', [FlashSaleController::class, 'getNameProduct']);
-Route::get('/ratings', [RatingController::class, 'index']);
-Route::get('/ratings/{rating}', [RatingController::class, 'show']);
-Route::get('/ratings/product/{id}', [RatingController::class, 'ratingByProduct']);
-Route::get('/ratings/user/{user_id}', [RatingController::class, 'getByUser']);
-
-// Yêu cầu đăng nhập mới được tạo, cập nhật, xóa đánh giá
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::post('/ratings', [RatingController::class, 'store']);
-    Route::put('/ratings/{rating}', [RatingController::class, 'update']);
-    Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
-});
-
-Route::apiResource('banners', BannerController::class);
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/wishlist', [WishlistController::class, 'index']); // Hiển thị sản phẩm yêu thích
-    Route::post('/wishlist', [WishlistController::class, 'store']); // Thêm sản phẩm vào danh sách yêu thích
-    Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']); // Xóa sản phẩm yêu thích
-    Route::get('/check-favorite', [WishlistController::class, 'checkFavorite']);
 
 
-});
 Route::middleware('auth:sanctum')->get('/favorites', [WishlistController::class, 'getFavorites']);
 
 Route::middleware('auth:sanctum')->post('/toggle-favorite', [WishlistController::class, 'toggleFavorite']);
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/devices', [AuthController::class, 'myDevices']);
-    Route::delete('/devices/{id}', [AuthController::class, 'revokeDevice']);
-});
-
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::put('/system-settings', [SettingController::class, 'update']);
 
 
-});
 Route::get('/maintenance', [SettingController::class, 'index']);
 
 Route::get('/maintenance-status', function () {
@@ -293,4 +302,13 @@ Route::get('/maintenance-status', function () {
 
 Route::apiResource('posts', PostController::class);
 
+Route::get('/test-lang', function () {
+    return response()->json([
+        'message' => __('messages.category_deleted')
+    ]);
+});
+
+Route::get('/debug-session', function () {
+    return response()->json(session()->all());
+});
 ?>

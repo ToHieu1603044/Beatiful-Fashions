@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Api;
@@ -7,6 +6,7 @@ use App\Models\Banner;
 use App\Models\Slide;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class SlideController extends Controller
 {
@@ -23,8 +23,9 @@ class SlideController extends Controller
     {
         try {
             $data = [
-                'slides' => Slide::all(),
-                'banners' => Banner::all(),
+                'slides' => Slide::
+                with('banners')
+                ->where('select', 1)->get()
             ];
             return response()->json($data);
         } catch (\Exception $e) {
@@ -47,10 +48,10 @@ class SlideController extends Controller
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'description' => 'required|string',
-                'images' => 'required|array|size:5',
+                'images' => 'required|array',
                 'images.*' => 'file|image|max:2048',
                 'banners' => 'nullable|array',
-                'banners.*' => 'file|image|max:2048',
+                'banners.*' => 'file|image|max:2048|size:4',
             ]);
 
             $imagePaths = [];
@@ -76,11 +77,13 @@ class SlideController extends Controller
             }
 
             $banner = Banner::create([
+                'slide_id' => $slide->id,
                 'banners' => $bannerPaths,
             ]);
 
             return response()->json([
                 'slide' => $slide,
+                'message' => __('messages.created'),
                 'banner' => $banner,
             ], 201);
         } catch (\Exception $e) {
@@ -91,6 +94,7 @@ class SlideController extends Controller
     public function show(Slide $slide)
     {
         try {
+            $slide = Slide::with('banners')->findOrFail($slide->id);
             return response()->json($slide);
         } catch (\Exception $e) {
             return $this->handleException($e);
@@ -108,29 +112,106 @@ class SlideController extends Controller
 
     public function update(Request $request, Slide $slide)
     {
+        \Log::info($request->all());
         try {
+         
             $validated = $request->validate([
                 'title' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
-                'images' => 'required|array',
-                'banners' => 'required|array',
-                'banners.*' => 'string',
-                'images.*' => 'string',
+                'images' => 'nullable|array',
+                'images.*' => 'string', 
+                'banners' => 'nullable|array',
+                'banners.*' => 'string', 
             ]);
 
-            $slide->update($validated);
-
-            return response()->json($slide);
+            if (isset($validated['images'])) {
+                $newImages = [];
+                foreach ($validated['images'] as $image) {
+                    // Nếu là chuỗi base64
+                    if (preg_match('/^data:image\/(\w+);base64,/', $image, $matches)) {
+                        $imageData = substr($image, strpos($image, ',') + 1);
+                        $imageData = base64_decode($imageData);
+                        $extension = $matches[1]; 
+                        $fileName = 'slide_' . uniqid() . '.' . $extension;
+                        $path = 'slides/' . $fileName;
+                        Storage::disk('public')->put($path, $imageData);
+                        $newImages[] = asset('storage/' . $path);
+                    } else {
+                        $newImages[] = $image;
+                    }
+                }
+                if ($slide->images) {
+                    foreach ($slide->images as $oldImage) {
+                        $oldPath = str_replace(asset('storage/'), '', $oldImage);
+                        if (Storage::disk('public')->exists($oldPath) && !in_array($oldImage, $newImages)) {
+                            Storage::disk('public')->delete($oldPath);
+                        }
+                    }
+                }
+                $validated['images'] = $newImages;
+            }
+    
+            // Cập nhật slide
+            $slide->update([
+                'title' => $validated['title'] ?? $slide->title,
+                'description' => $validated['description'] ?? $slide->description,
+                'images' => $validated['images'] ?? $slide->images,
+            ]);
+    
+            if (isset($validated['banners'])) {
+                $newBanners = [];
+                foreach ($validated['banners'] as $banner) {
+                    // Nếu là chuỗi base64
+                    if (preg_match('/^data:image\/(\w+);base64,/', $banner, $matches)) {
+                        $bannerData = substr($banner, strpos($banner, ',') + 1);
+                        $bannerData = base64_decode($bannerData);
+                        $extension = $matches[1]; // Lấy định dạng ảnh (jpg, png,...)
+                        $fileName = 'banner_' . uniqid() . '.' . $extension;
+                        $path = 'banners/' . $fileName;
+                        Storage::disk('public')->put($path, $bannerData);
+                        $newBanners[] = asset('storage/' . $path);
+                    } else {
+                        // Nếu là URL cũ, giữ nguyên
+                        $newBanners[] = $banner;
+                    }
+                }
+    
+                // Lấy banner hiện tại của slide (dựa trên cấu trúc dữ liệu: banners là mảng chứa 1 object)
+                $bannerData = $slide->banners->first();
+                if ($bannerData) {
+                    // Xóa ảnh banner cũ nếu có
+                    $oldBanners = $bannerData->banners ?? [];
+                    foreach ($oldBanners as $oldBanner) {
+                        $oldPath = str_replace(asset('storage/'), '', $oldBanner);
+                        if (Storage::disk('public')->exists($oldPath) && !in_array($oldBanner, $newBanners)) {
+                            Storage::disk('public')->delete($oldPath);
+                        }
+                    }
+    
+                    // Cập nhật banner
+                    $bannerData->update(['banners' => $newBanners]);
+                } else {
+                    // Nếu slide chưa có banner, tạo mới
+                    Banner::create([
+                        'slide_id' => $slide->id,
+                        'banners' => $newBanners,
+                    ]);
+                }
+            }
+    
+            return response()->json([
+                'message' => __('messages.updated'),
+            ]);
         } catch (\Exception $e) {
             return $this->handleException($e);
         }
     }
-
+    
     public function destroy(Slide $slide)
     {
         try {
             $slide->delete();
-            return response()->json(['message' => 'Slide deleted successfully']);
+            return response()->json(['message' => __('messages.deleted')]);
         } catch (\Exception $e) {
             return $this->handleException($e);
         }
@@ -141,7 +222,7 @@ class SlideController extends Controller
         try {
             $banner = Banner::findOrFail($id);
             $banner->delete();
-            return response()->json(['message' => 'Banner deleted successfully']);
+            return response()->json(['message' => 'Banner'.__('messages.deleted')]);
         } catch (\Exception $e) {
             return $this->handleException($e);
         }
@@ -157,7 +238,7 @@ class SlideController extends Controller
             $slide->save();
 
             return response()->json([
-                'message' => 'Slide selected successfully',
+                'message' => __('messages.selected'),
                 'slide' => $slide
             ]);
         } catch (\Exception $e) {
@@ -175,7 +256,7 @@ class SlideController extends Controller
             $banners->save();
 
             return response()->json([
-                'message' => 'Banners selected successfully',
+                'message' => __('messages.selected'),
                 'banners' => $banners
             ]);
         } catch (\Exception $e) {
@@ -188,7 +269,6 @@ class SlideController extends Controller
     {
         Log::error($e);
         return response()->json([
-            'error' => 'Có lỗi xảy ra!',
             'message' => $e->getMessage(),
         ], 500);
     }

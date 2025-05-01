@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class PointRedemption extends Model
@@ -20,4 +21,5 @@ class PointRedemption extends Model
     {
         return $this->belongsTo(Discount::class);
     }
+   
 }

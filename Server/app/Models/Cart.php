@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Cart extends Model
@@ -30,5 +31,7 @@ class Cart extends Model
     public function product(){
         return $this->belongsTo(Product::class);
     }
+
+
 
 }

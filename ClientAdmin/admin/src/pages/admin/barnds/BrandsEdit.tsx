@@ -70,6 +70,9 @@ const BrandsEdit = () => {
         navigate("/admin/brands", { state: { updated: true } });
       }
     } catch (error) {
+      if (error.response?.status === 403) {
+        navigate("/403");
+      }
       console.error("Lỗi khi cập nhật danh mục:", error);
       alert("Không thể cập nhật danh mục. Vui lòng thử lại.");
     } finally {

@@ -26,7 +26,9 @@ class RolePermissionController extends Controller
 
     public function indexPermissions()
     {
-        return response()->json(Permission::all(), 200);
+        $permsissions = Permission::all();
+
+        return response()->json($permsissions, 200);
     }
 
     public function createRole(Request $request)
@@ -37,10 +39,19 @@ class RolePermissionController extends Controller
             'name' => 'required|string|unique:roles,name'
         ]);
 
-        $role = Role::create(['name' => $request->name]);
+        $role = Role::create(
+            [
+                'name' => $request->name,
+                'guard_name' => 'api'
+            ],201);
 
 
-        return response()->json(['message' => 'Role created successfully', 'role' => $role], 201);
+        return response()->json(['message' => 'Role'.__('messages.created'), 'role' => $role], 201);
+    }
+    public function showRole($id){
+        $role = Role::findOrFail($id);
+
+        return response()->json($role, 200);
     }
 
     public function createPermission(Request $request)
@@ -51,7 +62,7 @@ class RolePermissionController extends Controller
 
         $permission = Permission::create(['name' => $request->name]);
 
-        return response()->json(['message' => 'Permission created successfully', 'permission' => $permission], 201);
+        return response()->json(['message' => 'Permission'.__('messages.created'), 'permission' => $permission], 201);
     }
 
     public function assignPermissionToRole(Request $request)
@@ -66,7 +77,7 @@ class RolePermissionController extends Controller
         $role = Role::where('name', $request->role_name)->first();
         $role->givePermissionTo($request->permissions);
 
-        return response()->json(['message' => 'Permissions assigned successfully'], 200);
+        return response()->json(['message' => __('messages.permission_assigned')], 200);
     }
 
     public function removePermissionFromRole(Request $request)
@@ -79,7 +90,7 @@ class RolePermissionController extends Controller
         $role = Role::where('name', $request->role_name)->first();
         $role->revokePermissionTo($request->permission_name);
 
-        return response()->json(['message' => 'Permission removed successfully'], 200);
+        return response()->json(['message' => __('messages.deleted')], 200);
     }
 
 
@@ -93,7 +104,7 @@ class RolePermissionController extends Controller
         $user = User::find($request->user_id);
         $user->assignRole($request->role_name);
 
-        return response()->json(['message' => 'Role assigned successfully'], 200);
+        return response()->json(['message' => __('messages.role_assigned')], 200);
     }
 
     public function removeRoleFromUser(Request $request)
@@ -104,18 +115,21 @@ class RolePermissionController extends Controller
         ]);
 
         $user = User::find($request->user_id);
+        
         $user->removeRole($request->role_name);
 
-        return response()->json(['message' => 'Role removed successfully'], 200);
+        return response()->json(['message' => __('messages.deleted')], 200);
     }
 
 
-    public function deleteRole(Role $role)
+    public function deleteRole($id)
     {
+        $role = Role::findOrFail($id);
        
+        $this->authorize('delete', $role);
+        
         $role->delete();
-    
-        return response()->json(['message' => 'Role deleted successfully'], 200);
+        return response()->json(['message' => __('messages.deleted')], 200);
     }
     
 
@@ -123,12 +137,12 @@ class RolePermissionController extends Controller
     {
         $permission = Permission::find($id);
         if (!$permission) {
-            return response()->json(['message' => 'Permission not found'], 404);
+            return response()->json(['message' => __('messages.not_found')], 404);
         }
 
         $permission->delete();
 
-        return response()->json(['message' => 'Permission deleted successfully'], 200);
+        return response()->json(['message' => __('messages.deleted')], 200);
     }
     public function updatePermissions(Request $request, $id)
     {
@@ -137,7 +151,19 @@ class RolePermissionController extends Controller
         $role->syncPermissions($request->permissions ?? []);
 
         return response()->json(
-            ['message' => 'Successfully']
+            ['message' => __('messages.updated')]
+            ,
+            200
+        );
+    }
+    public function updateRole(Request $request, $id){
+        $role = Role::findOrFail($id);
+
+        $role->name = $request->name;
+        $role->save();
+
+        return response()->json(
+            ['message' => __('messages.updated')]
             ,
             200
         );
@@ -165,7 +191,7 @@ class RolePermissionController extends Controller
 
         $role->syncPermissions([]); 
 
-        return response()->json(['message' => 'All permissions removed successfully'], 200);
+        return response()->json(['message' => __('messages.deleted')], 200);
     }
 
 }

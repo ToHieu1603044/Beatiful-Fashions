@@ -24,7 +24,7 @@ class WishlistController extends Controller
 
             if (!$userId) {
                 return response()->json([
-                    'message' => 'Bạn cần đăng nhập để xem danh sách yêu thích',
+                    'message' => __('messages.unauthorized'),
                     'data' => []
                 ], Response::HTTP_UNAUTHORIZED);
             }
@@ -44,7 +44,7 @@ class WishlistController extends Controller
 
             if ($data->isEmpty()) {
                 return response()->json([
-                    'message' => 'Không có sản phẩm yêu thích nào',
+                    'message' =>__('messages.not_found'),
                     'data' => []
                 ], Response::HTTP_OK);
             }
@@ -52,7 +52,7 @@ class WishlistController extends Controller
             return ApiResponse::responsePage(ProductResource::collection($data));
 
         } catch (\Exception $e) {
-            \Log::error('Lỗi lấy danh sách sản phẩm yêu thích', ['exception' => $e->getMessage()]);
+            \Log::error('Error in index', ['exception' => $e->getMessage()]);
             return ApiResponse::errorResponse();
         }
     }
@@ -72,7 +72,7 @@ class WishlistController extends Controller
         return response()->json([
             'status' => 'success',
             'wishlist' => $wishlist,
-            'message' => 'Sản phẩm đã được thêm vào danh sách yêu thích'
+            'message' => __('messages.created')
         ], 201);
 
     }
@@ -83,10 +83,10 @@ class WishlistController extends Controller
 
         if ($wishlist) {
             $wishlist->delete();
-            return response()->json(['status' => 'success', 'message' => 'Đã xóa sản phẩm khỏi danh sách yêu thích']);
+            return response()->json(['status' => 'success', 'message' => __('messages.deleted')], 200);
         }
 
-        return response()->json(['status' => 'error', 'message' => 'Sản phẩm không tồn tại trong danh sách yêu thích'], 404);
+        return response()->json(['status' => 'error', 'message' => __('messages.not_found')], 404);
     }
     public function getFavorites()
     {

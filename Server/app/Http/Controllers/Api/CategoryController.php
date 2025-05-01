@@ -99,6 +99,30 @@ class CategoryController extends Controller
 
 
     // Thêm danh mục mới
+    // public function store(Request $request)
+    // {
+    //     $this->authorize('create', Category::class);
+
+    //     $request->validate([
+    //         'name' => 'required|string|max:255',
+    //         'parent_id' => 'nullable|exists:categories,id',
+    //         'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+    //     ]);
+
+    //     $imagePath = null;
+    //     if ($request->hasFile('image')) {
+    //         $imagePath = $request->file('image')->store('categories', 'public');
+    //     }
+
+    //     $category = Category::create([
+    //         'name' => $request->name,
+    //         'slug' => \Str::slug($request->name),
+    //         'image' => $imagePath,
+    //         'parent_id' => $request->parent_id,
+    //     ]);
+
+    //     return response()->json(['message' => __('messages.category_created')], 201);
+    // }
     public function store(Request $request)
     {
         $this->authorize('create', Category::class);
@@ -114,16 +138,37 @@ class CategoryController extends Controller
             $imagePath = $request->file('image')->store('categories', 'public');
         }
 
-        $category = Category::create([
-            'name' => $request->name,
-            'slug' => \Str::slug($request->name),
-            'image' => $imagePath,
-            'parent_id' => $request->parent_id,
-        ]);
+        if ($request->parent_id) {
+            $parent = Category::whereNotNull('_rgt')->findOrFail($request->parent_id);
 
-        return response()->json(['message' => 'Danh mục đã được tạo!', 'category' => $category]);
+            // Cập nhật các node bị ảnh hưởng trước khi thêm node mới
+            Category::where('_lft', '>', $parent->_rgt)->increment('_lft', 2);
+            Category::where('_rgt', '>=', $parent->_rgt)->increment('_rgt', 2);
+
+            $category = Category::create([
+                'name' => $request->name,
+                'slug' => \Str::slug($request->name),
+                'image' => $imagePath,
+                'parent_id' => $parent->id,
+                '_lft' => $parent->_rgt,
+                '_rgt' => $parent->_rgt + 1,
+            ]);
+        } else {
+            // Nếu không có cha, thêm vào cuối cây
+            $maxRgt = Category::max('_rgt') ?? 0;
+
+            $category = Category::create([
+                'name' => $request->name,
+                'slug' => \Str::slug($request->name),
+                'image' => $imagePath,
+                'parent_id' => null,
+                '_lft' => $maxRgt + 1,
+                '_rgt' => $maxRgt + 2,
+            ]);
+        }
+
+        return response()->json(['message' => __('messages.category_created')], 201);
     }
-
     public function update(Request $req, $id)
     {
 
@@ -135,6 +180,7 @@ class CategoryController extends Controller
 
         // Tìm danh mục theo id
         $category = Category::findOrFail($id);
+
         $this->authorize('update', $category);
         // Xử lý hình ảnh nếu có
         $image_url = null;
@@ -156,7 +202,7 @@ class CategoryController extends Controller
             'image' => $image_url,
         ]);
 
-        return response()->json(['message' => 'Danh mục đã được cập nhật thành công', 'data' => $category]);
+        return response()->json(['message' => __('messages.category_updated'), 'data' => $category]);
     }
     public function CategoryDelete(Request $request)
     {
@@ -169,7 +215,6 @@ class CategoryController extends Controller
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        // Lọc theo danh mục cha (nếu parent_id là số, lọc theo danh mục cha, nếu 'all' thì lấy tất cả)
         if ($request->has('parent_id') && $request->parent_id !== 'all') {
             $query->where('parent_id', $request->parent_id);
         }
@@ -180,14 +225,14 @@ class CategoryController extends Controller
     }
     public function show($id)
     {
-     
+
 
         $category = Category::with('children')->find($id);
 
-      //  $this->authorize('view', $category);
+        //  $this->authorize('view', $category);
 
         if (!$category) {
-            return response()->json(['message' => 'Danh mục không tồn tạioii'], 404);
+            return response()->json(['message' => __('messages.category_not_found')], 404);
         }
 
         return response()->json([
@@ -242,24 +287,23 @@ class CategoryController extends Controller
 
     public function destroy($id)
     {
-
         $category = Category::findOrFail($id);
 
-        $this->authorize('delete', $category);
-
+        // Kiểm tra xem danh mục có con hay không
         if ($category->children()->count() > 0) {
-            return response()->json(['message' => 'Không thể xoá danh mục vì có danh mục con'], 400);
-        }
-
-        if ($category->image && Storage::exists('public/' . $category->image)) {
-            Storage::delete('public/' . $category->image);
+            return response()->json([
+                'message' => __('messages.category_has_children'),
+                'success' => false
+            ], 400);
         }
 
         $category->delete();
 
-        return response()->json(['message' => 'Danh mục đã được xoá']);
+        return response()->json([
+            'message' => __('messages.category_deleted')
+        ], 200);
     }
-   
+
     public function restore($id)
     {
 
@@ -269,35 +313,118 @@ class CategoryController extends Controller
 
         $category->restore();
 
-        return response()->json(['message' => 'Danh mục đã được khôi phục']);
+        return response()->json(['message' => __('messages.category_restored')]);
     }
     public function forceDelete($id)
     {
-    
+
         $category = Category::onlyTrashed()->findOrFail($id);
-        if(!$category){
+        if (!$category) {
             return response()->json(['message' => 'Danh mục khong ton tai'], 404);
         }
-        if($category->children()->count() > 0 || $category->products()->count() > 0){
-            return response()->json(['message' => 'Không thể xóa danh mục vì có danh mục con'], 400);
+        if ($category->children()->count() > 0 || $category->products()->count() > 0) {
+            return response()->json(['message' => __('messages.deleted_failed')], 400);
         }
         $this->authorize('forceDelete', $category);
         if ($category->image && \Storage::exists('public/' . $category->image)) {
             \Storage::delete('public/' . $category->image);
         }
-        
+
         $category->forceDelete();
 
-        return response()->json(['message' => 'Danh mục đã bị xóa vĩnh viễn']);
+        return response()->json(['message' => __('messages.force_deleted')]);
     }
+    // public function getProductsByCategory(Request $request, $id, $slug = null)
+    // {
+    //     // Lấy tất cả category_id con (bao gồm chính nó)
+    //     $categoryIds = Category::getAllChildrenIds($id);
+
+    //     $query = Product::with([
+    //         'brand',
+    //         'category',
+    //         'skus.attributeOptions.attribute',
+    //         'galleries'
+    //     ])
+    //     ->whereIn('category_id', $categoryIds)
+    //     ->where('active', 1)
+    //     ->when($request->price_range, function ($q, $range) {
+    //         [$min, $max] = array_map('intval', explode('-', $range));
+    //         $q->whereHas('skus', fn($q) => $q->whereBetween('price', [$min, $max]));
+    //     })
+    //     ->when($request->color, fn($q, $color) => $q->whereHas(
+    //         'skus.attributeOptions',
+    //         fn($q) =>
+    //         $q->whereHas('attribute', fn($q) => $q->where('name', 'color'))
+    //             ->where('value', $color)
+    //     ))
+    //     ->when($request->size, fn($q, $size) => $q->whereHas(
+    //         'skus.attributeOptions',
+    //         fn($q) =>
+    //         $q->whereHas('attribute', fn($q) => $q->where('name', 'size'))
+    //             ->where('value', $size)
+    //     ))
+    //     ->when($request->sortby, function ($q, $sortby) {
+    //         $sorts = [
+    //             'newest' => ['created_at', 'desc'],
+    //             'oldest' => ['created_at', 'asc']
+    //         ];
+    //         if (isset($sorts[$sortby])) {
+    //             $q->orderBy(...$sorts[$sortby]);
+    //         }
+    //     })
+    //     ->when($request->price, function ($query, $price) {
+    //         $flag = strtolower($price === 'asc' ? 'asc' : 'desc');
+
+    //         $query->select('products.*')->addSelect([
+    //             'min_price' => \DB::table('product_skus')
+    //                 ->select(\DB::raw('MIN(price)'))
+    //                 ->whereColumn('product_skus.product_id', 'products.id')
+    //         ])
+    //         ->groupBy('products.id')
+    //         ->orderBy('min_price', $flag);
+    //     });
+
+    //     $products = $query->paginate(10);
+
+    //     if ($products->isEmpty()) {
+    //         return response()->json(['message' => __('messages.not_found')], 404);
+    //     }
+
+    //     return ApiResponse::responsePage(ProductResource::collection($products));
+    // }
+
+
     public function getProductsByCategory(Request $request, $id, $slug = null)
     {
-        $query = Product::with([
+        $category = Category::findOrFail($id);
+
+        if ($slug && $category->slug !== $slug) {
+            return response()->json(['message' => 'Invalid slug'], 400);
+        }
+
+        $categoryIds = [$id];
+        $subCategories = Category::where('parent_id', $id)->pluck('id')->toArray();
+        $categoryIds = array_merge($categoryIds, $subCategories);
+
+        foreach ($subCategories as $subId) {
+            $subSubCategories = Category::where('parent_id', $subId)->pluck('id')->toArray();
+            $categoryIds = array_merge($categoryIds, $subSubCategories);
+        }
+
+        if (empty($categoryIds)) {
+            return response()->json([
+                'message' => 'No categories found for ID ' . $id,
+                'category' => $category->name
+            ], 404);
+        }
+
+        $baseQuery = Product::with([
             'brand',
             'category',
             'skus.attributeOptions.attribute',
             'galleries'
-        ])->where('category_id', $id)
+        ])
+            ->whereIn('category_id', $categoryIds)
             ->where('active', 1)
             ->when($request->price_range, function ($q, $range) {
                 [$min, $max] = array_map('intval', explode('-', $range));
@@ -305,41 +432,51 @@ class CategoryController extends Controller
             })
             ->when($request->color, fn($q, $color) => $q->whereHas(
                 'skus.attributeOptions',
-                fn($q) =>
-                $q->whereHas('attribute', fn($q) => $q->where('name', 'color'))->where('value', $color)
+                fn($q) => $q->whereHas('attribute', fn($q) => $q->where('name', 'color'))
+                    ->where('value', $color)
             ))
             ->when($request->size, fn($q, $size) => $q->whereHas(
                 'skus.attributeOptions',
-                fn($q) =>
-                $q->whereHas('attribute', fn($q) => $q->where('name', 'size'))->where('value', $size)
-            ))
-            ->when($request->sortby, function ($q, $sortby) {
-                $sorts = [
+                fn($q) => $q->whereHas('attribute', fn($q) => $q->where('name', 'size'))
+                    ->where('value', $size)
+            ));
 
-                    'newest' => ['created_at', 'desc'],
-                    'oldest' => ['created_at', 'asc']
-                ];
-                if (isset($sorts[$sortby]))
-                    $q->orderBy(...$sorts[$sortby]);
-            })->when($request->price, function ($query, $price) {
-                $flag = strtolower($price === 'asc' ? 'asc' : 'desc');
+        $countQuery = clone $baseQuery;
 
-                $query->select('products.*')->addSelect([
-                    'min_price' => \DB::table('product_skus')
-                        ->select(\DB::raw('MIN(price)'))
-                        ->whereColumn('product_skus.product_id', 'products.id')
-                ])->groupBy('products.id')
-                    ->orderBy('min_price', $flag);
-            });
+        $baseQuery->when($request->sortby, function ($q, $sortby) {
+            $sorts = [
+                'newest' => ['created_at', 'desc'],
+                'oldest' => ['created_at', 'asc']
+            ];
+            if (isset($sorts[$sortby])) {
+                $q->orderBy(...$sorts[$sortby]);
+            }
+        });
 
-        $products = $query->paginate(10);
+
+        if ($request->price) {
+            $flag = strtolower($request->price === 'asc' ? 'asc' : 'desc');
+            $baseQuery->select('products.*')->addSelect([
+                'min_price' => \DB::table('product_skus')
+                    ->selectRaw('MIN(price)')
+                    ->whereColumn('product_skus.product_id', 'products.id')
+            ])->groupBy('products.id')
+                ->orderByRaw('min_price IS NULL, min_price ' . $flag);
+        }
+
+        $products = $baseQuery->paginate(10);
 
         if ($products->isEmpty()) {
-            return response()->json(['message' => 'Không tìm thấy sản phẩm'], 404);
+            return response()->json([
+                'message' => __('messages.not_found'),
+                'category' => $category->name,
+                'category_ids' => $categoryIds
+            ], 404);
         }
 
         return ApiResponse::responsePage(ProductResource::collection($products));
     }
+
     public function updateStatus(Request $request, $id)
     {
         try {
@@ -349,7 +486,7 @@ class CategoryController extends Controller
             $category->active = $request->status;
 
             $category->save();
-            return response()->json(['message' => 'Trạng thái danh mục đã được cập nhật'], 200);
+            return response()->json(['message' => __('messages.category_status_updated')], 200);
         } catch (\Throwable $th) {
             return response()->json([
                 'message' => $th->getMessage()

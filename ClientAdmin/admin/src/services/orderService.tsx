@@ -17,6 +17,20 @@ export const getOrders = async (params: { is_paid?: boolean; tracking_status?: s
       headers: getAuthHeader(),
     });
   };
+  export const getSlide = async () => {
+    const token = localStorage.getItem("access_token");
+    return await axios.get(`${API_URL}/slides`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+  };
+  export const updateSlide = async (id, data) => {
+    const token = localStorage.getItem("access_token");
+    return await axios.put(`${API_URL}/slides/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+    },{
+        data
+    });
+  };
 
 export const getOrder = async (id:number) =>{ // lay ra mot don hang theo id
     try {
@@ -30,7 +44,7 @@ export const getOrder = async (id:number) =>{ // lay ra mot don hang theo id
 export const updateOrderStatus = async (id: number, tracking_status: string) => {
     try {
         const response = await axios.put(
-            `${API_URL}/orders/${id}/update-status`,
+            `${API_URL}/orders/${id}/update-status-user`,
             { tracking_status: tracking_status }, 
             { headers: getAuthHeader() }
         );
@@ -40,6 +54,20 @@ export const updateOrderStatus = async (id: number, tracking_status: string) => 
         console.error("Lỗi cập nhật trạng thái:", error.response?.data?.message || error.message);
         throw new Error(error.response?.data?.message || "Cập nhật trạng thái thất bại");
     }
+};
+export const updateOrderStatusAdmin = async (id: number, tracking_status: string) => {
+  try {
+      const response = await axios.put(
+          `${API_URL}/orders/${id}/update-status`,
+          { tracking_status: tracking_status }, 
+          { headers: getAuthHeader() }
+      );
+      console.log("Response from backend:", tracking_status, id);
+      return response.data;
+  } catch (error: any) {
+      console.error("Lỗi cập nhật trạng thái:", error.response?.data?.message || error.message);
+      throw new Error(error.response?.data?.message || "Cập nhật trạng thái thất bại");
+  }
 };
 
 export const confirmOrder = async (orderId: number) => {
@@ -70,5 +98,10 @@ export const getOrderReturnUser = async ()=>{
       headers: getAuthHeader(),
     });
 }
+export const applyPoints = async (data: any) => {
 
+  return await axios.post(`${API_URL}/orders/apply-points`, data, {
+    headers: getAuthHeader(),
+  });
+}
   

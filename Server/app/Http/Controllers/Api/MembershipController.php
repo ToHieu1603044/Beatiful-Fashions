@@ -15,10 +15,10 @@ class MembershipController extends Controller
             $order = Order::where('id', $request->orderId)->first();
             if ($order) {
                 $order->update(['status' => 'paid', 'is_paid' => true]);
-                return response()->json(['message' => 'Thanh toán thành công!']);
+                return response()->json(['message' =>__('messages.payment_success')]);
             }
         }
 
-        return response()->json(['message' => 'Thanh toán thất bại!'], 400);
+        return response()->json(['message' => __('messages.payment_failed')], 400);
     }
 }

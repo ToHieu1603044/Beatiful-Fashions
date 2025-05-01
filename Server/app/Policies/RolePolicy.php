@@ -40,7 +40,7 @@ class RolePolicy
         if ($role->name === 'admin') {
             return false;
         }
-        return $user->hasPermissionTo('delete_role','api');
+        return $user->hasPermissionTo('delete_role');
     }
 
     public function assignPermissions(User $user, Role $role)

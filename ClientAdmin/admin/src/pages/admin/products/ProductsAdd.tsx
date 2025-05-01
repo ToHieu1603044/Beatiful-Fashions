@@ -7,8 +7,9 @@ import { createProduct } from "../../../services/productService";
 import { axiosInstance } from "../../../services/axiosInstance";
 import DescriptionEditor from "../../../components/admin/DescriptionEditor";
 import { useNavigate } from "react-router-dom";
-import {Button} from 'antd';
+import { Button } from 'antd';
 import { Plus } from "lucide-react";
+import { message } from "antd";
 
 export default function AddProductForm() {
   const [product, setProduct] = useState({
@@ -291,16 +292,10 @@ export default function AddProductForm() {
       const response = await createProduct(outputData);
 
       if (response.status === 200 || response.status === 201) {
-        Swal.fire({
-          title: "Thành công!",
-          text: response.data.message || "Thêm sản phẩm thành công!",
-          icon: "success",
-          confirmButtonText: "OK",
-        });
-
+        message.success(response.data.message);
       }
     } catch (error) {
-      console.error("Lỗi khi thêm sản phẩm:", error);
+
       const errorMessage = error.response?.data?.message || "Lỗi khi thêm sản phẩm";
 
       Swal.fire({
@@ -442,29 +437,29 @@ export default function AddProductForm() {
               />
             </div>
 
-           <Button 
+            <Button
 
-           onClick={addAttribute}>
-             Thêm thuộc tính
-           </Button>
+              onClick={addAttribute}>
+              Thêm thuộc tính
+            </Button>
           </div>
 
           <ul className="list-group mb-3">
             {product.attributes.map((attr, index) => (
               <li key={index} className="list-group-item">
                 <strong>{attr.name}:</strong> {attr.values.join(", ")}
-                <Button 
-                 onClick={() => handleRemoveAttribute(attr.name)}
-                 className="btn btn-danger float-end"
+                <Button
+                  onClick={() => handleRemoveAttribute(attr.name)}
+                  className="btn btn-danger float-end"
                 >Xóa</Button>
               </li>
 
             ))}
           </ul>
 
-            <Button onClick={generateVariants}>
-              Tạo biến thể
-            </Button>
+          <Button onClick={generateVariants}>
+            Tạo biến thể
+          </Button>
 
           {product.variant_values.length > 0 && (
             <div className="mt-3">
