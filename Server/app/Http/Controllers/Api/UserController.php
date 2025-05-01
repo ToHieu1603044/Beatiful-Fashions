@@ -88,15 +88,16 @@ class UserController extends Controller
     }
 
     // Cập nhật user
-    public function update(Request $request, $id)
+    public function update(Request $request)
     {
-        $user = User::findOrFail($id);
+        \Log::info($request->all());
+        $user = Auth::user();
 
         $request->validate([
             'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $id,
+            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
             'password' => 'sometimes|string|min:6|confirmed',
-            'phone' => 'nullable|string|max:15',
+            'phone' => 'required|string|max:15|unique:users,phone,' . $user->id,
             'address' => 'nullable|string|max:255',
             'city' => 'nullable|string|max:100',
             'ward' => 'nullable|string|max:100',
@@ -125,6 +126,38 @@ class UserController extends Controller
             $roles = \Spatie\Permission\Models\Role::whereIn('name', $request->roles)->get();
             $user->syncRoles($roles);
         }
+
+        return ApiResponse::responseObject(new UserResource($user), 200, __('messages.updated'));
+    }
+    public function updateUser(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
+            'password' => 'sometimes|string|min:6|confirmed',
+            'phone' => 'nullable|string|max:15',
+            'address' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'ward' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'zip_code' => 'nullable|string|max:10',
+            'active' => 'nullable|boolean',
+        ]);
+
+        $user->update([
+            'name' => $request->name ?? $user->name,
+            'email' => $request->email ?? $user->email,
+            'password' => $request->password ? Hash::make($request->password) : $user->password,
+            'phone' => $request->phone ?? $user->phone,
+            'address' => $request->address ?? $user->address,
+            'city' => $request->city ?? $user->city,
+            'ward' => $request->ward ?? $user->ward,
+            'district' => $request->district ?? $user->district,
+            'zip_code' => $request->zip_code ?? $user->zip_code,
+            'active' => $request->active ?? $user->active,
+        ]);
 
         return ApiResponse::responseObject(new UserResource($user), 200, __('messages.updated'));
     }
@@ -164,6 +197,9 @@ class UserController extends Controller
             'city' => 'nullable|string|max:100',
             'district' => 'nullable|string|max:100',
             'ward' => 'nullable|string|max:100',
+            'zip_code' => 'nullable|string|max:10',
+            'active' => 'nullable|boolean',
+
         ]);
 
         $user = Auth::user();

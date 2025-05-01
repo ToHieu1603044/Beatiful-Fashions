@@ -97,30 +97,33 @@ Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name(
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('carts/count-cart', [CartController::class, 'countCart']);
     Route::put('/system-settings', [SettingController::class, 'update']);
+    
+    Route::middleware(['web'])->post('/settings', [SettingController::class, 'update']);
+
     Route::get('/devices', [AuthController::class, 'myDevices']);
     Route::delete('/devices/{id}', [AuthController::class, 'revokeDevice']);
-    
+    Route::put('/users/{id}/profile', [UserController::class, 'updateUser']);
     Route::put('/orders/{id}/update-status-user', [OrderController::class, 'updateStatusUser']);
     Route::post('/ratings', [RatingController::class, 'store']);
-    Route::put('ratings/{id}',[RatingController::class, 'update']);
+    Route::put('ratings/{id}', [RatingController::class, 'update']);
     Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
 
     Route::apiResource('banners', BannerController::class);
-    Route::get('/wishlist', [WishlistController::class, 'index']); 
+    Route::get('/wishlist', [WishlistController::class, 'index']);
     Route::post('/wishlist', [WishlistController::class, 'store']);
-    Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']); 
+    Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']);
     Route::get('/check-favorite', [WishlistController::class, 'checkFavorite']);
 
     // Google OAuth
     Route::get('google/login', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
     Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
     Route::post('discounts/apply', [DiscountController::class, 'applyDiscount']);
-    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
+    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy'])->middleware('throttle:2,1');
     //Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
     Route::post('orders/apply-points', [OrderController::class, 'applyPoints']);
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('/orders/invoice', [PdfController::class, 'index']);
-    
+    Route::get('pdf-invoice/{id}', [PdfController::class, 'exportPdf']);
     Route::apiResource('carts', CartController::class);
     Route::delete('carts', [CartController::class, 'clearCart']);
     Route::get('discounts/usegeder', [DiscountController::class, 'fetchDiscount']);
@@ -178,10 +181,10 @@ Route::middleware(['auth:sanctum', 'role:admin|manager', 'api'])->group(function
     Route::get('/listUsers', [UserController::class, 'index']);
 
     Route::post('/users', [UserController::class, 'store']);
-    Route::get('/users/{id}', [UserController::class, 'show']); 
-    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
+    Route::put('/users', [UserController::class, 'update']);
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
-//    Route::get('/listUsers', [App\Http\Controllers\Api\AuthController::class, 'listUser']);
+    //    Route::get('/listUsers', [App\Http\Controllers\Api\AuthController::class, 'listUser']);
     Route::get('/banners', [SlideController::class, 'banners']);
     // Route::get('/users', [App\Http\Controllers\Api\AuthController::class, 'index']);
 
@@ -301,9 +304,11 @@ Route::apiResource('posts', PostController::class);
 
 Route::get('/test-lang', function () {
     return response()->json([
-        'message' => __('messages.category_deleted') 
+        'message' => __('messages.category_deleted')
     ]);
 });
 
-
+Route::get('/debug-session', function () {
+    return response()->json(session()->all());
+});
 ?>

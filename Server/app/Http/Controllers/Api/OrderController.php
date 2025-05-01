@@ -608,6 +608,9 @@ class OrderController
         if ($order->tracking_status === 'completed') {
             return ApiResponse::errorResponse(400, __('messages.order_completed'));
         }
+        if($order->is_paid == 1 && $order->payment_method === 'online'){
+            return ApiResponse::errorResponse(400, __('messages.order_paid'));
+        }
 
         $request->validate([
             'tracking_status' => 'nullable|string|in:pending,processing,shipped,delivered,cancelled,completed,reback',
@@ -798,7 +801,7 @@ class OrderController
 
         $user = User::find($order->user_id);
 
-        if ($order->tracking_status === 'completed') {
+        if ($order->tracking_status === 'completed'&& $order->status === 'completed') {
             return ApiResponse::errorResponse(400, __('messages.order_completed'));
         }
 
@@ -999,12 +1002,21 @@ class OrderController
 
         return ApiResponse::responsePage(OrderResource::collection($orders));
     }
-    public function cancelOrder(Request $request, Order $order)
-    {
+    public function cancelOrder(Request $request, $id)
+    {   
+        $order = Order::findOrFail($id);
 
-        if ($order->shipping_status != 'Đã gửi hàng') {
+        if(!$order){
+            return ApiResponse::errorResponse(404, __("messages.not_found"));
+        }
+        if($order->is_paid == 1){
             return ApiResponse::errorResponse(400, __("messages.cannot_cancel_order"));
         }
+
+        if ($order->shipping_status != 'pending') {
+            return ApiResponse::errorResponse(400, __("messages.cannot_cancel_order"));
+        }
+    
 
         $order->update([
             'shipping_status' => 'canceled',

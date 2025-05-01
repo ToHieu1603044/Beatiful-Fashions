@@ -75,6 +75,7 @@ class RatingController extends Controller
 
     public function store(Request $request)
     {
+        \Log::info($request->all());
         $request->validate([
             'product_id' => 'required|exists:products,id',
             'rating' => 'required|integer|min:1|max:5',
@@ -83,13 +84,14 @@ class RatingController extends Controller
         ]);
 
         $user = Auth::user();
-
+        \Log::info($user);
         $hasPurchased = \DB::table('orders')
             ->join('order_details', 'orders.id', '=', 'order_details.order_id')
             ->where('orders.user_id', $user->id)
             ->where('order_details.product_id', $request->product_id)
-            ->where('orders.status', 'completed')
+            ->where('orders.tracking_status', '=', 'completed')
             ->exists();
+        \Log::info($hasPurchased);
         $isRating = \DB::table('ratings')
             ->where('user_id', $user->id)
             ->where('product_id', $request->product_id)

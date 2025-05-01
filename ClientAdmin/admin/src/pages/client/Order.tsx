@@ -151,6 +151,7 @@ const Orders: React.FC = () => {
             //     setReturnModalVisible(false);
             // }
             message.success(response.data.message);
+            setReturnModalVisible(false);
         } catch (error) {
             message.error(error.response.data.message);
             console.error("Lỗi khi hoàn trả sản phẩm:", error.response?.data || error);
@@ -226,11 +227,10 @@ const Orders: React.FC = () => {
                 const response = await updateOrderStatus(orderId, "cancelled");
                 console.log("response", response);
                 message.success(response.message);
-                loadOrders();
+                //loadOrders();
             }
-
         } catch (error) {
-          //  message.error(error.response.data.data.message);
+           message.error(error.message);
             console.error("Lỗi khi hủy đơn hàng:", error);
         }
     };
@@ -302,7 +302,7 @@ const Orders: React.FC = () => {
             title: "Hành động", key: "action",
             render: (_: any, record: any) => (
                 <div>
-                    <Button type="primary" onClick={() => handleShowModal(record)}>View</Button>
+                    <Button type="primary" onClick={() => handleShowModal(record)}>Xem</Button>
                     {record.tracking_status === "pending" && (
                         <Button type="primary" danger onClick={() => handleCancelOrder(record.id)}>
                             Hủy đơn

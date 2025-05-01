@@ -147,7 +147,7 @@ const Categories = () => {
     {
       title: "Hình ảnh",
       dataIndex: "image",
-      render: (image: string) => <img src={image || "https://placehold.co/50x50"} alt="Hình ảnh" width={50} height={50} />,
+      render: (image: string) => <img src={`http://127.0.0.1:8000/storage/${image}`} alt="Hình ảnh" width={50} height={50} />,
     },
     {
       title: "Danh mục cha",
