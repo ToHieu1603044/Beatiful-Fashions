@@ -1,9 +1,11 @@
 <?php
 
 namespace App\Http\Middleware;
+use App\Models\Setting;
 use Illuminate\Support\Facades\App;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class LanguageMiddleware
@@ -13,17 +15,16 @@ class LanguageMiddleware
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next)
+    public function handle($request, Closure $next)
     {
-   
-        $language = $request->get('lang', session('lang', 'en')); 
-        
-        if (in_array($language, ['en', 'vi'])) {
-            App::setLocale($language);
-        }
+        // Lấy ngôn ngữ từ bảng settings
+        $language = Setting::where('key', 'language')->value('value') ?? 'en';  // 'en' là mặc định
 
-        session(['lang' => $language]);
+        App::setLocale($language);
+
+        Log::info("Language set to: " . $language); 
 
         return $next($request);
     }
+    
 }

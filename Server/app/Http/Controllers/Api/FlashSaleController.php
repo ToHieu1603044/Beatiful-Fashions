@@ -23,28 +23,40 @@ class FlashSaleController extends Controller
         try {
             $now = Carbon::now();
 
-            // Lấy sản phẩm có Flash Sale đang hoạt động và chưa hết hạn
-            $products = Product::with('flashSales')
-                ->whereHas('flashSales', function ($query) use ($now) {
-                    $query->where('status', 'active')
-                        //  ->where('start_time', '<=', $now)
-                        ->where('end_time', '>=', $now);
-                })
-                ->get();
+            $query = Product::with(['flashSales', 'skus'])
+                ->whereHas('flashSales', function ($q) use ($now, $request) {
+                    $q->when($request->status, function ($query) use ($request) {
+                        $query->where('status', $request->status);
+                    });
 
-            $products->transform(function ($product) use ($now) {
+                    $q->when($request->expiry, function ($query) use ($now, $request) {
+                        if ($request->expiry === 'valid') {
+                            $query->where('start_time', '<=', $now)
+                                ->where('end_time', '>=', $now); 
+                        } elseif ($request->expiry === 'expired') {
+                            $query->where('end_time', '<', $now); 
+                        }
+                    });
+                });
+
+            // Tìm kiếm theo tên sản phẩm
+            if ($request->filled('search')) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+            }
+
+            $products = $query->paginate($request->input('per_page', 10));
+
+            $products->getCollection()->transform(function ($product) use ($now) {
                 if ($product->flashSales->isNotEmpty()) {
                     $flashSale = $product->flashSales->first();
 
-                    // Kiểm tra xem flash sale còn hiệu lực không
-                    if ($flashSale->end_time >= $now) {
+                    if ($flashSale->status === 'active' && $flashSale->start_time <= $now && $flashSale->end_time >= $now) {
                         $product->sale_price = $flashSale->pivot->discount_price;
 
                         foreach ($product->skus as $sku) {
                             $sku->sale_price = $flashSale->pivot->discount_price;
                         }
                     } else {
-                        // Nếu hết hạn, trả về giá gốc
                         $product->sale_price = $product->price;
 
                         foreach ($product->skus as $sku) {
@@ -62,10 +74,70 @@ class FlashSaleController extends Controller
             return response()->json(['message' => __('messages.error')], 500);
         }
     }
+    public function saleWeb(Request $request)
+    {
+        try {
+            $now = Carbon::now();
+    
+            $query = Product::with(['flashSales', 'skus'])
+                ->whereHas('flashSales', function ($q) use ($now, $request) {
+                    $q->whereRaw('flash_sale_products.quantity > 0'); // ✅ Điều kiện tồn kho Flash Sale
+    
+                    $q->when($request->status, function ($query) use ($request) {
+                        $query->where('flash_sales.status', $request->status);
+                    });
+    
+                    $q->when($request->expiry, function ($query) use ($now, $request) {
+                        if ($request->expiry === 'valid') {
+                            $query->where('flash_sales.start_time', '<=', $now)
+                                  ->where('flash_sales.end_time', '>=', $now); 
+                        } elseif ($request->expiry === 'expired') {
+                            $query->where('flash_sales.end_time', '<', $now); 
+                        }
+                    });
+                });
+    
+            // Tìm kiếm theo tên sản phẩm
+            if ($request->filled('search')) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+            }
+    
+            $products = $query->paginate($request->input('per_page', 10));
+    
+            $products->getCollection()->transform(function ($product) use ($now) {
+                if ($product->flashSales->isNotEmpty()) {
+                    $flashSale = $product->flashSales->first();
+    
+                    if ($flashSale->status === 'active' && $flashSale->start_time <= $now && $flashSale->end_time >= $now) {
+                        $product->sale_price = $flashSale->pivot->discount_price;
+    
+                        foreach ($product->skus as $sku) {
+                            $sku->sale_price = $flashSale->pivot->discount_price;
+                        }
+                    } else {
+                        $product->sale_price = $product->price;
+    
+                        foreach ($product->skus as $sku) {
+                            $sku->sale_price = $sku->price;
+                        }
+                    }
+                }
+    
+                return $product;
+            });
+    
+            return ApiResponse::responseSuccess(ProductResource::collection($products), __('messages.success'), 200);
+        } catch (\Exception $e) {
+            \Log::error('Lỗi khi lấy sản phẩm Flash Sale', ['exception' => $e->getMessage()]);
+            return response()->json(['message' => __('messages.error')], 500);
+        }
+    }
+    
 
 
     public function store(Request $request)
     {
+        \Log::info($request->all());
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|unique:flash_sales|max:255',
             'start_time' => 'required|date',
@@ -77,19 +149,19 @@ class FlashSaleController extends Controller
             'products.*.quantity' => 'required|integer|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp,apng,avif|max:2048'
         ]);
-    
+
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 400);
         }
-    
+
         DB::beginTransaction();
-    
+
         try {
             $imagePath = null;
             if ($request->hasFile('image')) {
                 $imagePath = $request->file('image')->store('flash_sale_images', 'public');
             }
-    
+
             $flashSale = FlashSale::create([
                 'name' => $request->name,
                 'image' => $imagePath,
@@ -97,26 +169,23 @@ class FlashSaleController extends Controller
                 'end_time' => $request->end_time,
                 'status' => $request->status,
             ]);
-    
+
             $flashSaleProducts = [];
-    
+
             foreach ($request->products as $product) {
-                // Kiểm tra sản phẩm đã có trong flash sale chưa
-                $existingFlashSale = FlashSaleProduct::where('product_id', $product['product_id'])
-                    ->whereHas('flashSale', function ($query) {
-                        $query->where('end_time', '>', now());
-                    })
+
+                $existingActiveFlashSale = FlashSaleProduct::where('product_id', $product['product_id'])
+                    ->whereHas('flashSale', fn($q) => $q->where('end_time', '>', now()))
                     ->exists();
-    
-                if ($existingFlashSale) {
+
+                if ($existingActiveFlashSale) {
                     DB::rollBack();
                     return response()->json([
                         'message' => __('messages.flash_sale_product_exists'),
                         'product_id' => $product['product_id'],
                     ], 400);
                 }
-    
-                // Lấy giá gốc của sản phẩm từ ProductSku
+
                 $sku = ProductSku::where('product_id', $product['product_id'])->first();
                 if (!$sku) {
                     DB::rollBack();
@@ -125,8 +194,7 @@ class FlashSaleController extends Controller
                         'product_id' => $product['product_id'],
                     ], 400);
                 }
-    
-                // Kiểm tra xem discount_price có lớn hơn giá gốc không
+
                 if ($product['discount_price'] > $sku->price) {
                     DB::rollBack();
                     return response()->json([
@@ -134,7 +202,7 @@ class FlashSaleController extends Controller
                         'product_id' => $product['product_id'],
                     ], 400);
                 }
-    
+
                 $flashSaleProducts[] = [
                     'flash_sale_id' => $flashSale->id,
                     'product_id' => $product['product_id'],
@@ -143,15 +211,14 @@ class FlashSaleController extends Controller
                     'updated_at' => now(),
                     'quantity' => $product['quantity']
                 ];
-    
-                // Lưu vào Redis
+
                 Redis::set("flash_sale:product:{$sku->sku}", $product['quantity']);
             }
-    
+
             FlashSaleProduct::insert($flashSaleProducts);
-    
+
             DB::commit();
-    
+
             return response()->json([
                 'message' => __('messages.created'),
                 'flash_sale' => $flashSale,
@@ -161,9 +228,7 @@ class FlashSaleController extends Controller
             return response()->json(['message' => 'Có lỗi xảy ra', 'error' => $e->getMessage()], 500);
         }
     }
-    
 
-    // Cập nhật trạng thái Flash Sale
     public function updateStatus(Request $request, $id)
     {
         \Log::info($request->all());
@@ -211,31 +276,73 @@ class FlashSaleController extends Controller
     // Hiển thị danh sách Flash Sale kèm sản phẩm
     public function sales(Request $request)
     {
-        $sales = FlashSale::with('products:id,name')->get();
-
-        $result = $sales->map(function ($sale) {
-            return [
-                'id' => $sale->id,
-                'name' => $sale->name,
-                'status' => $sale->status,
-                'start_time' => $sale->start_time,
-                'end_time' => $sale->end_time,
-                'image' => $sale->image,
-                'products' => $sale->products->map(function ($product) {
-                    return [
-                        'id' => $product->id,
-                        'name' => $product->name,
-                        'discount_price' => $product->pivot->discount_price,
-                        'quantity' => $product->pivot->quantity
-                    ];
-                }),
+        try {
+            $now = Carbon::now();
+    
+            $salesQuery = FlashSale::with(['products' => function ($q) {
+                $q->select('products.id', 'products.name');
+            }]);
+    
+            // Lọc theo trạng thái
+            if ($request->filled('status')) {
+                $salesQuery->where('status', $request->status);
+            }
+    
+            // Lọc theo hạn (valid / expired)
+            if ($request->filled('expiry')) {
+                if ($request->expiry === 'valid') {
+                    $salesQuery->where('start_time', '<=', $now)
+                               ->where('end_time', '>=', $now);
+                } elseif ($request->expiry === 'expired') {
+                    $salesQuery->where('end_time', '<', $now);
+                }
+            }
+    
+            // Tìm kiếm theo tên
+            if ($request->filled('search')) {
+                $salesQuery->where('name', 'like', '%' . $request->search . '%');
+            }
+    
+            // Phân trang (10 item mỗi trang)
+            $sales = $salesQuery->paginate(10);
+    
+            // Map lại kết quả
+            $result = $sales->getCollection()->map(function ($sale) {
+                return [
+                    'id' => $sale->id,
+                    'name' => $sale->name,
+                    'status' => $sale->status,
+                    'start_time' => $sale->start_time,
+                    'end_time' => $sale->end_time,
+                    'image' => $sale->image,
+                    'products' => $sale->products->map(function ($product) {
+                        return [
+                            'id' => $product->id,
+                            'name' => $product->name,
+                            'discount_price' => $product->pivot->discount_price,
+                            'quantity' => $product->pivot->quantity,
+                        ];
+                    }),
+                ];
+            });
+    
+            // Trả về dữ liệu đã map + thông tin phân trang
+            $paginatedResult = [
+                'data' => $result,
+                'current_page' => $sales->currentPage(),
+                'last_page' => $sales->lastPage(),
+                'per_page' => $sales->perPage(),
+                'total' => $sales->total(),
             ];
-        });
-
-        return response()->json($result);
+    
+            return response()->json($paginatedResult);
+        } catch (\Exception $e) {
+            \Log::error('Lỗi khi lấy danh sách Flash Sales', ['exception' => $e->getMessage()]);
+            return response()->json(['message' => __('messages.error')], 500);
+        }
     }
+    
 
-    // Cập nhật Flash Sale
     public function update(Request $request, $id)
     {
         \Log::info($request->all());
@@ -245,7 +352,6 @@ class FlashSaleController extends Controller
             return response()->json(['message' => __('messages.not_found')], 404);
         }
 
-        // Chuyển đổi thời gian bắt đầu và kết thúc nếu có
         if ($request->has('start_time')) {
             $request->merge(['start_time' => Carbon::parse($request->start_time)->format('Y-m-d H:i:s')]);
         }
@@ -336,7 +442,7 @@ class FlashSaleController extends Controller
             'flash_sale' => $flashSale,
         ]);
     }
-    // Xoá Flash Sale
+
     public function destroy($id)
     {
         $flashSale = FlashSale::find($id);

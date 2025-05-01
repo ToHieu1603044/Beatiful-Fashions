@@ -5,10 +5,12 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Kalnoy\Nestedset\NodeTrait;
 
 class Category extends Model
 {
     use SoftDeletes;
+    use NodeTrait;
     protected $fillable = [
         'name',
         'slug',
@@ -26,14 +28,13 @@ class Category extends Model
     public function parent(){
         return $this->belongsTo(Category::class, 'parent_id');
     }
-    public function getCreatedAtAttribute($date)
+    public static function getAllChildrenIds($id)
     {
-        return Carbon::parse($date)->format('d-m-Y');
-    }
-
-    // Accessor to format the updated_at date automatically
-    public function getUpdatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y');
+        $ids = [$id];
+        $children = self::where('parent_id', $id)->pluck('id');
+        foreach ($children as $childId) {
+            $ids = array_merge($ids, self::getAllChildrenIds($childId));
+        }
+        return $ids;
     }
 }

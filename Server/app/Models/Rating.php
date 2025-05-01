@@ -39,14 +39,6 @@ class Rating extends Model
     public function parent(){
         return $this->belongsTo(Rating::class, 'parent_id');
     }
-    public function getCreatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
 
-    public function getUpdatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
     
 }

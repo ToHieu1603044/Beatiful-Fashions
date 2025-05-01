@@ -173,11 +173,34 @@ export default function ProfilePage() {
                       <div className="card-body text-center">
                         <h6 className="text-primary">{voucher.name}</h6>
                         {/* <p className="mb-1">Mã: <strong>{voucher.code}</strong></p> */}
-                        <p className="text-muted">Giảm {voucher.value}% (Tối đa {voucher.max_discount.toLocaleString()}đ)</p>
-                        <p className="text-muted">Áp dụng từ: {new Date(voucher.start_date).toLocaleDateString()}</p>
-                        <p className="text-muted">HSD: {new Date(voucher.end_date).toLocaleDateString()}</p>
-                        <p className="text-muted">Điểm đổi: {voucher.can_be_redeemed_with_points}</p>
-                        <p className="text-muted">Yêu cầu đơn hàng tối thiểu: {voucher.min_order_amount.toLocaleString()}đ</p>
+                        <p className="text-muted">
+                          Giảm {voucher.value}% {voucher.max_discount != null && `(Tối đa ${voucher.max_discount.toLocaleString()}đ)`}
+                        </p>
+
+                        {voucher.start_date && (
+                          <p className="text-muted">
+                            Áp dụng từ: {new Date(voucher.start_date).toLocaleDateString()}
+                          </p>
+                        )}
+
+                        {voucher.end_date && (
+                          <p className="text-muted">
+                            HSD: {new Date(voucher.end_date).toLocaleDateString()}
+                          </p>
+                        )}
+
+                        {voucher.can_be_redeemed_with_points != null && (
+                          <p className="text-muted">
+                            Điểm đổi: {voucher.can_be_redeemed_with_points}
+                          </p>
+                        )}
+
+                        {voucher.min_order_amount != null && (
+                          <p className="text-muted">
+                            Yêu cầu đơn hàng tối thiểu: {voucher.min_order_amount.toLocaleString()}đ
+                          </p>
+                        )}
+
 
                         {/* Nút đổi voucher */}
                         <Button className="btn btn-success mt-2" onClick={() => redeemVoucher(voucher.id)}>

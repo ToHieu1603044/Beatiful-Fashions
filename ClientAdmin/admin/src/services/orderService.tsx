@@ -55,6 +55,20 @@ export const updateOrderStatus = async (id: number, tracking_status: string) => 
         throw new Error(error.response?.data?.message || "Cập nhật trạng thái thất bại");
     }
 };
+export const updateOrderStatusAdmin = async (id: number, tracking_status: string) => {
+  try {
+      const response = await axios.put(
+          `${API_URL}/orders/${id}/update-status`,
+          { tracking_status: tracking_status }, 
+          { headers: getAuthHeader() }
+      );
+      console.log("Response from backend:", tracking_status, id);
+      return response.data;
+  } catch (error: any) {
+      console.error("Lỗi cập nhật trạng thái:", error.response?.data?.message || error.message);
+      throw new Error(error.response?.data?.message || "Cập nhật trạng thái thất bại");
+  }
+};
 
 export const confirmOrder = async (orderId: number) => {
     return await axios.put(`/orders/${orderId}/confirm-order`, {}, {

@@ -63,8 +63,10 @@ import ListBaiViet from "./pages/admin/baiviet/ListBaiViet";
 import BaivietForm from "./pages/admin/baiviet/FormBaiViet";
 import BaivietPage from "./pages/client/baiviet/Baiviet";
 import BaivietDetailPage from "./pages/client/baiviet/ChiTietbaChiTiet";
+import EditBaiviet from "./pages/admin/baiviet/EditBaiviet";
 import SkuTable from "./pages/admin/sku";
 import BannerSlideFormUpdate from "./pages/admin/BannerSlideFormUpdate";
+
 const ProtectedRoute = ({ element }: { element: JSX.Element }) => {
   const [allowed, setAllowed] = useState<null | boolean>(null);
 
@@ -229,7 +231,6 @@ function App() {
         { path: "baiviet/edit/:id", element: <BaivietForm /> },
         { path: "sku", element: <SkuTable /> },
         { path: "slider/edit/:id", element: <BannerSlideFormUpdate /> },
-
       ],
     },
     {

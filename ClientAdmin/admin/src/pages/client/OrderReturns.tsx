@@ -16,10 +16,7 @@ const OrderReturns = () => {
     // Danh sách trạng thái có thể cập nhật
     const statusOptions = [
         { value: "shipping", label: "Đã gửi hàng" },
-        { value: "received", label: "Đã nhận hàng" },
-        { value: "refunded", label: "Đã hoàn tiền" },
-        { value: "completed", label: "Hoàn thành" },
-        { value: "cancelled", label: "Đã hủy" },
+
     ];
 
     // Hủy đơn hàng
@@ -86,7 +83,7 @@ const OrderReturns = () => {
         { title: "ID", dataIndex: "id", key: "id" },
         { title: "Tên khách hàng", dataIndex: ["order", "name"], key: "name" },
         { title: "Số điện thoại", dataIndex: ["order", "phone"], key: "phone" },
-
+        { title: "Email", dataIndex: ["order", "email"], key: "email" },
         {
             title: "Trạng thái",
             dataIndex: "status",
@@ -148,6 +145,7 @@ const OrderReturns = () => {
             case "refunded": return "Đã hoàn tiền";
             case "completed": return "Hoàn thành";
             case "cancelled": return "Đã hủy";
+            case "rejected": return "Từ chối";
             default: return status;
         }
     };
@@ -173,7 +171,7 @@ const OrderReturns = () => {
                 dataSource={orders}
                 columns={columns}
                 rowKey="id"
-                pagination={{ pageSize: 5 }}
+                pagination={{ pageSize: 10 }}
                 loading={loading} // Thêm thuộc tính loading
             />
 

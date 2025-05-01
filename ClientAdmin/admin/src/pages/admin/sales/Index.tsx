@@ -1,9 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-    Table, Tag, Image, Collapse, Typography, Button,
-    Modal, Form, Input, DatePicker, message, Upload, Select,
-    InputNumber
-} from 'antd';
+import { Table, Tag, Image, Collapse, Typography, Button, Modal, Form, Input, DatePicker, message, Upload, Select, InputNumber, Space } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -20,7 +16,6 @@ interface Product {
         discount_price: number;
     };
 }
-
 interface FlashSale {
     id: number;
     name: string;
@@ -30,7 +25,6 @@ interface FlashSale {
     status: string;
     products: Product[];
 }
-
 const Index = () => {
     const [flashSales, setFlashSales] = useState<FlashSale[]>([]);
     const [loading, setLoading] = useState(false);
@@ -40,40 +34,53 @@ const Index = () => {
     const [form] = Form.useForm();
     const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
+    const [filters, setFilters] = useState({
+        search: '',
+        status: '',
+        start_time: null,
+    });
     const fetchSales = async () => {
         setLoading(true);
         try {
-            const response = await axios.get('http://127.0.0.1:8000/api/sales');
-            setFlashSales(response.data);
-            console.log("dayaba", response.data);
+            const response = await axios.get('http://127.0.0.1:8000/api/sales', {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+                },
+                params: filters,
+            });
+            setFlashSales(response.data.data);
         } catch (error) {
-            console.error('Lỗi khi lấy dữ liệu khuyến mãi:', error);
+            message.error('Không tìm thấy chương trình Flash Sale');
         }
         setLoading(false);
     };
 
     useEffect(() => {
         fetchSales();
-    }, []);
+    }, [filters]);
+
+    const handleFilterChange = (value, key) => {
+        setFilters({
+            ...filters,
+            [key]: value,
+        });
+    };
 
     const handleToggleStatus = async (id: number) => {
         try {
-            // Tìm FlashSale tương ứng với id và cập nhật status
             const sale = flashSales.find(sale => sale.id === id);
             if (!sale) {
                 message.error("Không tìm thấy chương trình Flash Sale");
                 return;
             }
-
             const updatedStatus = sale.status === 'active' ? 'inactive' : 'active';
 
-            // Gửi PUT request với status
             const response = await axios.put(`http://127.0.0.1:8000/api/sales/${id}/toggle-status`, {
-                status: updatedStatus,  // Truyền status trong body request
+                status: updatedStatus,
             });
 
             if (response.status === 200) {
-                // Cập nhật lại danh sách Flash Sale trong state
+
                 const updatedSales = flashSales.map((sale) =>
                     sale.id === id ? { ...sale, status: updatedStatus } : sale
                 );
@@ -106,8 +113,8 @@ const Index = () => {
 
         const formattedProducts = sale.products.map(p => ({
             product_id: p.id,
-            discount_price: p.discount_price,  // lấy thẳng discount_price
-            quantity: p.quantity               // thêm luôn quantity
+            discount_price: p.discount_price,
+            quantity: p.quantity
         }));
 
         form.setFieldsValue({
@@ -121,8 +128,6 @@ const Index = () => {
 
         setIsModalVisible(true);
     };
-
-
     useEffect(() => {
         const fetchProducts = async () => {
             try {
@@ -147,7 +152,7 @@ const Index = () => {
             formData.append('status', values.status);
             if (image) formData.append('image', image);
 
-           const response = await updateSales(currentEditSale.id, values);
+            const response = await updateSales(currentEditSale.id, values);
             console.log("values", formData);
             message.success(response.data.message);
             setIsModalVisible(false);
@@ -162,7 +167,7 @@ const Index = () => {
 
     const columns = [
         {
-            title: 'Tên chương trình',
+            title: 'Tên',
             dataIndex: 'name',
             key: 'name',
         },
@@ -239,7 +244,30 @@ const Index = () => {
         <div className="container" style={{ padding: 20 }}>
             <h2>Danh sách chương trình Flash Sale</h2>
             <Button className='mt-3 mb-3' type="primary" href="/admin/sales">Thêm Flash Sale</Button>
-
+            <Space style={{ marginBottom: 16 }}>
+                <Input
+                    placeholder="Tìm theo tên"
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange(e.target.value, 'search')}
+                />
+                <Select
+                    placeholder="Chọn trạng thái"
+                    value={filters.status}
+                    onChange={(value) => handleFilterChange(value, 'status')}
+                    style={{ width: 200 }}
+                >
+                    <Option value="">Tất cả</Option>
+                    <Option value="active">Đang diễn ra</Option>
+                    <Option value="inactive">Ngừng</Option>
+                </Select>
+                {/* <DatePicker
+                    placeholder="Chọn thời gian bắt đầu"
+                    value={filters.start_time}
+                    onChange={(date) => handleFilterChange(date, 'start_time')}
+                    showTime
+                    format="YYYY-MM-DD HH:mm:ss"
+                /> */}
+            </Space>
             <Table
                 columns={columns}
                 dataSource={flashSales}

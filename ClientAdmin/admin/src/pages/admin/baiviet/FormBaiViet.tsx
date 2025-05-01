@@ -85,18 +85,20 @@ const BaivietForm = () => {
             // Thêm dữ liệu vào FormData
             Object.keys(payload).forEach(key => {
                 formData.append(key, payload[key]);
+                
             });
             if (image) {
                 formData.append('image', image); // Thêm tệp ảnh
             }
 
             if (id) {
-                await axios.put(`http://127.0.0.1:8000/api/posts/${id}`, formData, {
-                    headers: {
+                const response =await axios.put(`http://127.0.0.1:8000/api/posts/${id}`, formData, {
+                     headers: {
                         'Content-Type': 'multipart/form-data',
                         ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     },
                 });
+                console.log(response.data); 
                 Swal.fire("Thành công", "Bài viết đã được cập nhật", "success");
             } else {
                 await axios.post("http://127.0.0.1:8000/api/posts", formData, {

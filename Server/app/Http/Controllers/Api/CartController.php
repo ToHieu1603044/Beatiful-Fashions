@@ -55,20 +55,26 @@ class CartController
     }
     public function countCart(Request $request)
     {
-        $user = Auth::user();
+        \Log::info($request->all());
+    
+        $user = auth()->user();
+    
         if (!$user) {
             return response()->json([
                 'message' => __('messages.unauthorized'),
                 'data' => 0,
             ], 401);
         }
-
+    
         $count = Cart::where('user_id', $user->id)->count();
+    
         return response()->json([
             'message' => __('messages.success'),
             'data' => $count,
+            'user_id' => $user->id
         ], 200);
     }
+    
 
     public function show($id)
     {
@@ -76,6 +82,8 @@ class CartController
     }
     public function store(Request $request)
     {
+       \Log::info($request->all());
+       \Log::info("Giỏ hàng", ['request' => $request->attributes]);
         $request->validate([
             'sku_id' => 'required|exists:product_skus,id',
             'quantity' => 'required|integer|min:1'
@@ -92,8 +100,15 @@ class CartController
 
             if ($sku->stock < $request->quantity) {
                 return ApiResponse::errorResponse(422, __("messages.stock_not_available", ['stock' => $sku->stock]));
-            }
-
+            }   
+            $skuAttributes = $sku->attributeOptions->mapWithKeys(function ($option) {
+                return [$option->attribute->name => $option->value];
+            })->toArray();
+            foreach ($request->attributes as $attribute => $value) {
+                if (!isset($skuAttributes[$attribute]) || $skuAttributes[$attribute] !== $value) {
+                    return ApiResponse::errorResponse(422, __("messages.attribute_not_selected", ['attribute' => $attribute, 'value' => $value]));
+                }
+            }    
             $flashSalePrice = $sku->product->flashSales->first()?->pivot->discount_price;
             \Log::info("Giá khuyến mãi", ['flashSalePrice' => $flashSalePrice]);
            
@@ -140,7 +155,7 @@ class CartController
                 ]);
             }
 
-            return ApiResponse::responseSuccess([], 200, __('messages.item_added_success'));
+            return ApiResponse::responseSuccess([], __('messages.item_added_success'),200);
         } catch (\Throwable $th) {
             \Log::error("Lỗi giỏ hàng:", [$th->getMessage()]);
             return ApiResponse::errorResponse(500, __("messages.error_occurred"));

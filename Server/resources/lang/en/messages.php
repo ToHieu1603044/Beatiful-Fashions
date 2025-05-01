@@ -84,6 +84,10 @@ return [
     'only_for_new_customers' => 'This discount code is for new customers only!',
     'expired' => 'The discount code has expired.',
     'insufficient_ranking' => 'You do not meet the required ranking.',
+    'old_password_not_match' => 'Old password does not match.',
+    'change_password_success' => 'Password changed successfully.',
+    'logout_success' => 'Logout successful.',
+    'logout_failed' => 'Logout failed.',
     'not_redeemed' => 'You have not redeemed points to use this discount code.',
     'already_used' => 'You have already used this discount code.',
     'no_longer_available' => 'This discount code is no longer available.',
@@ -167,8 +171,8 @@ return [
 
     'maintenance_enabled' => 'Maintenance mode enabled.',
     'maintenance_disabled' => 'Maintenance mode disabled.',
-
-
+    'order_paid' => 'The order has been paid. Please contact admin to check.',
+    'order_return_status_must_be_shipping_to_receive' => 'Order return status must be shipping to receive.',
     // General Messages
     'welcome' => 'Welcome to our website!',
     'product_not_found' => 'Product not found.',
@@ -237,6 +241,7 @@ return [
     'something_went_wrong' => 'Something went wrong. Please try again later.',
     'unauthorized' => 'You are not authorized to perform this action.',
     'not_found' => 'The requested resource was not found.',
+    'attribute_not_selected' => 'The required attribute was not selected.',
     'validation_error' => 'There was a problem with your submission. Please check your inputs.',
     'status_invalid' => 'The status value is invalid.',
     // Cart Messages

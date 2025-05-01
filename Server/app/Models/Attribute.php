@@ -24,12 +24,12 @@ class Attribute extends Model
     
     public function getCreatedAtAttribute($value)
     {
-        return \Carbon\Carbon::parse($value)->format('Y-m-d H:i:s');  // Hoặc định dạng bạn muốn
+        return Carbon::parse($value)->format('Y-m-d H:i:s');  
     }
     
     public function getUpdatedAtAttribute($value)
     {
-        return \Carbon\Carbon::parse($value)->format('Y-m-d H:i:s');
+        return Carbon::parse($value)->format('Y-m-d H:i:s');
     }
     
 }

@@ -52,6 +52,16 @@ Route::get('/categories/web/{id}/', [CategoryController::class, 'categoryDetail'
 Route::get('slide-banner', [SlideController::class, 'slides']);
 Route::get('site-setting', [SettingController::class, 'siteName']);
 Route::get('avg-rating/{id}', [ProductController::class, 'getAverageRating']);
+
+Route::get('/flash-sales', [FlashSaleController::class, 'index']);
+Route::get('/flash-sales-web', [FlashSaleController::class, 'saleWeb']);
+Route::get('/count-down', [FlashSaleController::class, 'countDown']);
+Route::get('/ratings', [RatingController::class, 'index']);
+Route::get('/ratings/{rating}', [RatingController::class, 'show']);
+Route::get('/ratings/product/{id}', [RatingController::class, 'ratingByProduct']);
+Route::get('/ratings/user/{user_id}', [RatingController::class, 'getByUser']);
+
+
 //Discount
 Route::get('/provinces', function () {
     $response = Http::get("https://provinces.open-api.vn/api/p/");
@@ -77,7 +87,7 @@ Route::get('/districts/{district}', function (Request $request, $district) {
 Route::get('/ghn/provinces', [LocationController::class, 'provinces']);
 Route::post('/ghn/districts', [LocationController::class, 'districts']);
 Route::post('/ghn/wards', [LocationController::class, 'wards']);
-Route::apiResource('carts', CartController::class);
+
 //Auth
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
@@ -85,17 +95,35 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name('password.reset');
 
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('carts/count-cart', [CartController::class, 'countCart']);
+    Route::put('/system-settings', [SettingController::class, 'update']);
+    
+    Route::middleware(['web'])->post('/settings', [SettingController::class, 'update']);
+
+    Route::get('/devices', [AuthController::class, 'myDevices']);
+    Route::delete('/devices/{id}', [AuthController::class, 'revokeDevice']);
+    Route::put('/users/{id}/profile', [UserController::class, 'updateUser']);
     Route::put('/orders/{id}/update-status-user', [OrderController::class, 'updateStatusUser']);
+    Route::post('/ratings', [RatingController::class, 'store']);
+    Route::put('ratings/{id}', [RatingController::class, 'update']);
+    Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
+
+    Route::apiResource('banners', BannerController::class);
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/wishlist', [WishlistController::class, 'store']);
+    Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']);
+    Route::get('/check-favorite', [WishlistController::class, 'checkFavorite']);
+
     // Google OAuth
     Route::get('google/login', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
     Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
     Route::post('discounts/apply', [DiscountController::class, 'applyDiscount']);
-    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
+    Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy'])->middleware('throttle:2,1');
     //Route::post('/orders/rebuy-item/{id}', [OrderController::class, 'handleRebuy']);
     Route::post('orders/apply-points', [OrderController::class, 'applyPoints']);
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('/orders/invoice', [PdfController::class, 'index']);
-    Route::get('carts/count', [CartController::class, 'countCart']);
+    Route::get('pdf-invoice/{id}', [PdfController::class, 'exportPdf']);
     Route::apiResource('carts', CartController::class);
     Route::delete('carts', [CartController::class, 'clearCart']);
     Route::get('discounts/usegeder', [DiscountController::class, 'fetchDiscount']);
@@ -153,10 +181,10 @@ Route::middleware(['auth:sanctum', 'role:admin|manager', 'api'])->group(function
     Route::get('/listUsers', [UserController::class, 'index']);
 
     Route::post('/users', [UserController::class, 'store']);
-    Route::get('/users/{id}', [UserController::class, 'show']); 
-    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
+    Route::put('/users', [UserController::class, 'update']);
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
-//    Route::get('/listUsers', [App\Http\Controllers\Api\AuthController::class, 'listUser']);
+    //    Route::get('/listUsers', [App\Http\Controllers\Api\AuthController::class, 'listUser']);
     Route::get('/banners', [SlideController::class, 'banners']);
     // Route::get('/users', [App\Http\Controllers\Api\AuthController::class, 'index']);
 
@@ -248,47 +276,19 @@ Route::middleware(['auth:sanctum', 'role:admin|manager', 'api'])->group(function
     Route::put('sales/{id}', [FlashSaleController::class, 'update']);
     Route::delete('sales/{id}', [FlashSaleController::class, 'destroy']);
 
-});
-Route::get('/flash-sales', [FlashSaleController::class, 'index']);
-Route::get('/count-down', [FlashSaleController::class, 'countDown']);
-Route::post('/flash-sales', [FlashSaleController::class, 'store']);
-Route::get('/sales', [FlashSaleController::class, 'sales']);
-Route::get('/flash-sales/products', [FlashSaleController::class, 'getNameProduct']);
-Route::get('/ratings', [RatingController::class, 'index']);
-Route::get('/ratings/{rating}', [RatingController::class, 'show']);
-Route::get('/ratings/product/{id}', [RatingController::class, 'ratingByProduct']);
-Route::get('/ratings/user/{user_id}', [RatingController::class, 'getByUser']);
-
-// Yêu cầu đăng nhập mới được tạo, cập nhật, xóa đánh giá
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::post('/ratings', [RatingController::class, 'store']);
-    Route::put('ratings/{id}',[RatingController::class, 'update']);
-    Route::put('/ratings/{rating}', [RatingController::class, 'update']);
-    Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
-});
-
-Route::apiResource('banners', BannerController::class);
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/wishlist', [WishlistController::class, 'index']); // Hiển thị sản phẩm yêu thích
-    Route::post('/wishlist', [WishlistController::class, 'store']); // Thêm sản phẩm vào danh sách yêu thích
-    Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']); // Xóa sản phẩm yêu thích
-    Route::get('/check-favorite', [WishlistController::class, 'checkFavorite']);
+    Route::post('/flash-sales', [FlashSaleController::class, 'store']);
+    Route::get('/flash-sales/products', [FlashSaleController::class, 'getNameProduct']);
+    Route::get('/sales', [FlashSaleController::class, 'sales']);
 
 
 });
+
+
 Route::middleware('auth:sanctum')->get('/favorites', [WishlistController::class, 'getFavorites']);
 
 Route::middleware('auth:sanctum')->post('/toggle-favorite', [WishlistController::class, 'toggleFavorite']);
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/devices', [AuthController::class, 'myDevices']);
-    Route::delete('/devices/{id}', [AuthController::class, 'revokeDevice']);
-});
-
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::put('/system-settings', [SettingController::class, 'update']);
 
 
-});
 Route::get('/maintenance', [SettingController::class, 'index']);
 
 Route::get('/maintenance-status', function () {
@@ -305,9 +305,11 @@ Route::apiResource('posts', PostController::class);
 
 Route::get('/test-lang', function () {
     return response()->json([
-        'message' => __('messages.category_deleted') 
+        'message' => __('messages.category_deleted')
     ]);
 });
 
-
+Route::get('/debug-session', function () {
+    return response()->json(session()->all());
+});
 ?>

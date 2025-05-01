@@ -21,14 +21,5 @@ class PointRedemption extends Model
     {
         return $this->belongsTo(Discount::class);
     }
-    public function getCreatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
-
-    // Accessor to format the updated_at date automatically
-    public function getUpdatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
+   
 }

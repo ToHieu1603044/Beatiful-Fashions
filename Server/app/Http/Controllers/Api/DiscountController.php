@@ -22,7 +22,6 @@ class DiscountController
     {
         try {
             $discounts = Discount::with('products')
-                ->where('is_redeemable', false)
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
 
@@ -36,8 +35,7 @@ class DiscountController
 
     public function fetchDiscount(Request $request)
     {
-        $discounts = Discount::select('id', 'name', 'code', 'discount_type', 'value', 'max_discount', 'min_order_amount', 'max_uses', 'start_date', 'end_date', 'is_global', 'is_redeemable', 'can_be_redeemed_with_points')
-            ->where('is_global', 1)
+        $discounts = Discount::where('is_global', 1)
             ->where('active', 1)
             ->where('start_date', '<=', Carbon::now())
             ->where('end_date', '>=', Carbon::now())
@@ -79,28 +77,28 @@ class DiscountController
 
     public function applyDiscount(Request $request)
     {
-        \Log::info($request->all());
-
+        \Log::info('Apply Discount Request:', $request->all());
+    
         $data = [
-            'discount_code' => $request->input('discountCode'),
-            'total_amount' => $request->input('totalAmount'),
+            'discount_code' => $request->discountCode,
+            'total_amount' => $request->totalAmount,
         ];
-
+    
         $validator = Validator::make($data, [
-
             'discount_code' => 'required|string|exists:discounts,code',
             'total_amount' => 'required|numeric|min:0',
         ]);
-
+    
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first()], 400);
         }
-
+    
         $discountCode = $data['discount_code'];
         $totalAmount = $data['total_amount'];
-
+        \Log::info('Validated Data:', $data);
+    
         $user = Auth::user();
-
+    
         $discount = Discount::where('code', $discountCode)
             ->where('active', true)
             ->where(function ($query) use ($user) {
@@ -108,129 +106,119 @@ class DiscountController
                     ->orWhere('user_id', $user->id);
             })
             ->first();
-
-
+    
         if (!$discount) {
             return response()->json(['message' => __('discount.not_found_or_disabled')], 404);
-
         }
+    
         if ($discount->is_first_order) {
             $hasOrder = Order::where('user_id', auth()->id())->exists();
             if ($hasOrder) {
                 return response()->json(['message' => __('discount.only_for_new_customers')], 403);
             }
         }
-
+    
         $currentDate = now();
         if ($currentDate < $discount->start_date || $currentDate > $discount->end_date) {
             return response()->json(['message' => __('discount.expired')], 400);
-
         }
+    
         $rankingLevels = [
             'bronze' => 1,
             'silver' => 2,
             'gold' => 3,
             'platinum' => 4,
         ];
-
-
+    
         if (
             $discount->required_ranking &&
             isset($rankingLevels[$discount->required_ranking]) &&
             $user->ranking < $rankingLevels[$discount->required_ranking]
         ) {
             return response()->json(['message' => __('messages.insufficient_ranking')], 400);
-
         }
-
-
-        if ($discount->is_redeemable) {
-            $redeemed = PointRedemption::where('user_id', $user->id)
-                ->where('discount_id', $discount->id)
-                ->exists();
-
-            if (!$redeemed) {
-                return response()->json(['message' => __('messages.not_redeemed')], 400);
-            }
-        }
-
+    
+        // if ($discount->is_redeemable) {
+        //     $redeemed = PointRedemption::where('user_id', $user->id)
+        //         ->where('discount_id', $discount->id)
+        //         ->exists();
+        //     if (!$redeemed) {
+        //         return response()->json(['message' => __('messages.not_redeemed')], 400);
+        //     }
+        // }
+    
         $used = DiscountUsage::where('user_id', $user->id)
             ->where('discount_id', $discount->id)
             ->exists();
-
         if ($used) {
             return response()->json(['message' => __('messages.already_used')], 422);
         }
-
+    
         if ($discount->max_uses !== null && $discount->max_uses === 0) {
             return response()->json(['message' => __('messages.no_longer_available')], 400);
         }
-
+    
         if ($discount->max_uses !== null && $discount->used_count >= $discount->max_uses) {
             return response()->json(['message' => __('messages.usage_limit_reached')], 400);
         }
-
-        if ($totalAmount < $discount->min_order_amount) {
+    
+        $totalAmount = (float)$totalAmount;
+        $minOrderAmount = (float)$discount->min_order_amount;
+    
+        if ($totalAmount < $minOrderAmount) {
             return response()->json([
                 'message' => __('messages.min_order_amount', [
                     'amount' => number_format($discount->min_order_amount)
                 ])
             ], 400);
         }
-
-        $cartData = $request->input('selectedItems');
+    
+        $cartData = $request->input('selectedItems', []);
         $discountedProducts = $discount->products->pluck('id')->toArray();
         \Log::info('Mã giảm giá áp dụng cho các sản phẩm ID:', $discountedProducts);
-
+    
         $validCartItems = collect($cartData)->filter(function ($item) use ($discountedProducts) {
             return empty($discountedProducts) || in_array($item['product']['id'], $discountedProducts);
         });
-        \Log::info(['validCartItems' => $validCartItems]);
-
+        \Log::info('Valid Cart Items:', $validCartItems->toArray());
+    
         if ($discount->products->count() > 0 && $validCartItems->isEmpty()) {
             return response()->json([
                 'message' => __('messages.cart_product_not_eligible')
             ], 400);
         }
-
-        $totalValidAmount = $validCartItems->sum(fn($item) => $item['price'] * $item['quantity']);
-
-        return response()->json([
-            'message' => __('messages.min_order_amount', [
-                'amount' => number_format($discount->min_order_amount)
-            ])
-        ], 400);
-
+    
+        $totalValidAmount = $validCartItems->sum(fn($item) => ($item['price'] - ($item['sale_price'] ?? 0)) * $item['quantity']);
+        \Log::info('Total Valid Amount:', ['totalValidAmount' => $totalValidAmount]);
+    
         $totalDiscount = 0;
         foreach ($validCartItems as $item) {
-            $productPrice = $item['price'] * $item['quantity'];
-
+            $productPrice = ($item['price'] - ($item['sale_price'] ?? 0)) * $item['quantity'];
+    
             if ($discount->discount_type === 'percentage') {
                 $discountAmount = ($productPrice * $discount->value) / 100;
             } else {
                 $discountAmount = min($discount->value, $productPrice);
             }
-
+    
             $totalDiscount += $discountAmount;
         }
-
+    
         if ($discount->max_discount !== null) {
             $totalDiscount = min($totalDiscount, $discount->max_discount);
         }
-
+    
         $totalDiscount = min($totalDiscount, $totalValidAmount);
-
-        // Tính toán tổng tiền mới
+    
         $newTotalAmount = max(0, $totalAmount - $totalDiscount);
-
-        //  Ghi  mã giảm giá đã sử dụng
+    
+        // Ghi mã giảm giá đã sử dụng (bỏ comment khi cần)
         // DiscountUsage::create([
         //     'user_id' => $user->id,
         //     'discount_id' => $discount->id,
         // ]);
-
         // $discount->increment('used_count');
-
+    
         return response()->json([
             'success' => true,
             'newTotalAmount' => $newTotalAmount,
@@ -245,8 +233,10 @@ class DiscountController
         \Log::info($request->all());
         try {
             if (!$request->has('code')) {
-                return response()->json(['message' => "Code".__('messages.required_field')], 400);
+                return response()->json(['message' => "Code" . __('messages.required_field')], 400);
             }
+
+            // Validate dữ liệu
             $validated = $request->validate([
                 'name' => 'required|string|max:255|unique:discounts,name',
                 'code' => 'string|max:50|unique:discounts,code',
@@ -255,27 +245,25 @@ class DiscountController
                 'max_discount' => 'nullable|numeric|min:0',
                 'min_order_amount' => 'nullable|numeric|min:0',
                 'max_uses' => 'nullable|integer|min:1',
-                'start_date' => 'required|date',
+                'start_date' => 'required|date', // Chấp nhận định dạng ISO 8601
                 'end_date' => 'required|date|after_or_equal:start_date',
                 'is_global' => 'required|boolean',
-                'required_ranking' => 'nullable|integer|min:1',
-                'is_first_order' => 'nullable|boolean',
-                'products.*.id' => 'exists:products,id',
                 'required_ranking' => 'nullable|in:bronze,silver,gold,platinum',
+                'is_first_order' => 'nullable|boolean',
                 'is_redeemable' => 'nullable|boolean',
-                'can_be_redeemed_with_points' => 'nullable|integer',
+                'can_be_redeemed_with_points' => 'nullable|integer|min:0',
+                'product_ids' => 'nullable|array',
+                'product_ids.*' => 'exists:products,id',
             ]);
 
-            $startDate = Carbon::parse($request->start_date);
-            $endDate = Carbon::parse($request->end_date);
-
-            if ($request->discount_type == 'percentage' && $request->value > 100) {
+            // Kiểm tra giá trị giảm giá
+            if ($validated['discount_type'] === 'percentage' && $validated['value'] > 100) {
                 throw ValidationException::withMessages([
                     'value' => __('messages.percentage_value_exceeded'),
                 ]);
             }
 
-            if ($request->discount_type == 'fixed' && $request->value < 0) {
+            if ($validated['discount_type'] === 'fixed' && $validated['value'] < 0) {
                 throw ValidationException::withMessages([
                     'value' => __('messages.fixed_value_invalid'),
                 ]);
@@ -283,50 +271,69 @@ class DiscountController
 
             if (!$validated['is_global'] && empty($validated['required_ranking'])) {
                 throw ValidationException::withMessages([
-                    'required_ranking' =>__('messages.required_ranking'),
+                    'required_ranking' => __('messages.required_ranking'),
                 ]);
             }
 
+            // Chuẩn bị dữ liệu để tạo Discount
+            $discountData = [
+                'name' => $validated['name'],
+                'code' => $validated['code'],
+                'discount_type' => $validated['discount_type'],
+                'value' => $validated['value'],
+                'start_date' => Carbon::parse($validated['start_date'])->format('Y-m-d H:i:s'),
+                'end_date' => Carbon::parse($validated['end_date'])->format('Y-m-d H:i:s'),
+                'max_uses' => $validated['max_uses'] ?? null,
+                'is_global' => $validated['is_global'],
+                'required_ranking' => $validated['required_ranking'] ?? null,
+                'is_first_order' => $validated['is_first_order'] ?? false,
+                'is_redeemable' => $validated['is_redeemable'] ?? false,
+                'can_be_redeemed_with_points' => $validated['can_be_redeemed_with_points'] ?? null,
+                'max_discount' => $validated['max_discount'] ?? null,
+                'min_order_amount' => $validated['min_order_amount'] ?? null,
+                'active' => true,
+                'used_count' => 0,
+            ];
 
-            $discount = Discount::create($validated);
+            // Tạo Discount
+            $discount = Discount::create($discountData);
 
-            if (!empty($request->product_ids)) {
-                $discount->products()->sync($request->product_ids);
+            // Gắn sản phẩm nếu có
+            if (!empty($validated['product_ids'])) {
+                $discount->products()->sync($validated['product_ids']);
             }
+
             // Tạo thông báo
             $notification = Notification::create([
-                'title' => __('messages.new_discount_title'). $discount->name,
-                'message' => __('messages.new_discount_message'). $discount->name,
+                'title' => __('messages.new_discount_title') . $discount->name,
+                'message' => __('messages.new_discount_message') . $discount->name,
                 'type' => 'discount',
-                // 'status' => 'unread',
             ]);
 
+            // Gửi thông báo cho tất cả user
             $userIds = User::pluck('id')->toArray();
             if (!empty($userIds)) {
                 $data = array_map(fn($id) => [
                     'user_id' => $id,
                     'notification_id' => $notification->id,
                     'status' => 'unread',
-                    'deleted' => false
+                    'deleted' => false,
                 ], $userIds);
 
                 \DB::table('notification_user')->insert($data);
             }
 
-            $mess = Notification::find($notification->id)->first();
+            $mess = Notification::find($notification->id);
 
-            // Phát sự kiện realtime
             event(new NewNotificationEvent($mess));
 
             return response()->json([
                 'message' => __('messages.created'),
-                'discount' => $discount,
             ], 201);
         } catch (\Throwable $th) {
             return ApiResponse::errorResponse(500, $th->getMessage());
         }
     }
-
     public function show(string $id)
     {
         //
@@ -374,8 +381,25 @@ class DiscountController
                     'required_ranking' => __('messages.required_ranking'),
                 ]);
             }
-
-            $discount->update($validated);
+            $discountData = [
+                'name' => $validated['name'],
+                'code' => $validated['code'],
+                'discount_type' => $validated['discount_type'],
+                'value' => $validated['value'],
+                'start_date' => Carbon::parse($validated['start_date'])->format('Y-m-d H:i:s'),
+                'end_date' => Carbon::parse($validated['end_date'])->format('Y-m-d H:i:s'),
+                'max_uses' => $validated['max_uses'] ?? null,
+                'is_global' => $validated['is_global'],
+                'required_ranking' => $validated['required_ranking'] ?? null,
+                'is_first_order' => $validated['is_first_order'] ?? false,
+                'is_redeemable' => $validated['is_redeemable'] ?? false,
+                'can_be_redeemed_with_points' => $validated['can_be_redeemed_with_points'] ?? null,
+                'max_discount' => $validated['max_discount'] ?? null,
+                'min_order_amount' => $validated['min_order_amount'] ?? null,
+                'active' => true,
+                'used_count' => 0,
+            ];
+            $discount->update($discountData);
 
             // Nếu có product_ids thì sync lại bảng pivot
             if (!empty($request->product_ids)) {
@@ -449,9 +473,9 @@ class DiscountController
 
         $user->decrement('points', $discount->can_be_redeemed_with_points);
 
-        $discountCode = strtoupper(\Str::random(8)); 
+        $discountCode = strtoupper(\Str::random(8));
 
-       
+
         $newDiscount = Discount::create([
             'name' => "Voucher từ điểm",
             'code' => $discountCode,
@@ -482,7 +506,8 @@ class DiscountController
             'discount_code' => $discountCode
         ]);
     }
-    public function updateStatus(Request $request, $id){
+    public function updateStatus(Request $request, $id)
+    {
 
         \Log::info($request->all());
         $validator = Validator::make($request->all(), [
@@ -495,7 +520,7 @@ class DiscountController
 
         $discount = Discount::find($id);
         if (!$discount) {
-            return response()->json(['message' =>__('messages.not_found')], 404);
+            return response()->json(['message' => __('messages.not_found')], 404);
         }
 
         $discount->active = $request->status;

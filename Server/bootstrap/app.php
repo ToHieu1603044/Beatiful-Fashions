@@ -17,6 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\AuthMiddlewire::class,
         ]);
         $middleware->api([
+            \Illuminate\Session\Middleware\StartSession::class,
+            
             LanguageMiddleware::class
         ]);
         $middleware->web([

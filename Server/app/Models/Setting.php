@@ -20,13 +20,5 @@ class Setting extends Model
     {
         return static::updateOrCreate(['key' => $key], ['value' => $value]);
     }
-    public function getCreatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
 
-    public function getUpdatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
 }

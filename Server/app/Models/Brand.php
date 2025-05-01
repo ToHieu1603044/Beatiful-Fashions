@@ -23,17 +23,13 @@ class Brand extends Model
     public function products(){
         return $this->hasMany(Product::class);
     }
-    public function getCreatedAtAttribute($date)
+    public function getCreatedAtAttribute($value)
     {
-        return Carbon::parse($date)->format('d-m-Y');
+        return Carbon::parse($value)->format('Y-m-d H:i:s');  
     }
-
-    // Accessor to format the updated_at date automatically
-    public function getUpdatedAtAttribute($date)
+    
+    public function getUpdatedAtAttribute($value)
     {
-        return Carbon::parse($date)->format('d-m-Y');
+        return Carbon::parse($value)->format('Y-m-d H:i:s');
     }
-
-
-
 }

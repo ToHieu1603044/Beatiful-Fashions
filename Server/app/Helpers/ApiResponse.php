@@ -9,7 +9,7 @@ class ApiResponse{
             'message' => $message,
             'error' => $errorMessage
         ];
-
+        \Log::info($errorMessage);
         return response()->json($response,$code);
     }
 

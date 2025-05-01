@@ -19,13 +19,10 @@ class Slide extends Model
     protected $casts = [
         'images' => 'array',
     ];
-    public function getCreatedAtAttribute($date)
+
+    public function banners()
     {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
+        return $this->hasMany(Banner::class);
     }
 
-    public function getUpdatedAtAttribute($date)
-    {
-        return Carbon::parse($date)->format('d-m-Y-H:i:s');
-    }
 }
