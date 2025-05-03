@@ -6,17 +6,23 @@ use App\Models\Brand;
 use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Discount;
+use App\Models\FlashSale;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Rating;
+use App\Models\Setting;
 use App\Models\User;
 use App\Observers\ProductObserver;
 use App\Policies\BrandPolicy;
 use App\Policies\CartPolicy;
 use App\Policies\CategoryPolicy;
 use App\Policies\DiscountPolicy;
+use App\Policies\FlashSalePolicy;
 use App\Policies\OrderPolicy;
 use App\Policies\ProductPolicy;
+use App\Policies\RatingPolicy;
 use App\Policies\RolePolicy;
+use App\Policies\SettingPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
@@ -46,6 +52,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Category::class, CategoryPolicy::class);
         Gate::policy(Discount::class, DiscountPolicy::class);
         Gate::policy(Order::class, OrderPolicy::class);
+        Gate::policy(FlashSale::class, FlashSalePolicy::class);
+        Gate::policy(Rating::class, RatingPolicy::class);
+        Gate::policy( Setting::class,SettingPolicy::class,);
       //  Product::observe(ProductObserver::class);
     }
     

@@ -71,6 +71,9 @@ const Staff = () => {
       setUsers(response.data.data);
       setTotalUsers(response.data.page.total);
     } catch (error) {
+      if(error.response.status == 403) {
+        window.location.href = '/403';
+    }
       console.log(error);
       message.error("Lỗi khi tải danh sách người dùng");
     } finally {
@@ -104,6 +107,9 @@ const Staff = () => {
       message.success(response.data.message || "Xóa người dùng thành công!");
       getAll(currentPage, filterType);
     } catch (error) {
+      if(error.response.status == 403) {
+        window.location.href = '/403';
+    }
       console.log(error);
       message.error(error.response.data.message);
     }
@@ -130,6 +136,9 @@ const Staff = () => {
       setIsModalVisible(false);
       getAll(currentPage, filterType);
     } catch (error) {
+      if(error.response.status == 403) {
+        window.location.href = '/403';
+    }
       console.log(error);
       message.error(error.response.data.message);
     }

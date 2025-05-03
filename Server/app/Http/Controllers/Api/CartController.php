@@ -109,9 +109,27 @@ class CartController
                     return ApiResponse::errorResponse(422, __("messages.attribute_not_selected", ['attribute' => $attribute, 'value' => $value]));
                 }
             }    
-            $flashSalePrice = $sku->product->flashSales->first()?->pivot->discount_price;
-            \Log::info("Giá khuyến mãi", ['flashSalePrice' => $flashSalePrice]);
-           
+            $now = now();
+
+            $flashSale = $sku->product->flashSales()
+                ->where('flash_sales.status', 'active')
+                ->where('flash_sales.start_time', '<=', $now)
+                ->where('flash_sales.end_time', '>=', $now)
+                ->whereHas('products', function ($query) use ($sku) {
+                    $query->where('flash_sale_products.product_id', $sku->product_id)
+
+                          ->where('flash_sale_products.quantity', '>', 0);
+                })
+                ->first();
+            
+            $flashSalePrice = $flashSale
+                ? $flashSale->products
+                    ->where('id', $sku->product->id)
+                    ->first()
+                    ?->pivot
+                    ?->discount_price
+                : 0;
+            
             $variant_detail = [
                 'sku_id' => $sku->id,
                 'price' => $sku->price,

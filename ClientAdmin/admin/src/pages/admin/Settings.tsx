@@ -151,6 +151,9 @@ const Settings = () => {
         window.location.reload();
       }
     } catch (error) {
+      if(error.response.status == 403) {
+        window.location.href = '/403';
+      }
       console.error("System settings update error:", error.response);
       const errorMessage = error.response?.data?.message || "Lỗi khi cập nhật cài đặt hệ thống.";
       message.error(errorMessage);
@@ -243,23 +246,7 @@ const Settings = () => {
           </Row>
         </TabPane>
 
-        <TabPane tab="Bảo mật" key="security">
-          <Form layout="vertical">
-            <Form.Item label="Xác thực 2 yếu tố">
-              <Switch
-                checked={twoFactorEnabled}
-                onChange={setTwoFactorEnabled}
-              />
-            </Form.Item>
-            <Button
-              type="primary"
-              onClick={() => setPasswordModalVisible(true)}
-            >
-              Thay đổi mật khẩu
-            </Button>
-          </Form>
-        </TabPane>
-
+      
         <TabPane tab="Cấu hình hệ thống" key="system">
           <Form
             form={systemForm}
@@ -307,13 +294,6 @@ const Settings = () => {
               </Button>
             </Form.Item>
           </Form>
-        </TabPane>
-
-        <TabPane tab="Gửi Email" key="email">
-          <p>
-            👉 Phần này bạn có thể mở rộng theo nhu cầu như SMTP config, test
-            mail, Mailgun, v.v.
-          </p>
         </TabPane>
       </Tabs>
 

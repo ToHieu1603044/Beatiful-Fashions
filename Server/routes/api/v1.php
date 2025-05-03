@@ -56,10 +56,10 @@ Route::get('avg-rating/{id}', [ProductController::class, 'getAverageRating']);
 Route::get('/flash-sales', [FlashSaleController::class, 'index']);
 Route::get('/flash-sales-web', [FlashSaleController::class, 'saleWeb']);
 Route::get('/count-down', [FlashSaleController::class, 'countDown']);
-Route::get('/ratings', [RatingController::class, 'index']);
 Route::get('/ratings/{rating}', [RatingController::class, 'show']);
 Route::get('/ratings/product/{id}', [RatingController::class, 'ratingByProduct']);
 Route::get('/ratings/user/{user_id}', [RatingController::class, 'getByUser']);
+
 
 
 //Discount
@@ -97,7 +97,7 @@ Route::post('/reset-password', [AuthController::class, 'resetPasswords'])->name(
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('carts/count-cart', [CartController::class, 'countCart']);
     Route::put('/system-settings', [SettingController::class, 'update']);
-    
+    Route::post('payment/retry/{id}',[OrderController::class, 'retryPayment']);
     Route::middleware(['web'])->post('/settings', [SettingController::class, 'update']);
 
     Route::get('/devices', [AuthController::class, 'myDevices']);
@@ -157,8 +157,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/notifications', [NotificationController::class, 'store']);
 });
 
-Route::middleware(['auth:sanctum', 'role:admin|manager', 'api'])->group(function () {
-
+Route::middleware(['auth:sanctum', 'role:admin|manager|staff|content', 'api'])->group(function () {
+    Route::get('/ratings', [RatingController::class, 'index']);
     Route::get('/products/sku', [ProductSkuController::class, 'index']);
     Route::post('/ratings/{id}/reply', [RatingController::class, 'reply']);
     Route::get('discounts', [DiscountController::class, 'index']);
@@ -173,8 +173,8 @@ Route::middleware(['auth:sanctum', 'role:admin|manager', 'api'])->group(function
     Route::put('orders/{id}', [OrderController::class, 'update']);
     Route::patch('/order-returns/{id}/status', [OrderReturnController::class, 'updateStatus']);
 
-    Route::get('dashboard/stats', [DashboardController::class, 'stats']);
-    Route::get('/dashboard/revenue', [DashboardController::class, 'revenueStats']);
+    Route::get('dashboard/stats', [DashboardController::class, 'stats'])->middleware('role:admin');
+    Route::get('/dashboard/revenue', [DashboardController::class, 'revenueStats'])->middleware('role:admin');
 
     Route::apiResource('slides', SlideController::class);
     // User

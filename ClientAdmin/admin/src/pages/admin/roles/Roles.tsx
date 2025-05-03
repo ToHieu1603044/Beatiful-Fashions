@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import {
@@ -46,9 +45,9 @@ const Roles = () => {
           getPermissions(),
         ]);
         setRoles(rolesRes.data);
-     //   console.log("permissionsRes", permissionsRes.data.data);
         setPermissions(permissionsRes.data);
 
+        // Nhóm quyền theo model
         const grouped = permissionsRes.data.reduce((acc, perm) => {
           const model = perm.model || "Other";
           if (!acc[model]) acc[model] = [];
@@ -206,16 +205,22 @@ const Roles = () => {
 
       <Modal
         title={`Phân quyền cho vai trò: ${selectedRole?.name}`}
-        visible={showModal}
+        open={showModal}
         onCancel={() => setShowModal(false)}
         width={800}
         footer={[
           <Button key="close" onClick={() => setShowModal(false)}>
             Đóng
           </Button>,
-          <Button key="remove" danger onClick={() => handleRemoveAllPermissions(selectedRole.id)}>
-            Gỡ toàn bộ quyền
-          </Button>,
+          <Popconfirm
+            key="remove-all"
+            title="Bạn có chắc chắn muốn gỡ toàn bộ quyền?"
+            onConfirm={() => handleRemoveAllPermissions(selectedRole?.id)}
+            okText="Gỡ"
+            cancelText="Hủy"
+          >
+            <Button danger>Gỡ toàn bộ quyền</Button>
+          </Popconfirm>,
           <Button key="save" type="primary" onClick={handleSavePermissions}>
             Lưu
           </Button>,
@@ -231,26 +236,31 @@ const Roles = () => {
             <Panel
               header={
                 <div className="d-flex justify-content-between align-items-center">
-                  <span>{model}</span>
-                  <Button size="small" onClick={() => handleSelectAll(model)}>
-                    Chọn tất cả
-                  </Button>
+                  <span>{model} Permissions</span>
+                  <Checkbox
+                    onChange={() => handleSelectAll(model)}
+                    checked={groupedPermissions[model].every((perm) =>
+                      selectedPermissions.includes(perm.id)
+                    )}
+                  >
+                    Chọn tất cả {model}
+                  </Checkbox>
                 </div>
               }
               key={model}
             >
-              <Checkbox.Group
-                value={selectedPermissions}
-                onChange={(checkedValues) => setSelectedPermissions(checkedValues)}
-              >
-                <Space wrap>
-                  {groupedPermissions[model].map((perm) => (
-                    <Checkbox key={perm.id} value={perm.id}>
-                      {perm.name}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+                {groupedPermissions[model].map((perm) => (
+                  <div key={perm.id} style={{ width: "33%" }}>
+                    <Checkbox
+                      checked={selectedPermissions.includes(perm.id)}
+                      onChange={() => handlePermissionChange(perm.id)}
+                    >
+                      {perm.name} {/* Hiển thị đầy đủ tên quyền như view_category */}
                     </Checkbox>
-                  ))}
-                </Space>
-              </Checkbox.Group>
+                  </div>
+                ))}
+              </div>
             </Panel>
           ))}
         </Collapse>
@@ -262,4 +272,3 @@ const Roles = () => {
 };
 
 export default Roles;
-

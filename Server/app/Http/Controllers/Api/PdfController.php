@@ -4,15 +4,19 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Order;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 
 class PdfController
 {
+    use AuthorizesRequests;
     public function index(Request $request)
     {
         try {
             $orders = Order::with('orderDetails.sku')->orderBy('created_at', 'desc')->paginate(10);
-    
+            
+
+            $this->authorize('viewAny', Order::class);
             if ($orders->isEmpty()) {
                 return response()->json(['error' => __('messages.order_not_found')], 404);
             }

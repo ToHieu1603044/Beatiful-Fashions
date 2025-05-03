@@ -42,7 +42,7 @@ const Dashboard = () => {
             setOrderStatus(response.orderStatus);
         } catch (error) {
             console.error("Lỗi lấy dữ liệu dashboard:", error);
-            if (error.response?.status === 403) navigate("/403");
+
             if (error.response?.status === 401) navigate("/login");
         } finally {
             setLoading(false);

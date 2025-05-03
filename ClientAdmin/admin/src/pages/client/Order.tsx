@@ -266,7 +266,19 @@ const Orders: React.FC = () => {
         ...order,
         product_name: order.orderdetails.map(detail => detail.product_name).join(", ")
     }));
-
+    const handlePayment = async (orderId: number) => {
+        try {
+          const res = await axios.post(`http://127.0.0.1:8000/api/payment/retry/${orderId}`);
+          const { payUrl } = res.data;
+          console.log(res);
+          window.location.href = payUrl; 
+        } catch (err) {
+            console.log(err);
+            message.error(err.response.data.message);
+          message.error("Không thể thực hiện lại thanh toán");
+        }
+      };
+      
     const columns = [
         { title: "ID", dataIndex: "id", key: "id" },
         { title: "Tên ", dataIndex: "name", key: "name" },
@@ -288,7 +300,14 @@ const Orders: React.FC = () => {
             title: "Tên sản phẩm",
             dataIndex: "product_name",
             key: "product_name",
+            render: (product_name: string) => product_name.slice(0, 30) + "...",
 
+        },
+        {
+            title: " Phương thức thanh toán",
+            dataIndex: "payment_method",
+            key: "payment_method",
+            render: (payment_method: string) => payment_method === "cod" ? "Thanh toán khi nhận hàng" : "Thanh toán MoMo",
         },
 
         {
@@ -313,7 +332,7 @@ const Orders: React.FC = () => {
                             Hoàn trả
                         </Button>
                     )}
-                    {(record.tracking_status === "cancelled" || record.status === "cancelled") && (
+                    {(record.tracking_status === "cancelled" && record.status === "cancelled") && (
                         <Button type="primary" danger onClick={() => handleRebuy(record)}>
                             Mua lại
                         </Button>
@@ -322,6 +341,11 @@ const Orders: React.FC = () => {
                     {record.tracking_status === "delivered" && (
                         <Button type="primary" onClick={() => handleConfirmReceived(record.id)}>
                             Đã nhận
+                        </Button>
+                    )}
+                     {record.payment_method == "online" && record.is_paid == 0 && (
+                        <Button type="primary" onClick={() => handlePayment(record.id)}>
+                          Thanh toán lại 
                         </Button>
                     )}
 
@@ -396,8 +420,13 @@ const Orders: React.FC = () => {
                                         <Tag color="red">Chưa thanh toán</Tag>
                                     ) : (
                                         <Tag color={selectedOrder.payment_method === 'online' ? 'green' : 'orange'}>
-                                            {selectedOrder.tracking_status === 'completed' ? 'Hoàn tất' : 'Đang xử lý'}
-                                        </Tag>
+                                        {selectedOrder.tracking_status === 'completed'
+                                          ? 'Hoàn tất'
+                                          : selectedOrder.payment_method == 'online' && selectedOrder.is_paid == 1
+                                            ? 'Đã thanh toán'
+                                            : 'Chưa thanh toán'}
+                                      </Tag>
+                                      
                                     )}
                                 </Descriptions.Item>
 

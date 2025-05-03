@@ -8,7 +8,7 @@ interface Props {
   visible: boolean;
   userId: string | null;
   onCancel: () => void;
-  onUpdate: () => void; // Dùng để reload lại danh sách sau khi cập nhật
+  onUpdate: () => void;
 }
 
 const EditUserForm: React.FC<Props> = ({ visible, userId, onCancel, onUpdate }) => {
@@ -28,9 +28,9 @@ const EditUserForm: React.FC<Props> = ({ visible, userId, onCancel, onUpdate }) 
       console.log("user:", user); 
       
       const userRoles = user.role.map((r: any) => r.name);
-      console.log("userRoles:", userRoles); // Kiểm tra giá trị của userRoles
+      console.log("userRoles:", userRoles);
 
-      // Set giá trị vào form mà không reset
+    
       form.setFieldsValue({
         name: user.name,
         phone: user.phone,
@@ -43,9 +43,10 @@ const EditUserForm: React.FC<Props> = ({ visible, userId, onCancel, onUpdate }) 
         active: user.active,
       });
 
-      setSelectedRoles(userRoles); // Cập nhật selectedRoles
-      console.log("selectedRoles set to:", userRoles); // Kiểm tra giá trị sau khi cập nhật
+      setSelectedRoles(userRoles); 
+      console.log("selectedRoles set to:", userRoles);
     } catch (error) {
+      
       message.error("Lỗi khi lấy thông tin người dùng");
     }
   };
@@ -60,7 +61,6 @@ const EditUserForm: React.FC<Props> = ({ visible, userId, onCancel, onUpdate }) 
     }
   };
 
-  // Gọi fetchUser và fetchRoles khi userId thay đổi và modal visible
   useEffect(() => {
     if (userId && visible) {
       fetchUser();
@@ -68,7 +68,6 @@ const EditUserForm: React.FC<Props> = ({ visible, userId, onCancel, onUpdate }) 
     }
   }, [userId, visible]);
 
-  // Hàm xử lý khi form được submit
   const onFinish = async (values: IUsers) => {
     console.log(values);
     
@@ -81,9 +80,12 @@ const EditUserForm: React.FC<Props> = ({ visible, userId, onCancel, onUpdate }) 
         headers: { Authorization: `Bearer ${token}` },
       });
       message.success("Cập nhật thành công");
-      onUpdate();  // Reload lại danh sách người dùng
-      onCancel();  // Đóng modal
+      onUpdate();
+      onCancel();
     } catch (error) {
+      if(error.response.status == 403) {
+        window.location.href = '/403';
+    }
       message.error("Cập nhật thất bại");
     }
   };
@@ -130,9 +132,9 @@ const EditUserForm: React.FC<Props> = ({ visible, userId, onCancel, onUpdate }) 
             options={roles.map(r => ({ label: r.name, value: r.name }))}
             onChange={(val) => {
               setSelectedRoles(val as string[]);
-              console.log("selectedRoles updated to:", val); // Kiểm tra giá trị mới được chọn
+              console.log("selectedRoles updated to:", val); 
             }}
-            value={selectedRoles} // Đặt giá trị cho Checkbox.Group
+            value={selectedRoles} 
           />
         </Form.Item>
 

@@ -50,6 +50,9 @@ const Index = () => {
             });
             setFlashSales(response.data.data);
         } catch (error) {
+            if(error.response.status == 403) {
+                window.location.href = '/403';
+            }
             message.error('Không tìm thấy chương trình Flash Sale');
         }
         setLoading(false);
@@ -87,6 +90,9 @@ const Index = () => {
                 message.success(response.data.message);
                 setFlashSales(updatedSales);
             } else {
+                if(response.status == 403) {
+                    window.location.href = '/403';
+                }
                 message.error("Không thể cập nhật trạng thái");
             }
         } catch (error) {
@@ -104,6 +110,9 @@ const Index = () => {
                 message.success("Xóa thành công");
             }
         } catch (error) {
+            if(error.response.status == 403) {
+                window.location.href = '/403';
+            }
             console.error('Lỗi khi xóa khuyến mãi:', error);
         }
     };
@@ -136,6 +145,9 @@ const Index = () => {
                 setProducts(productList);
                 console.log("productList", productList);
             } catch (error) {
+                if(error.response.status == 403) {
+                    window.location.href = '/403';
+                }
                 console.error('Lỗi khi lấy sản phẩm:', error);
             }
         };
@@ -160,6 +172,9 @@ const Index = () => {
             setImage(null);
             fetchSales();
         } catch (error) {
+            if(error.response.status == 403) {
+                window.location.href = '/403';
+            }
             console.error("Lỗi khi cập nhật:", error);
             message.error(error.response.data.message);
         }
@@ -243,7 +258,7 @@ const Index = () => {
     return (
         <div className="container" style={{ padding: 20 }}>
             <h2>Danh sách chương trình Flash Sale</h2>
-            <Button className='mt-3 mb-3' type="primary" href="/admin/sales">Thêm Flash Sale</Button>
+            <Button className='m-3 text-text-decoration-none'  type="primary" href="/admin/sales">Thêm Flash Sale</Button>
             <Space style={{ marginBottom: 16 }}>
                 <Input
                     placeholder="Tìm theo tên"

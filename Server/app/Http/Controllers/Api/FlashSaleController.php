@@ -8,6 +8,7 @@ use App\Models\FlashSale;
 use App\Models\FlashSaleProduct;
 use App\Models\Product;
 use App\Models\ProductSku;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -17,10 +18,13 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 class FlashSaleController extends Controller
 {
+    use AuthorizesRequests;
 
     public function index(Request $request)
     {
+
         try {
+
             $now = Carbon::now();
 
             $query = Product::with(['flashSales', 'skus'])
@@ -80,12 +84,12 @@ class FlashSaleController extends Controller
             $now = Carbon::now();
     
             $query = Product::with(['flashSales', 'skus'])
+                ->where('active', 1)
                 ->whereHas('flashSales', function ($q) use ($now, $request) {
-                    $q->whereRaw('flash_sale_products.quantity > 0'); // ✅ Điều kiện tồn kho Flash Sale
-    
-                    $q->when($request->status, function ($query) use ($request) {
-                        $query->where('flash_sales.status', $request->status);
-                    });
+                    $q->whereRaw('flash_sale_products.quantity > 0'); 
+                    
+                    $q->where('flash_sales.status', $request->status ?? 'active');
+
     
                     $q->when($request->expiry, function ($query) use ($now, $request) {
                         if ($request->expiry === 'valid') {
@@ -108,7 +112,7 @@ class FlashSaleController extends Controller
                 if ($product->flashSales->isNotEmpty()) {
                     $flashSale = $product->flashSales->first();
     
-                    if ($flashSale->status === 'active' && $flashSale->start_time <= $now && $flashSale->end_time >= $now) {
+                    if ($flashSale->status == 'active' && $flashSale->start_time <= $now && $flashSale->end_time >= $now) {
                         $product->sale_price = $flashSale->pivot->discount_price;
     
                         foreach ($product->skus as $sku) {
@@ -133,10 +137,9 @@ class FlashSaleController extends Controller
         }
     }
     
-
-
     public function store(Request $request)
     {
+        $this->authorize('create', FlashSale::class);
         \Log::info($request->all());
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|unique:flash_sales|max:255',
@@ -234,6 +237,8 @@ class FlashSaleController extends Controller
         \Log::info($request->all());
 
         $fashSale = FlashSale::find($id);
+
+        $this->authorize('update', $fashSale);
         $validator = Validator::make($request->all(), [
             'status' => 'required|in:active,inactive'
         ]);
@@ -276,6 +281,7 @@ class FlashSaleController extends Controller
     // Hiển thị danh sách Flash Sale kèm sản phẩm
     public function sales(Request $request)
     {
+        $this->authorize('viewAny', FlashSale::class);
         try {
             $now = Carbon::now();
     
@@ -325,8 +331,7 @@ class FlashSaleController extends Controller
                     }),
                 ];
             });
-    
-            // Trả về dữ liệu đã map + thông tin phân trang
+
             $paginatedResult = [
                 'data' => $result,
                 'current_page' => $sales->currentPage(),
@@ -347,6 +352,8 @@ class FlashSaleController extends Controller
     {
         \Log::info($request->all());
         $flashSale = FlashSale::find($id);
+
+        $this->authorize('update', $flashSale);
 
         if (!$flashSale) {
             return response()->json(['message' => __('messages.not_found')], 404);
@@ -446,7 +453,7 @@ class FlashSaleController extends Controller
     public function destroy($id)
     {
         $flashSale = FlashSale::find($id);
-
+        $this->authorize('delete', $flashSale);
         if (!$flashSale) {
             return response()->json(['message' => __('messages.not_found')], 404);
         }
