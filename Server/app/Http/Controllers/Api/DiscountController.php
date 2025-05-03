@@ -195,17 +195,17 @@ class DiscountController
         \Log::info('Total Valid Amount:', ['totalValidAmount' => $totalValidAmount]);
     
         $totalDiscount = 0;
-        foreach ($validCartItems as $item) {
-            $productPrice = ($item['price'] - ($item['sale_price'] ?? 0)) * $item['quantity'];
-    
-            if ($discount->discount_type === 'percentage') {
+        if ($discount->discount_type === 'percentage') {
+            foreach ($validCartItems as $item) {
+                $productPrice = ($item['price'] - ($item['sale_price'] ?? 0)) * $item['quantity'];
                 $discountAmount = ($productPrice * $discount->value) / 100;
-            } else {
-                $discountAmount = min($discount->value, $productPrice);
+                $totalDiscount += $discountAmount;
             }
-    
-            $totalDiscount += $discountAmount;
+        } else {
+          
+            $totalDiscount = min($discount->value, $totalValidAmount);
         }
+        
     
         if ($discount->max_discount !== null) {
             $totalDiscount = min($totalDiscount, $discount->max_discount);
@@ -348,7 +348,7 @@ class DiscountController
 
         try {
             $discount = Discount::findOrFail($id);
-            $this->authorize('update', $discount);
+           // $this->authorize('update', $discount);
             $validated = $request->validate([
                 'name' => 'required|string|max:255|unique:discounts,name,' . $id,
                 'code' => 'required|string|max:50|unique:discounts,code,' . $id,

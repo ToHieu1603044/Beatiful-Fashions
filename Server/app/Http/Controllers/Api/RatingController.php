@@ -77,7 +77,7 @@ class RatingController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('create', Rating::class);
+       
         \Log::info($request->all());
         $request->validate([
             'product_id' => 'required|exists:products,id',

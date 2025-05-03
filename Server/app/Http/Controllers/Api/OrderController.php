@@ -444,9 +444,7 @@ class OrderController
             return ApiResponse::errorResponse(400, __('messages.order_completed'));
         }
 
-        if ($order->is_paid == 1 && $order->payment_method === 'online') {
-            return ApiResponse::errorResponse(400, __('messages.order_paid'));
-        }
+      
 
         $request->validate([
             'tracking_status' => 'nullable|string|in:pending,processing,shipped,delivered,cancelled,completed,reback',
@@ -480,6 +478,9 @@ class OrderController
                 if (!in_array($order->tracking_status, ['pending'])) {
                     return ApiResponse::errorResponse(400, __('messages.only_cancel_when_status'));
                 }
+                if ($order->is_paid == 1 && $order->payment_method === 'online') {
+                    return ApiResponse::errorResponse(400, __('messages.order_paid'));
+                }
             
                 // Hoàn điểm nếu đã thanh toán online
                 if ($order->is_paid && $order->payment_method === 'online' && $user) {
@@ -491,7 +492,7 @@ class OrderController
                 }
             
                 $order->status = 'cancelled';
-            
+                
                 foreach ($order->orderDetails as $detail) {
                     $product = Product::find($detail->product_id);
                     if ($product) {
