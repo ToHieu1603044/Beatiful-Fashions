@@ -20,6 +20,9 @@ const Comments = () => {
       setComments(response.data.data);
       message.success(response.data.message);
     } catch (error) {
+      if(error.response.status == 403) {
+        window.location.href = '/403';
+      }
       console.error("Error fetching comments:", error);
     }
   };
@@ -34,6 +37,9 @@ const Comments = () => {
       message.success(response.data.message);
       fetchComments();
     } catch (error) {
+      if(error.response.status == 403) {
+        window.location.href = '/403';
+      }
       message.error(error.response?.data?.message || "Xóa thất bại");
       console.error("Error deleting comment:", error);
     }
@@ -65,6 +71,9 @@ const Comments = () => {
       setReplyModalVisible(false);
       fetchComments();
     } catch (error) {
+      if(error.response.status == 403) {
+        window.location.href = '/403';
+      }
       message.error(error.response?.data?.message || "Gửi phản hồi thất bại");
       console.error("Error replying to comment:", error);
     }

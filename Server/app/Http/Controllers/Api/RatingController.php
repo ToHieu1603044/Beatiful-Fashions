@@ -17,6 +17,7 @@ class RatingController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Rating::class);
         $query = Rating::with(['user', 'product', 'replies.user'])
             ->withCount('replies')
             ->whereNull('parent_id')
@@ -53,6 +54,7 @@ class RatingController extends Controller
     }
     public function reply(Request $request, $id)
     {
+        $this->authorize('create', Rating::class);
         $request->validate([
             'content' => 'required|string',
         ]);
@@ -75,6 +77,7 @@ class RatingController extends Controller
 
     public function store(Request $request)
     {
+       
         \Log::info($request->all());
         $request->validate([
             'product_id' => 'required|exists:products,id',
@@ -130,7 +133,7 @@ class RatingController extends Controller
     public function update(Request $request, $id)
     {
         $rating = Rating::findOrFail($id);
-
+        $this->authorize('update', $rating);
         $user = Auth::user();
 
         if ($user->hasRole('admin') && $rating->user_id !== $user->id) {
@@ -161,7 +164,7 @@ class RatingController extends Controller
     public function destroy($id)
     {
         $user = Auth::user();
-
+        
         DB::beginTransaction();
 
         try {

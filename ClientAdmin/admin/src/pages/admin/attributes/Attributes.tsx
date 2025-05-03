@@ -150,7 +150,7 @@ const Attributes = () => {
   ];
 
   return (
-    <div className="p-4">
+    <div className="p-4 container">
       {loading ? (
         <Spin size="large" />
       ) : (
@@ -161,12 +161,12 @@ const Attributes = () => {
           {isRootAttributes && (
             <>
               <div className="d-flex justify-between items-center mb-4">
-                <Title level={3}>Danh sách Attributes</Title>
-                <Link to="/admin/attributes/create">
-                  <Button type="primary">Thêm thuộc tính</Button>
-                </Link>
+                <Title level={3}>Danh sách thuộc tính</Title>
+               
               </div>
-
+              <Link  to="/admin/attributes/create">
+                  <Button className="mb-5" type="primary">Thêm thuộc tính</Button>
+                </Link>
               <Table
                 columns={columns}
                 dataSource={attributes}

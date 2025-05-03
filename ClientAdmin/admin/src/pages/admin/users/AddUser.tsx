@@ -57,6 +57,9 @@ const AddUser = () => {
       message.success(response.data.message || "Thêm người dùng thành cong!");
 
     } catch (error) {
+      if(error.response.status == 403) {
+        window.location.href = '/403';
+    }
       alert("Thêm người dùng thất bại!");
       console.error("Lỗi khi thêm user:", error);
     }

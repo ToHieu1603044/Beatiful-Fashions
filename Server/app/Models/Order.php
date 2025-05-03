@@ -28,6 +28,7 @@ class Order extends Model
         'is_paid',
         'price_shipped',
         'payment_method',
+       
         'note',
         'discount_amount',
         'discount_code',

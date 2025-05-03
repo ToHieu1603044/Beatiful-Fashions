@@ -95,6 +95,9 @@ const Sales: React.FC = () => {
             setLoading(false);
             Modal.success({ content: response.data.message });
         } catch (error) {
+            if(error.response.status == 403) {
+                window.location.href = '/403';
+            }
             setLoading(false);
             console.error('Lỗi khi tạo Flash Sale:', error);
             message.error(error.response.data.message);

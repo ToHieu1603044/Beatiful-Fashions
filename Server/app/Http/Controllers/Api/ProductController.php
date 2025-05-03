@@ -4,6 +4,7 @@ use App\Helpers\ApiResponse;
 use App\Helpers\TextSystemConst;
 use App\Http\Requests\ProductRequest;
 use App\Http\Resources\ProductResource;
+use App\Models\Category;
 use App\Models\FlashSaleProduct;
 use App\Models\Gallery;
 use App\Models\Rating;
@@ -36,9 +37,10 @@ class ProductController extends Controller
     
     public function index(Request $request)
     {
+        
+        $this->authorize('viewAny', Product::class);
         try {
-            $this->authorize('viewAny', Product::class);
-
+           
             $filters = $request->query();
             $page = $request->query('page', 1);
             $cacheKey = 'products_cache_' . md5(json_encode($filters));
@@ -92,8 +94,20 @@ class ProductController extends Controller
                 }
 
                 if (isset($filters['category_id'])) {
-                    $query->where('category_id', $filters['category_id']);
+                    $category = Category::find($filters['category_id']);
+                
+                    if ($category) {
+                        // Lấy tất cả category con của category hiện tại (bao gồm chính nó)
+                        $descendantCategoryIds = Category::where('_lft', '>=', $category->_lft)
+                            ->where('_rgt', '<=', $category->_rgt)
+                            ->pluck('id')
+                            ->toArray();
+                
+                        // Lọc tất cả sản phẩm thuộc các category này
+                        $query->whereIn('category_id', $descendantCategoryIds);
+                    }
                 }
+                
 
                 foreach ($dates as $date) {
                     if (isset($filters['start_date']) && isset($filters['end_date'])) {
@@ -247,8 +261,8 @@ class ProductController extends Controller
                     'stock' => $variant['stock'],
                     'sku' => $sku,
                 ]);
-                // Redis::set("stock:sku:{$productSku->id}", $variant['stock']);
-                Redis::set("sku:stock:{$productSku->sku}", $productSku->stock);
+                 Redis::set("stock:sku:{$productSku->id}", $variant['stock']);
+                //Redis::set("sku:stock:{$productSku->sku}", $productSku->stock);
                 foreach ($sku_values as $option_id) {
                     AttributeOptionSku::create([
                         'sku_id' => $productSku->id,

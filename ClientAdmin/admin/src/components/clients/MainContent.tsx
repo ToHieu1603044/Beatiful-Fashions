@@ -559,7 +559,7 @@ const MainContent = () => {
 
       <CountDown />
       <div>
-        <Post/>
+        <Post />
       </div>
 
       {selectedProduct && (
@@ -595,6 +595,13 @@ const MainContent = () => {
                       <i className="fas fa-folder me-1"></i>
                       {selectedProduct.category?.name}
                     </span>
+                    {selectedProduct.quantity_sale && (
+                      <span className="badge bg-light text-dark">
+                        <i className="fas fa-bolt me-1 text-warning"></i>
+                       Sale còn: {selectedProduct.quantity_sale}
+                      </span>
+                    )}
+
                   </div>
 
                   {Object.keys(selectedAttributes).map((attributeName, index) => (
@@ -634,6 +641,7 @@ const MainContent = () => {
                       <div className="stock-info mb-3">
                         <h5 className="mb-2">Số lượng còn lại:</h5>
                         <span className="badge bg-success">{selectedVariant.stock} sản phẩm</span>
+
                       </div>
 
                       <div className="quantity-selector">

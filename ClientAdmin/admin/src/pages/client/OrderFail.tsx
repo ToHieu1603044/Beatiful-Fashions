@@ -91,7 +91,7 @@ const OrderFail = () => {
           Bạn có thể thử lại sau ít phút hoặc sử dụng phương thức thanh toán khác. Nếu cần hỗ trợ, vui lòng liên hệ bộ phận CSKH qua hotline 1900 1234.
         </HintBox>
 
-        <Button href="/gio-hang">Quay lại giỏ hàng</Button>
+        <Button href="/cart">Quay lại giỏ hàng</Button>
       </Card>
     </Wrapper>
   );

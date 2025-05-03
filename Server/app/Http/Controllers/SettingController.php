@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Models\Setting;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Session;
 
 class SettingController
 {
+    use AuthorizesRequests;
     public function index()
     {
         $keys = [
@@ -38,7 +40,8 @@ class SettingController
     public function update(Request $request)
     {
         Log::info($request->all());
-    
+        $this->authorize('update', Setting::class);
+
         $request->validate([
             'site_name' => 'nullable|string|max:255',
             'support_email' => 'nullable|email|max:255',

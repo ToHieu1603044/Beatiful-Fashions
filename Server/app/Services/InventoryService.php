@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 
 class InventoryService
@@ -47,7 +48,28 @@ class InventoryService
     
     public static function restoreFlashSaleStock($productId, $quantity)
     {
-        return Redis::incrby("flash_sale_stock:$productId", $quantity);
+        $redisKey = "flash_sale_stock:{$productId}";
+    
+        // Kiểm tra tồn kho hiện tại trong Redis
+        if (Redis::exists($redisKey)) {
+            $currentStock = (int) Redis::get($redisKey);
+            Redis::set($redisKey, $currentStock + $quantity);
+        } else {
+            // Nếu Redis chưa có → đọc từ DB rồi khởi tạo
+            $flashSale = DB::table('flash_sale_products')->where('product_id', $productId)->first();
+            if ($flashSale) {
+                $currentStock = $flashSale->quantity + $quantity;
+                Redis::set($redisKey, $currentStock);
+            }
+        }
+    
+        // Cập nhật lại DB theo Redis
+        $updatedStock = Redis::get($redisKey);
+        DB::table('flash_sale_products')
+            ->where('product_id', $productId)
+            ->update(['quantity' => $updatedStock]);
     }
+    
+    
     
 }

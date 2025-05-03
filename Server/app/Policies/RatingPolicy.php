@@ -7,38 +7,38 @@ use App\Models\User;
 
 class RatingPolicy
 {
-    public function viewAny(?User $user): bool
+    public function viewAny(User $user)
     {
-        return true;
+        return $user->hasPermissionTo('view_any_rating');
     }
 
-    public function view(?User $user, Rating $rating): bool
+    public function view(User $user, Rating $rating)
     {
-        return true;
+        return $user->hasPermissionTo('view_rating');
     }
 
-    public function create(User $user): bool
+    public function create(User $user)
     {
-        return true;
+        return $user->hasPermissionTo('create_rating');
     }
 
     public function update(User $user, Rating $rating)
     {
-        return $user->id === $rating->user_id;
+        return $user->hasPermissionTo('update_rating');
     }
 
     public function delete(User $user, Rating $rating)
     {
-        return $user->id === $rating->user_id;
+        return $user->hasPermissionTo('delete_rating');
     }
 
-    public function restore(User $user, Rating $rating): bool
+    public function restore(User $user, Rating $rating)
     {
-        return false;
+        return $user->hasPermissionTo('restore_rating');
     }
 
-    public function forceDelete(User $user, Rating $rating): bool
+    public function forceDelete(User $user, Rating $rating)
     {
-        return false;
+        return $user->hasPermissionTo('force_delete_rating');
     }
 }

@@ -54,7 +54,7 @@ const Discount = () => {
             max_uses: record.max_uses,
             product_ids: record.products?.map(p => p.id) || [],
             is_global: Boolean(record.is_global),
-
+            max_discount: record.max_discount,
             required_ranking: record.required_ranking,
             is_first_order: record.is_first_order,
             is_redeemable: record.is_redeemable,
@@ -94,6 +94,10 @@ const Discount = () => {
                     const response = await createDiscount(requestData);
                     message.success(response.data.message);
                 } catch (error) {
+                    if(error.response.status == 403) {
+                        window.location.href = '/403';
+
+                    }
                     message.error(error.response.data.message);
                     handleApiError(error);
                     return;
@@ -155,6 +159,9 @@ const Discount = () => {
                 setDiscounts(prev => prev.filter(discount => discount.id !== id));
             }
         } catch (error) {
+            if(error.response.status == 403) {
+                window.location.href = '/403';
+            }
             message.error(error.response.data.message);
         }
     }
@@ -174,6 +181,9 @@ const Discount = () => {
             fetchProducts();
             fetchDiscounts();
         } catch (error) {
+            if(error.response.status == 403) {
+                window.location.href = '/403';
+            }
             console.error("Lỗi khi cập nhật trạng thái:", error);
             message.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
@@ -196,6 +206,7 @@ const Discount = () => {
             title: "Loại giảm giá",
             dataIndex: "discount_type",
             key: "discount_type",
+            render: (value) => value === "percentage" ? "Phần trăm" : "Giá trị",
         },
         {
             title: "Giá trị ",
@@ -302,6 +313,9 @@ const Discount = () => {
                 setDiscounts([]);
             }
         } catch (error) {
+            if(error.response.status == 403) {
+                window.location.href = '/403';
+            }
             console.error("Lỗi khi tải danh sách mã giảm giá:", error);
             setDiscounts([]);
         } finally {
@@ -415,10 +429,10 @@ const Discount = () => {
                             </Form.Item>
 
                             <Form.Item label="Ngày Bắt Đầu" name="start_date" rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu!' }]}>
-                                <DatePicker format="YYYY-MM-DD" />
+                               <DatePicker showTime format="YYYY-MM-DD HH:mm:ss" />
                             </Form.Item>
                             <Form.Item label="Ngày Kết Thúc" name="end_date" rules={[{ required: true, message: 'Vui lòng chọn ngày kết thúc!' }]}>
-                                <DatePicker format="YYYY-MM-DD" />
+                                <DatePicker showTime format="YYYY-MM-DD HH:mm:ss" />
                             </Form.Item>
                         </Col>
 
@@ -461,11 +475,11 @@ const Discount = () => {
                             )}
 
 
-                            <Form.Item label="Có thể tân thủ?" name="is_first_order" valuePropName="checked">
-                                <Checkbox>Cho mã tân thủ</Checkbox>
+                            <Form.Item label="Mã cho người mới ?" name="is_first_order" valuePropName="checked">
+                                <Checkbox>Người mới </Checkbox>
                             </Form.Item>
-                            {/* 🟢 Checkbox bật/tắt "Có thể đổi bằng điểm" */}
-                            <Form.Item label="Có thể đổi bằng điểm?" name="is_redeemable" valuePropName="checked">
+                
+                            <Form.Item label="Cho phép đổi điểm?" name="is_redeemable" valuePropName="checked">
                                 <Checkbox onChange={(e) => setIsRedeemable(e.target.checked)}>Cho phép đổi điểm</Checkbox>
                             </Form.Item>
 

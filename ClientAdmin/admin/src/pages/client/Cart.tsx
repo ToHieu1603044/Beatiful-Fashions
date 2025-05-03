@@ -7,7 +7,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 const Cart = () => {
     const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(true); // Trạng thái loading
+    const [loading, setLoading] = useState(true); 
     const [selectedItems, setSelectedItems] = useState([]);
     const navigate = useNavigate();
 
@@ -24,6 +24,7 @@ const Cart = () => {
                 quantity: item.quantity || 1,
             }));
             setProducts(cartData);
+            console.log(cartData);
         } catch (error) {
             if (error.response && error.response.status === 401) {
                 navigate("/login");

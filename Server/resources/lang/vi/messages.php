@@ -19,6 +19,7 @@ return [
     'out_of_stock' => 'Số lượng không đủ',
     'order_paid' => 'Đơn hàng đã thanh toán. Vui long liên hệ admin để kiểm tra ',
     'order_return_status_must_be_shipping_to_receive' => 'Khách hàng chưa gửi hàng hoàn về',
+    'not_enough_stock_for' => 'Số lượng trong kho không đủ.',
     'updated_failed' => 'Cập nhật thất bại.',
     'old_password_not_match' => 'Mật khóa cuối cung không khớp lệ.',
     'created_failed' => 'Tạo mới thất bại.',

@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\PointRedemption;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -18,8 +19,10 @@ use Illuminate\Validation\ValidationException;
 
 class DiscountController
 {
+    use AuthorizesRequests;
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Discount::class);
         try {
             $discounts = Discount::with('products')
                 ->orderBy('created_at', 'desc')
@@ -192,17 +195,17 @@ class DiscountController
         \Log::info('Total Valid Amount:', ['totalValidAmount' => $totalValidAmount]);
     
         $totalDiscount = 0;
-        foreach ($validCartItems as $item) {
-            $productPrice = ($item['price'] - ($item['sale_price'] ?? 0)) * $item['quantity'];
-    
-            if ($discount->discount_type === 'percentage') {
+        if ($discount->discount_type === 'percentage') {
+            foreach ($validCartItems as $item) {
+                $productPrice = ($item['price'] - ($item['sale_price'] ?? 0)) * $item['quantity'];
                 $discountAmount = ($productPrice * $discount->value) / 100;
-            } else {
-                $discountAmount = min($discount->value, $productPrice);
+                $totalDiscount += $discountAmount;
             }
-    
-            $totalDiscount += $discountAmount;
+        } else {
+          
+            $totalDiscount = min($discount->value, $totalValidAmount);
         }
+        
     
         if ($discount->max_discount !== null) {
             $totalDiscount = min($totalDiscount, $discount->max_discount);
@@ -230,7 +233,7 @@ class DiscountController
 
     public function store(Request $request)
     {
-        \Log::info($request->all());
+        $this->authorize('create', Discount::class);
         try {
             if (!$request->has('code')) {
                 return response()->json(['message' => "Code" . __('messages.required_field')], 400);
@@ -345,7 +348,7 @@ class DiscountController
 
         try {
             $discount = Discount::findOrFail($id);
-
+           // $this->authorize('update', $discount);
             $validated = $request->validate([
                 'name' => 'required|string|max:255|unique:discounts,name,' . $id,
                 'code' => 'required|string|max:50|unique:discounts,code,' . $id,
@@ -441,7 +444,7 @@ class DiscountController
     public function destroy($id)
     {
         $discount = Discount::findOrFail($id);
-
+        $this->authorize('delete', $discount);
         $discount->delete();
 
         return response()->json([
@@ -519,6 +522,9 @@ class DiscountController
         }
 
         $discount = Discount::find($id);
+
+        $this->authorize('update', $discount);
+
         if (!$discount) {
             return response()->json(['message' => __('messages.not_found')], 404);
         }

@@ -187,7 +187,7 @@ return [
     'only_cancel_pending' => "You can only cancel the order when it is in 'pending' status.",
     'no_flash_sale' => 'No flash sale available.',
     'cannot_cancel_order' => "Cannot cancel the order.",
-
+    'not_enough_stock_for' => 'Not enough stock.',
 
     // User Authentication
 

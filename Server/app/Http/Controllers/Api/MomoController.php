@@ -21,40 +21,43 @@ class MomoController
     public function callback(Request $request)
     {
         \Log::info('MoMo Callback:', $request->all());
-    
+
         $uniqueOrderId = $request->orderId;
         $parts = explode("-", $uniqueOrderId);
         $orderId = end($parts);
-    
+
         $order = Order::find($orderId);
         if (!$order) {
             return response()->json(['message' => 'Không tìm thấy đơn hàng!'], 400);
         }
-    
+
         $userId = $order->user_id;
         $session_id = session()->getId();
-    
+      
+        
+        
+
         // Giải mã extraData
         $extraData = json_decode($request->extraData, true);
         $cartIds = $extraData['cart_ids'] ?? [];
         $flashSaleData = $extraData['flash_sale_data'] ?? [];
-    
+
         switch ($request->resultCode) {
             case 0: // Giao dịch thành công
                 DB::beginTransaction();
                 try {
-                    $order->update(['status' => 'pending', 'is_paid' => true]);
-    
+                    $order->update(['status' => 'pending', 'is_paid' => true, 'tracking_status' => 'pending']);
+
                     // Cập nhật số lượng tồn kho flash sale và flash_sale_products
                     foreach ($flashSaleData as $flashSaleItem) {
                         $productId = $flashSaleItem['product_id'];
                         $flashSaleId = $flashSaleItem['flash_sale_id'];
                         $discountAppliedQty = $flashSaleItem['discount_applied_qty'];
-    
+
                         if ($discountAppliedQty > 0) {
                             // Giảm tồn kho flash sale trong Redis
                             $reduceResult = InventoryService::reduceFlashSaleStock($productId, $discountAppliedQty);
-                          
+
                             if ($reduceResult === -2) {
                                 DB::rollBack();
                                 return response()->json(['message' => 'Flash Sale không đồng bộ'], 400);
@@ -62,16 +65,16 @@ class MomoController
                                 DB::rollBack();
                                 return response()->json(['message' => 'Flash Sale hết hàng'], 400);
                             }
-    
+
                             Redis::incrby("flash_sale_purchased:{$productId}", $discountAppliedQty);
                             \Log::info("Đã áp dụng flash sale cho {$discountAppliedQty} sản phẩm ID {$productId}.");
-    
+
                             // Cập nhật số lượng trong flash_sale_products
                             $updated = DB::table('flash_sale_products')
                                 ->where('flash_sale_id', $flashSaleId)
                                 ->where('product_id', $productId)
                                 ->decrement('quantity', $discountAppliedQty);
-    
+
                             if ($updated === 0) {
                                 DB::rollBack();
                                 \Log::error("Không thể cập nhật flash_sale_products cho sản phẩm {$productId}");
@@ -79,7 +82,7 @@ class MomoController
                             }
                         }
                     }
-    
+
                     // Xóa giỏ hàng
                     if (!empty($cartIds)) {
                         Cart::where(function ($query) use ($userId, $session_id) {
@@ -90,7 +93,7 @@ class MomoController
                             }
                         })->whereIn('id', $cartIds)->delete();
                     }
-    
+
                     DB::commit();
                     OrderCreated::dispatch($order);
                     return redirect()->to(env('FRONTEND_URL') . "/order/success");
@@ -99,9 +102,9 @@ class MomoController
                     \Log::error('Lỗi xử lý callback: ' . $e->getMessage());
                     return response()->json(['message' => 'Lỗi xử lý callback'], 500);
                 }
-    
+
             case 7002:
-                $order->update(['status' => 'pending', 'is_paid' => false]);
+                $order->update(['status' => 'pending', 'tracking_status' => 'pending', 'is_paid' => false]);
                 // Không cần rollback flash sale vì chưa giảm
                 if (!empty($cartIds)) {
                     Cart::where(function ($query) use ($userId, $session_id) {
@@ -112,15 +115,40 @@ class MomoController
                         }
                     })->whereIn('id', $cartIds)->delete();
                 }
+                // Rollback Flash Sale nếu có
+                if (!empty($flashSaleData)) {
+                    foreach ($flashSaleData as $flashSaleItem) {
+                        $productId = $flashSaleItem['product_id'];
+                        $flashSaleId = $flashSaleItem['flash_sale_id'];
+                        $discountAppliedQty = $flashSaleItem['discount_applied_qty'];
+
+                        if ($discountAppliedQty > 0) {
+                            // Tăng lại số lượng trong Redis
+                            Redis::incrby("flash_sale_stock:{$productId}", $discountAppliedQty);
+
+                            // Giảm lại số đã mua nếu đã từng tăng
+                            Redis::decrby("flash_sale_purchased:{$productId}", $discountAppliedQty);
+
+                            // Cộng lại vào flash_sale_products trong DB
+                            DB::table('flash_sale_products')
+                                ->where('flash_sale_id', $flashSaleId)
+                                ->where('product_id', $productId)
+                                ->increment('quantity', $discountAppliedQty);
+
+                            \Log::info("Rollback flash sale: +{$discountAppliedQty} sản phẩm {$productId} sau thanh toán thất bại.");
+                        }
+                    }
+                }
+                
                 return redirect()->to(env('FRONTEND_URL') . "/order/pending");
-    
+
             case 7003:
             case 9001:
             case 9003:
             case 9004:
             default:
-                $order->update(['status' => 'cancelled', 'is_paid' => false]);
-                // Không cần rollback flash sale vì chưa giảm
+                $order->delete();
+
                 if (!empty($cartIds)) {
                     Cart::where(function ($query) use ($userId, $session_id) {
                         if ($userId) {
@@ -133,13 +161,13 @@ class MomoController
                 return redirect()->to(env('FRONTEND_URL') . "/order/failed");
         }
     }
-    
+
     public function refund(Request $request)
     {
         // Lấy thông tin từ request
         $transId = $request->input('transId');  // Mã giao dịch cần hoàn tiền
         $refundAmount = $request->input('refundAmount');  // Số tiền hoàn lại
-        
+
         // Thông tin từ config
         $partnerCode = config('services.momo.partner_code');
         $accessKey = config('services.momo.access_key');
@@ -176,7 +204,7 @@ class MomoController
 
         $context = stream_context_create($options);
         $response = file_get_contents($url, false, $context);
-        
+
         // Kiểm tra phản hồi từ Momo
         $responseData = json_decode($response, true);
         if ($responseData['resultCode'] == 0) {
@@ -187,6 +215,6 @@ class MomoController
             return response()->json(['message' => 'Lỗi hoàn tiền: ' . $responseData['message']], 400);
         }
     }
-    
+
 
 }

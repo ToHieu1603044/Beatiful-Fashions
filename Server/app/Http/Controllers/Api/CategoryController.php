@@ -289,13 +289,20 @@ class CategoryController extends Controller
     {
         $category = Category::findOrFail($id);
 
-        // Kiểm tra xem danh mục có con hay không
+       
         if ($category->children()->count() > 0) {
             return response()->json([
                 'message' => __('messages.category_has_children'),
                 'success' => false
             ], 400);
         }
+        if($category->products()->count() > 0) {
+            return response()->json([
+                'message' => __('messages.category_has_products'),
+                'success' => false
+            ], 400);
+        }
+        $this->authorize('delete', $category);
 
         $category->delete();
 

@@ -154,6 +154,16 @@ const Header = () => {
 
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav">
+            <li className="nav-item">
+              <a className="nav-link text-white" href='/'>
+                Trang chủ
+              </a>
+            </li>
+            <li className="nav-item">
+              <a className="nav-link text-white" href='/contact'>
+                Liên hệ 
+              </a>
+            </li>
             {categories.map((category) => (
               <li key={category.id} className="nav-item">
                 <a className="nav-link text-white" href={`/category/${category.id}/${category.slug}`}>

@@ -280,14 +280,25 @@ export const fetchOrders = async (params: { is_paid?: boolean; tracking_status?:
 
 export const fetchDashboardData = async (startDate, endDate) => {
   const token = getAuthToken();
-  const { data } = await axios.get(`${API_BASE_URL}/dashboard/stats`, {
-    params: {
-      start_date: startDate,
-      end_date: endDate,
-    },
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  return data;
+  const params = {};
+
+  // Only include date parameters if both startDate and endDate are provided
+  if (startDate && endDate) {
+    params.start_date = startDate;
+    params.end_date = endDate;
+  } else {
+    params.time_range = "all"; 
+  }
+
+  try {
+    const { data } = await axios.get(`${API_BASE_URL}/dashboard/stats`, {
+      params,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    return data;
+  } catch (error) {
+    throw error; // Propagate error to the caller for handling in the component
+  }
 };
 
 

@@ -46,7 +46,7 @@ const Products = () => {
       console.log(error);
       console.error("Lỗi khi lấy sản phẩm:", error);
       
-      if (error.response?.status === 403) {
+      if (error.response.status === 403) {
         navigate("/403");
       } else {
         setProducts([]);
@@ -196,11 +196,12 @@ const Products = () => {
       {isRootProducts && (
         <>
           <h2>Danh sách Sản Phẩm</h2>
-          <Button type="primary" onClick={() => navigate("/admin/products/create")}>Thêm mới</Button>
+          <Button className="mb-3 mt-3" type="primary" onClick={() => navigate("/admin/products/create")}>Thêm mới +</Button>
 
-          <Input placeholder="Tìm kiếm sản phẩm..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <Input className="mb-3" placeholder="Tìm kiếm sản phẩm..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
 
           <Dropdown
+           className="mb-3"
             overlay={filterMenu}
             trigger={["click"]}
             overlayStyle={{ minWidth: 250 }}

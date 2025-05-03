@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { FaEdit, FaEnvelope, FaPhone, FaTicketAlt, FaCoins, FaMapMarkerAlt, FaCog, FaBoxOpen, FaTruck, FaCheckCircle } from 'react-icons/fa';
-import { Link } from "react-router-dom";
+import { FaEdit, FaEnvelope, FaPhone, FaTicketAlt, FaCoins, FaMapMarkerAlt, FaCog, FaBoxOpen, FaTruck, FaCheckCircle, FaSignOutAlt } from 'react-icons/fa';
+import { Link, useNavigate } from "react-router-dom";
 import { getDiscount, getDiscountForUser, getUserProfile, handleRedeemVoucher } from "../../services/homeService";
 import ResetPassword from "./ResetPassword";
 import MyDevices from "../../components/MyDevices";
+import axios from "axios";
+import { message } from "antd";
 
 function Avatar({ src, className }: { src: string; className?: string }) {
   return <img src={src} alt="Avatar" className={`rounded-circle ${className}`} style={{ width: "80px", height: "80px" }} />;
@@ -50,7 +52,7 @@ export default function ProfilePage() {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showDevices, setShowDevices] = useState(false);
   const [securityTab, setSecurityTab] = useState<"password" | "devices" | null>("password");
-
+  const navigate = useNavigate();
   useEffect(() => {
     fetProfile();
     fetchRedeemableVouchers();
@@ -97,6 +99,33 @@ export default function ProfilePage() {
       console.log(error);
     }
   }
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/logout",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      message.success(response.data.message);
+    } catch (error) {
+      console.error("Logout error:", error); // vẫn tiếp tục xóa localStorage dù lỗi
+    } finally {
+      // Xóa toàn bộ thông tin liên quan đến user
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("access_token_expiry");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("roles");
+
+      navigate("/login");
+    }
+  };
 
   return (
     <div className="container py-4">
@@ -134,12 +163,17 @@ export default function ProfilePage() {
               {user?.district ? `${user.district}, ` : ""}
               {user?.city ? user.city : "Chưa có địa chỉ"}
             </p>
+            <Link to="/profile/edit" className="btn btn-outline-primary ms-auto">
+              <FaEdit className="me-2" /> Chỉnh sửa
+            </Link>
           </div>
 
           {/* Nút chỉnh sửa */}
-          <Link to="/profile/edit" className="btn btn-outline-primary ms-auto">
-            <FaEdit className="me-2" /> Chỉnh sửa
-          </Link>
+
+          <button onClick={handleLogout} className="btn btn-outline-danger ms-auto">
+            <FaSignOutAlt className="me-2" />
+            Đăng xuất
+          </button>
         </div>
       </div>
 

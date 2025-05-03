@@ -9,7 +9,7 @@ useEffect(() => {
             name: editingSale.name,
             start_time: moment(editingSale.start_time),
             end_time: moment(editingSale.end_time),
-            quantity: editingSale.quantity, // Cập nhật số lượng nếu có
+            quantity: editingSale.quantity,
         });
     }
 }, [editingSale]);
@@ -17,14 +17,13 @@ useEffect(() => {
 const handleUpdateSale = async () => {
     try {
         const values = await form.validateFields();
-        await axios.put(`http://127.0.0.1:8000/api/sales/${editingSale?.id}`, {
+        const response = await axios.put(`http://127.0.0.1:8000/api/sales/${editingSale?.id}`, {
             name: values.name,
             start_time: values.start_time.format('YYYY-MM-DD HH:mm:ss'),
             end_time: values.end_time.format('YYYY-MM-DD HH:mm:ss'),
-            quantity: values.quantity, // Thêm số lượng vào request
+            quantity: values.quantity,
         });
 
-        // Cập nhật state
         const updatedSales = flashSales.map((sale) =>
             sale.id === editingSale?.id ? { ...sale, ...values } : sale
         );
